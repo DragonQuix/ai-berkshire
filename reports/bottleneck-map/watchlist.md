@@ -1,6 +1,6 @@
 # 瓶颈猎手观察名单（持续更新）
 
-最后更新：2026-05-26 12:13（第八轮扫描）  
+最后更新：2026-05-26 13:14（第九轮扫描）  
 下次复查：下次扫描
 
 ---
@@ -24,15 +24,16 @@
 - ✅ 市值从ATH回调21%（ATH ¥32,900于5/7；今日5/26跌-6.1%至¥25,890）
 - ✅ **【2026-05-26 11:10 新增】Nvidia已签中长期绑定合同**（Digitimes确认），不再是"竞争配额"而是"锁定供给"，其他CSP被进一步挤出
 - ✅ **【2026-05-26 11:10 新增】Meritz证券新研报**：《T-glass缺口加速及未来影响（以三星电机为例）》——首次将三星电机列为受损下游，引发市场更广泛关注
+- ✅ **【2026-05-26 13:14 新增】5:1股票拆分（2026-07-01生效）+ 上调FY2026业绩展望**：管理层对未来的信心信号；拆分后每股约¥5,178，散户门槛显著降低；流动性提升预期；拆分前后关注成交量变化；下季度业绩2026-08-05
 - ⚠️ T-glass约为Nittobo总营收约20%（估计），低于30%纯正度门槛（纯正度问题存在但T-glass是最高利润率分部）
 - ⚠️ Nan Ya 2027年替代路径存在（20%），长期垄断将部分弱化
 - ⚠️ 日元汇率影响汇算收益
 
-**估值安全边际**：以¥921.4B（$5.9B）买入，10年25xPE退出，年化10%回报需净利润$612M（对应营收$3.5B，是当前$715M的4.9倍），CAGR约17%。目标可行但不宽裕——当前价格进入需承受一定估值压力。更合理的入场是等候回调至¥22,000-24,000（P/E约20-22x）。  
-**催化剂**：Q4 FY2026业绩（2026年秋季）；Nittobo Integrated Report 2026（确认T-glass收入占比）；2026年底Nan Ya产能能否如期投产（验证替代威胁时间线）  
-**建议动作**：加入重点关注；执行/bottleneck-hunter深入研究；等候进一步回调至¥22,000-24,000考虑建仓  
+**估值安全边际**：以¥921.4B（$5.9B）买入，10年25xPE退出，年化10%回报需净利润$612M（对应营收$3.5B，是当前$715M的4.9倍），CAGR约17%。目标可行但不宽裕——当前价格进入需承受一定估值压力。更合理的入场是等候回调至¥22,000-24,000（P/E约20-22x，拆分后对应约¥4,400-4,800/股）。  
+**催化剂**：**2026-07-01股票拆分生效**（近期）；Q4 FY2026业绩（2026年秋季，业绩下季2026-08-05）；Nittobo Integrated Report 2026（确认T-glass收入占比）；2026年底Nan Ya产能能否如期投产（验证替代威胁时间线）  
+**建议动作**：加入重点关注；执行/bottleneck-hunter深入研究；等候进一步回调至目标区间（拆分后约¥4,400-4,800/股）考虑建仓  
 **加入日期**：2026-05-26  
-**来源**：[Yahoo Finance 3110.T](https://finance.yahoo.com/quote/3110.T/) | [Tom's Hardware](https://www.tomshardware.com/tech-industry/shortages-of-crucial-chip-packaging-material-threatens-ai-accelerator-supply-chains-nittobos-fukushima-plant-is-tripling-capacity-but-itll-take-years-before-market) | [SmartKarma估值](https://www.smartkarma.com/insights/nittobo-3110-jp-scarcity-premium-in-ai-substrates-with-strong-earnings-visibility) | [Global Tech Research](https://globaltechresearch.substack.com/p/nittobo-3110-jp-the-king-of-electronic)
+**来源**：[Yahoo Finance 3110.T](https://finance.yahoo.com/quote/3110.T/) | [Tom's Hardware](https://www.tomshardware.com/tech-industry/shortages-of-crucial-chip-packaging-material-threatens-ai-accelerator-supply-chains-nittobos-fukushima-plant-is-tripling-capacity-but-itll-take-years-before-market) | [SmartKarma估值](https://www.smartkarma.com/insights/nittobo-3110-jp-scarcity-premium-in-ai-substrates-with-strong-earnings-visibility) | [Global Tech Research](https://globaltechresearch.substack.com/p/nittobo-3110-jp-the-king-of-electronic) | [Globe and Mail 股票拆分](https://www.theglobeandmail.com/investing/markets/markets-news/Tipranks/2122978/nittobo-announces-five-for-one-stock-split-and-boosts-authorized-shares/)
 
 ---
 
@@ -199,7 +200,7 @@
 
 ---
 
-### 9. United States Antimony Corporation (UAMY，NYSE) ★★★ 【2026-05-26 10:10 新增 | 2026-05-26 11:10 操作更新】
+### 9. United States Antimony Corporation (UAMY，NYSE) ★★★ 【2026-05-26 10:10 新增 | 2026-05-26 11:10 操作更新 | 2026-05-26 13:14 CFO黄灯】
 **瓶颈环节**：锑（Antimony）供应（国防弹药链，A级，新加入）  
 **市值**：~$1.25B（股价约$8.42，2026-05-25）  
 **瓶颈核心逻辑**：美国唯一运营中的国内锑冶炼商（Thompson Falls, Montana）；全球锑缺口40,000 MT/年；中国出口管制断供后美国100%依赖进口；DoD/DLA $248M五年合同（锑金属锭，国防战略储备，其中~$85M为2026年已确认订单）  
@@ -215,30 +216,53 @@
 - 注意：**推断资源级**，距生产5-10年以上，属于期权价值而非核心价值
 - 股价验证：资源发现公告后+19%，推进Fostung计划后+14.6%；H.C. Wainwright维持Buy目标$11.75
 - **评级不变★★★**：钨资产增加叙事广度但不改变近期投资逻辑；主线仍是锑（Thompson Falls+DoD合同）
+**2026-05-26 13:14 CFO风险（⚠️黄灯）**：
+- CFO Richard Isaak 2026-05-04起"个人原因"停职，复职日期不明
+- Shawn Winkler（前财务顾问，30年以上经验）出任临时CFO
+- 公司声明：与财务表现/会计/内控无关
+- 市场反应：+8-9%（接受解释，注意力放在DoD合同和guidance维持上）
+- 风险点：公司关键产能爬坡期CFO换人，是黄灯信号，但不构成论点颠覆
+
 **估值状态**：P/S forward 10x（若$125M指引实现）；黄灯（亏损+forward PS偏高）；最高★★★；10年25xPE退出年化约6%，当前价格无安全边际  
-**信号验证**：✅ DoD $248M五年合同（$85M 2026确认）；✅ 全球锑结构性缺口；✅ 扩产比预期提前；⚠️ Q1严重miss；❌ 尚无盈利  
-**催化剂**：Q2 2026财报（8月）为关键验证点；新炉灶7月80%爬坡；锑价走势；DOE $44M资助批复  
+**信号验证**：✅ DoD $248M五年合同（$85M 2026确认）；✅ 全球锑结构性缺口；✅ 扩产比预期提前；⚠️ Q1严重miss；⚠️ CFO临时离职；❌ 尚无盈利  
+**催化剂**：Q2 2026财报（8月）为关键验证点；新炉灶7月80%爬坡；锑价走势；DOE $44M资助批复；CFO是否复职  
 **建议动作**：持续跟踪；等Q2财报验证；Q2收入>$25M+毛利率>20%则升级至★★★★  
 **加入日期**：2026-05-26  
-**来源**：[UAMY FY2025](https://www.accessnewswire.com/newsroom/en/metals-and-mining/united-states-antimony-corporation-reports-fiscal-year-2025-financial-and-operati-1149817) | [UAMY Q1 2026](https://www.stocktitan.net/news/UAMY/united-states-antimony-corporation-reports-first-quarter-2026-7w2rb5fb8cwd.html) | [Thompson Falls扩产完成](https://nationaltoday.com/us/mt/thompson-falls/news/2026/04/07/united-states-antimony-secures-248m-defense-contract-expands-antimony-production/) | [水冶设施申请](https://www.stocktitan.net/news/UAMY/united-states-antimony-corporation-announces-new-hydromet-processing-axnl5tzm5xx0.html)
+**来源**：[UAMY FY2025](https://www.accessnewswire.com/newsroom/en/metals-and-mining/united-states-antimony-corporation-reports-fiscal-year-2025-financial-and-operati-1149817) | [UAMY Q1 2026](https://www.stocktitan.net/news/UAMY/united-states-antimony-corporation-reports-first-quarter-2026-7w2rb5fb8cwd.html) | [Thompson Falls扩产完成](https://nationaltoday.com/us/mt/thompson-falls/news/2026/04/07/united-states-antimony-secures-248m-defense-contract-expands-antimony-production/) | [水冶设施申请](https://www.stocktitan.net/news/UAMY/united-states-antimony-corporation-announces-new-hydromet-processing-axnl5tzm5xx0.html) | [UAMY临时CFO](https://www.stocktitan.net/news/UAMY/united-states-antimony-announces-shawn-winkler-appointed-as-interim-icdy0i7dmxdm.html)
 
 ---
 
 ## 观察中（信号强度★★）
 
-### 10. Almonty Industries（TSX:AII / OTC:ALM）★★ 【2026-05-26午后 新增】
+### 10. Almonty Industries（TSX:AII / OTC:ALM）★★ 【2026-05-26午后 新增 | 2026-05-26 13:14 叙事升级】
 **代码**：AII.TO（TSX）/ ALM（OTC）  
 **瓶颈环节**：西方钨矿供应（S级跨趋势瓶颈——AI+国防+工业）  
 **市值**：C$5.22B（约$3.8B USD）  
+
+**2026-05-26 13:14 新确认事实（重大叙事升级）**：
+- ✅ **Tungsten Parts Wyoming (TPW) 绑定offtake协议**：每月最低40吨WO3，覆盖90%+ Sangdong Phase 1产出，**专用于美国国防应用（导弹、无人机、弹药）**，合同期15年
+- ✅ **Montana Gentung Browns Lake钨项目收购**：Beaverhead County，H2 2026可能开始开口矿产出，距UAMY Thompson Falls约180英里——美国国内钨矿源
+- ✅ **总部迁至Dillon, Montana（2026-04-13）**：直接对接DoD/DLA采购流程，前美军高级将领进入董事会
+- ✅ **Sangdong commissioning ceremony（2026-03）**：商业产出目标Q3 2026
+- ✅ **新CFO Jorge Beristain（2026-06-01生效）**：CFA认证，来自专业金融背景
+- ✅ YTD股价+126.9%，30日+27.6%，市场已高度认知
+
+**估值更新**：
+- P/S修正：~51x（基于C$25.4M × 4 = C$101.6M年化），非此前37x
+- 收入增速+221% YoY → 技术上豁免PS红线（>100%）
+- 10年25xPE退出分析：需$394M净利润，对应~$2B收入，CAGR需38.9%/年 → **当前价格无安全边际**
+- 市值TAM检查：全球非中国钨市场（估）~$5B/年，市值$3.8B < 20% × $5B（不触发红灯，但接近）
+
 **待验证事项**：
-- 估值：基于Q1年化约P/S 37x——高位，但收入增速+221%（技术上豁免PS红线），需等Q2-Q3数据确认增速持续性
-- Sangdong Phase 1产量爬坡是否如期（设计2300吨/年），实际产量vs设计产能
-- Phase 2（2027）进展：能否如期扩至4600吨/年（覆盖全球非中国需求约40%）
-- 钨价能否维持高位（当前+557%）还是中国管控有所松动
-- 与美国国防部的直接采购合同进展（2027年1月1日截止中俄来源）
+- Q2/Q3 Sangdong Phase 1实际产量（设计2300吨/年，商业产出是否如期）
+- Montana Gentung项目H2 2026时间线可信度
+- 钨价能否维持高位（当前+557%）
+- Phase 2（2027）进展
+
+**评级维持★★**：瓶颈真实+防御性强，但估值高（P/S~51x）+10年退出需38.9% CAGR；当前是叙事充分定价，非低估机会。
 
 **加入日期**：2026-05-26  
-**来源**：[InvestingNews Q1](https://investingnews.com/almonty-industries-reports-first-quarter-2026-financial-results/) | [StockAnalysis AII](https://stockanalysis.com/quote/tsx/AII/)
+**来源**：[InvestingNews Q1](https://investingnews.com/almonty-industries-reports-first-quarter-2026-financial-results/) | [StockAnalysis AII](https://stockanalysis.com/quote/tsx/AII/) | [Almonty TPW offtake](https://almonty.com/binding-offtake-agreement-to-supply-tungsten-oxide-solely-for-us-defense-applications/) | [Almonty Montana HQ](https://www.businesswire.com/news/home/20260413261619/en/Almonty-Industries-Establishes-U.S.-Corporate-Headquarters-Reinforcing-Role-as-Americas-Tungsten-Supplier) | [NBC Montana](https://nbcmontana.com/news/local/almonty-industries-moves-headquarters-to-montana-as-tungsten-push-intensifies)
 
 ---
 
@@ -307,3 +331,7 @@
 | 2026-05-26 12:13 | CHG.L | **NC护城河升级（评级★★★★维持）** | NAPIM正式警告NC蔓延商业领域；AAC停产；军用NC优先级全面提升；June 9财报前景加强 |
 | 2026-05-26 12:13 | UAMY | **Fostung钨矿期权补录（评级★★★维持）** | 2026-03-03公告推断资源53.6M磅WO3毛值$46亿；开发阶段期权价值，不改变近期投资逻辑 |
 | 2026-05-26 12:13 | COHR | **InP供给侧加速信号** | Q3 FY2026：InP产能下季度翻倍，6英寸效益4x；EML S级维持不变 |
+| 2026-05-26 13:14 | 3110.T | **新催化剂（评级★★★★维持）** | 5:1股票拆分（2026-07-01）+上调FY2026展望；拆分后目标入场¥4,400-4,800/股；当前¥25,890（拆前）仍高于目标入场区间 |
+| 2026-05-26 13:14 | AII.TO | **叙事升级（评级★★维持）** | 三大新事实确认：TPW绑定offtake（专供美国国防）+Montana项目（H2 2026）+HQ迁Montana；P/S修正~51x；10年退出需38.9% CAGR，无安全边际 |
+| 2026-05-26 13:14 | UAMY | **CFO黄灯（评级★★★维持）** | CFO Richard Isaak 5月4日起"个人原因"停职，Shawn Winkler临时接任；关键爬坡期管理层变动是黄灯但不颠覆论点 |
+| 2026-05-26 13:14 | master-map | **新增重稀土国防链瓶颈** | 条目0c2：中国4月4日出口管制7种重稀土（含yttrium/SmCo所需）；美国导弹库存耗尽后依赖中国供应来重建；S级地缘政治瓶颈；无可投资纯正标的（全部P/S 200x+） |

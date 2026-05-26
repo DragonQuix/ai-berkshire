@@ -1,6 +1,6 @@
 # 供应链瓶颈总地图（持续更新）
 
-最后更新：2026-05-26 12:13（第八轮扫描）
+最后更新：2026-05-26 13:14（第九轮扫描）
 
 ---
 
@@ -28,6 +28,35 @@
 
 ---
 
+## 地缘政治S级瓶颈（续）
+
+### 0c2. 重稀土（SmCo/钇/镝/铽）国防制造链【2026-05-26 13:14 新增，S级，国防链关键材料】
+**核心数据**：
+- 中国2026-04-04对7种重稀土（钐、钆、铽、镝、镥、钪、钇）实施出口管制（须许可证）
+- 美国yttrium（钇）93%历史进口依赖中国；重稀土加工99%在中国
+- 伊朗战争耗尽：~50% THAAD、~50% Patriot、45% Precision Strike Missiles；Tomahawk补充需47个月
+- 应用场景：钐钴（SmCo）高温永磁体→导弹制导、Patriot/THAAD雷达；钇→喷气发动机涂层、导弹导引头光学
+- 2027-01-01：中国来源重稀土（含加工品）禁入美国国防采购
+
+**瓶颈判定**：
+- 供给集中🔴（99%加工在中国，已实施出口许可管制）
+- 扩产周期🔴（西方新重稀土加工设施5-10年；Energy Fuels Q4 2026仅微量Dy/Tb试产）
+- 替代难度🔴（SmCo磁体在导弹高温环境不可替代，NdFeB性能不足）
+- 需求增速🔴（美国必须重建库存，2027年1月1日硬截止）
+= **S级（地缘政治驱动，类氦气断供型）**
+
+**性质说明**：这是"断供型"瓶颈——不是产能不足，而是主要供应国主动设置许可证壁垒。紧迫性与氦气类似但更偏军用。
+
+**可投资标的评估（全部红灯，暂无纯正可投资标的）**：
+- REalloys（ALOY，~$588M市值，$2.4M TTM收入）：P/S~245x ❌
+- USA Rare Earth（USAR，$5.57B市值，$5.7M Q1收入）：P/S~244x，亏损$67M/季 ❌
+- Energy Fuels（UUUU）：零REE收入Q1 2026，Q4 2026才有微量Dy/Tb ❌
+- 结论：重稀土加工瓶颈真实，但西方上市公司全处预收入/极早期，估值已反映所有叙事
+
+**来源**：[China REE export controls CSIS](https://www.csis.org/analysis/chinas-new-rare-earth-and-magnet-restrictions-threaten-us-defense-supply-chains) | [Fortune: America needs Beijing's permission to reload](https://fortune.com/2026/04/30/us-missile-stockpile-depleted-iran-ukraine-china-rare-earths-restock/) | [CNN: US missile stockpile](https://www.cnn.com/2026/04/21/politics/us-military-missile-stockpile)
+
+---
+
 ## S级瓶颈（单点故障级）
 
 ### 0c. 钨（W）供应链危机【2026-05-26午后 新增，S级，跨AI+国防+工业三趋势】
@@ -47,10 +76,10 @@
 = **S级**
 
 **相关公司**：
-- **Almonty Industries**（TSX:AII / OTC:ALM，市值C$5.22B≈$3.8B）：韩国Sangdong矿Phase 1已量产（2300吨/年），2027年Phase 2（4600吨/年），届时可供全球非中国需求约40%；葡萄牙、西班牙、加拿大、美国多矿区。Q1 2026营收$25.4M（+221% YoY）。**估值警告**：P/S约37x（基于Q1年化），高位但收入增速>100%可技术豁免；尚处于产量爬坡阶段。
+- **Almonty Industries**（TSX:AII / OTC:ALM，市值C$5.22B≈$3.8B）：韩国Sangdong矿Phase 1已量产（2300吨/年），2027年Phase 2（4600吨/年），届时可供全球非中国需求约40%；葡萄牙、西班牙、加拿大，以及**美国Montana（新增，2026-05-26）**多矿区。Q1 2026营收C$25.4M（+221% YoY）。**2026-05-26 13:14 三大新事实确认**：①与Tungsten Parts Wyoming（TPW）签订绑定offtake（15年，每月40吨+，90%+ Sangdong Phase 1产出，专供美国国防导弹/无人机/弹药）；②收购Montana Gentung Browns Lake钨项目（H2 2026可能投产）；③总部迁至Dillon, Montana（2026-04-13），前美军将领进入董事会。**估值状态**：P/S ~51x（基于Q1年化），收入增速+221%（>100%）技术豁免PS红线；但10年25xPE退出需38.9% CAGR，当前价格无安全边际。
 - 其他：American Tungsten Corp（TUNG.CN，加拿大，极早期探矿，市值C$136M，不在主追踪范围）
 
-**来源**：[GoldInvest钨价+557%](https://goldinvest.de/en/tungsten-price-on-record-course-export-limits-from-china-and-defense-demand-intensify-shortage/) | [TechMacroArchive](https://techmacroarchive.com/semiconductor-supply-chain-2026-the-helium-tungsten-crisis/) | [Almonty Q1 2026](https://investingnews.com/almonty-industries-reports-first-quarter-2026-financial-results/)
+**来源**：[GoldInvest钨价+557%](https://goldinvest.de/en/tungsten-price-on-record-course-export-limits-from-china-and-defense-demand-intensify-shortage/) | [TechMacroArchive](https://techmacroarchive.com/semiconductor-supply-chain-2026-the-helium-tungsten-crisis/) | [Almonty Q1 2026](https://investingnews.com/almonty-industries-reports-first-quarter-2026-financial-results/) | [Almonty TPW offtake](https://almonty.com/binding-offtake-agreement-to-supply-tungsten-oxide-solely-for-us-defense-applications/) | [Almonty Montana HQ](https://www.businesswire.com/news/home/20260413261619/en/Almonty-Industries-Establishes-U.S.-Corporate-Headquarters-Reinforcing-Role-as-Americas-Tungsten-Supplier)
 
 ---
 
@@ -136,7 +165,7 @@
 - T-glass（低膨胀系数玻纤布）是ABF基板的关键基材，防止先进AI芯片封装中的基板翘曲
 - Nittobo已于2025年8月涨价20%；2026年4月再涨20-30%
 - H2 2026供应缺口预计>40%（Morgan Stanley估计）；Nan Ya Plastics合作伙伴计划2027年提供Nittobo产量约20%替代
-- **可投资标的：Nittobo（3110.T）**：市值¥921.4B≈$5.9B；P/E **24.8x**（同业均值25.8x）；P/S约8.3x；5分析师Buy，0 Sell；**估值绿灯**；Apple/Nvidia/Google/Amazon均在争夺产能；已从ATH ¥32,900回调21%至¥25,890
+- **可投资标的：Nittobo（3110.T）**：市值¥921.4B≈$5.9B；P/E **24.8x**（同业均值25.8x）；P/S约8.3x；5分析师Buy，0 Sell；**估值绿灯**；Apple/Nvidia/Google/Amazon均在争夺产能；已从ATH ¥32,900回调21%至¥25,890；**2026-05-26 13:14更新：5:1股票拆分（生效2026-07-01）+上调FY2026业绩展望**——正面催化剂；拆分后散户准入门槛降低，流动性扩大
 
 **主要供应商**：Samsung Electro-Mechanics (009150), Ibiden (4062), Shinko Electric (6967), Unimicron (3037)  
 **原材料供应商**：Ajinomoto（TYO:2802，ABF膜95%份额，非纯正标的）| **Nittobo（3110.T，T-glass ~90-100%，✅可投资，估值绿灯）**  
@@ -308,3 +337,7 @@
 | 2026-05-26 12:13 | **NC瓶颈升级** | NAPIM正式警告NC商业短缺；AAC暂停生产；NC短缺从军用扩至商业，Chemring护城河更深；June 9财报前景加强 |
 | 2026-05-26 12:13 | **电力/变压器数据更新** | 美国互联队列2600GW（↑from 2100GW）；北弗吉尼亚等待4-7年；母线槽首次加入长交期类别；变压器S级确认 |
 | 2026-05-26 12:13 | **UAMY钨矿补录** | Fostung钨矿（安大略）技术报告（2026-03-03）：推断资源53.6M磅WO3，毛值$46亿；开发阶段，watchlist附加期权描述 |
+| 2026-05-26 13:14 | **新增 S级地缘政治** | 重稀土（SmCo/钇/镝/铽）国防制造链（0c2）：中国4月4日管制7种REE；美国导弹库存耗尽（50% THAAD，45% PSM）；补充需1-4年；93%钇依赖中国；2027-01-01国防采购硬截止；无可投资纯正标的 |
+| 2026-05-26 13:14 | **Almonty三大新事实** | 钨条目（0c）更新：①TPW绑定offtake（专供美国国防，15年）；②Montana Gentung项目收购（H2 2026可能产出）；③HQ迁至Montana；P/S修正为~51x（非37x）；10年退出需38.9% CAGR，无安全边际 |
+| 2026-05-26 13:14 | **Nittobo股票拆分** | ABF/T-glass条目更新：Nittobo 5:1拆分（2026-07-01）+上调FY2026展望；正面催化剂；评级★★★★维持 |
+| 2026-05-26 13:14 | **UAMY CFO黄灯** | CFO Richard Isaak 5月4日起"个人原因"停职，Shawn Winkler临时接任；市场反应平静；评级★★★维持 |
