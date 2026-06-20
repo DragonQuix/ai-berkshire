@@ -6506,3 +6506,45 @@ H2执行是关键：论点不变，等待H2利润率兑现。
 | 评级 | ★★★ | **★★★ 维持**（盈利兑现仍待确认；$50以下是理想入场区） |
 
 来源：[Digitimes Google CSP InP 6/16](https://www.digitimes.com/news/a20260616PD215/substrate-google-security-price-communications.html)
+
+---
+
+## 观察名单更新 — 2026-06-20 14:05（第254轮）
+
+### 状态更新：FormFactor（FORM）★★★★⚠️ — Q2指引超预期 + 2030年倍增目标，估值仍偏贵
+
+| 项目 | 前值（上次记录） | 更新（本轮） |
+|------|------|------|
+| 股价 | ~$150（估） | **$139.21**（从$159 ATH回落12.4%） |
+| 市值 | ~$4.0B（旧数据）| **~$10.3B**（修正，含2026年170%涨幅） |
+| Q2 2026营收指引 | 首次发布 | **$240M ± $5M**（超分析师预期$227.7M，+5.4%） |
+| Q2 Non-GAAP EPS指引 | — | **$0.61 ± $0.04**（超分析师预期$0.45，+35.6%） |
+| 2030目标 | 无明确目标 | **营收翻倍（~$1.8-2B）+ EPS超翻倍（$5.0+）** |
+| Forward PS | ~12.1x | **10.8x**（Q2指引年化$960M） |
+| Non-GAAP Forward PE | ~61x | **~57x**（$2.44年化EPS） |
+| 分析师最新目标价 | — | Craig-Hallum升级至Buy，目标价**$175** |
+| 评级 | ★★★★⚠️ | **★★★★⚠️ 维持** |
+| 入场等待区间 | 等PS<10x（~$121） | **仍等$110-120**（20%+ EPS CAGR才有安全边际） |
+
+**10年25xPE退出更新（以当前$10.3B市值计）**：
+- 情景B（20% EPS CAGR，接近管理层目标轨迹）：2036年EPS $15.10 → 25x PE退出 $28.0B → 年化10.5% ✅ 勉强过关
+- 情景A（15% CAGR）：年化5.9% ❌ 不足
+- **结论**：当前价格依赖20%+ EPS CAGR持续10年，安全边际薄，等回调$110-120
+
+**状态记录（2026-06-20 14:05）**：Q2指引大幅超预期，业务质量高，但市值$10.3B使安全边际偏薄。Craig-Hallum $175目标隐含26%短期上行，但不满足本系统10年安全边际要求。★★★★维持；等候更好入场价。
+
+来源：[Yahoo FORM Q2 surge 6.4%](https://ca.finance.yahoo.com/news/why-formfactor-form-6-4-131635132.html) · [FORM 2030 Revenue Doubling](https://finance.yahoo.com/sectors/technology/articles/formfactor-targets-revenue-doubling-2030-180507795.html) · [MarketBeat Q2 guidance](https://www.marketbeat.com/instant-alerts/formfactor-nasdaqform-updates-q2-2026-earnings-guidance-2026-04-29/)
+
+---
+
+### 其他无变化（2026-06-20 14:05）
+
+| 标的 | 评级 | 状态 | 备注 |
+|------|------|------|------|
+| Foosung（093370.KS） | ★★★ | ✅ 无变化 | WF6 T-11天；Forward PS ~2.79x（绿灯更深） |
+| HEX.L（Helix Exploration） | ★★★★ | ✅ 无变化 | 短期offtake（~8月到期）；长期谈判进行中 |
+| LEU（Centrus） | ★★ | ✅ 无变化 | $900M DOE任务令再确认；TAM红灯、PE 94x不变 |
+| VECO（Veeco） | ★★★ | ✅ 无变化 | PS 6.3x绿灯；等Q2财报~8月 |
+| 4047.T（关东电化） | ★★★ | ✅ 无变化 | NF3/WF6双催化剂，PE~47x黄灯；等8/12财报 |
+| IntelliEPI（4971.TWO） | ★★ | ✅ 无变化 | 等350-450 TWD区间 |
+
