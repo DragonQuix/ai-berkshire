@@ -130,6 +130,18 @@ python tools/lxr_data.py quality-metrics {code} --years 10 --fcf-years 5
 
 标注 `_source: lixinger`。与 mx-xuangu 初筛结果不一致时，**以理杏仁为准**。
 
+**⑦ 股本膨胀 `missing` 语义与准出规则**：
+
+| `checks.share_dilution_5y.status` | 含义 | 筛选处理 |
+|-----------------------------------|------|---------|
+| `pass` / `fail` | `q.bs.tsc.t` 可得，已判定 | 计入 7 条硬指标 |
+| `missing` | 理杏仁 `q.bs.tsc.t` 缺失或上市不足 `fcf_years+1` 年 | **不判通过也不判排除**；汇总表标注「⑦数据不足」；`result` 为 `incomplete` |
+| `na` | 仅适用于③利息覆盖（金融股） | 跳过该条 |
+
+- CLI 自动拉取 `max(years, fcf_years+1)` 年财报以确保股本对比窗口；`--years 5 --fcf-years 5` 会取 6 个年末点。
+- 若 `missing`：可降级 `verify-inputs` 取当前总股本 + 巨潮年报手工核对，标注 `_source: legacy`。
+- **准出**：6 条可判定指标均无 `fail` 且⑦为 `pass` 或 `missing`（非 `fail`）→ 可进入豁免规则；⑦ `fail`（膨胀>20%）→ 排除（除非有并购说明）。
+
 #### Step 3 — 本地最终筛选 + 豁免规则
 
 对 Step 2 数据逐条检验 7 指标 + 3 条豁免（逻辑不变）。输出格式见第四步。

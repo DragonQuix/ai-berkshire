@@ -33,12 +33,18 @@
 
 ### 第二步：深度研究
 
-涉及上市公司数据点时，嵌入前调用（标注来源）：
+涉及上市公司数据点时，嵌入前调用（**每条数据须标注 `_source`**）：
 
 ```bash
 python C:/Users/admin/.claude/skills/mx-data/mx_data.py "{公司或指标} 最新数据" %TEMP%\mx_skills
 python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{主题} 权威来源 数据" --output-dir %TEMP%\mx_skills
 ```
+
+| 工具 | `_source` |
+|------|-----------|
+| mx-data | `mx-data` |
+| mx-search | `mx-search` |
+| 理杏仁 CLI | `lixinger` |
 
 使用 Agent 工具**并行**启动2-3个研究Agent，收集足够的素材：
 

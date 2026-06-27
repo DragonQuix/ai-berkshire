@@ -29,6 +29,14 @@ python tools/lxr_data.py valuation {code} --source lixinger
 python tools/lxr_data.py industry-deep {code} --years 3
 ```
 
+**`_source` 标注**（注入各大师 Agent 前写入数据摘要）：
+
+| 数据块 | `_source` |
+|--------|-----------|
+| financials / valuation / industry-deep | `lixinger` |
+| 业绩会纪要 / 券商点评（mx-search） | `mx-search` |
+| 财报原文（巨潮/SEC/HKEX 抓取） | `legacy` |
+
 `mx-search` 拉业绩会纪要摘要；四大师 Agent **分析**同比/环比与指引兑现，不再 WebSearch 抄财务表。
 
 ### 第一步：获取一手资料

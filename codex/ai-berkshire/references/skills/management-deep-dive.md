@@ -42,15 +42,16 @@ python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{公司} {CEO姓名
 python C:/Users/admin/.claude/skills/mx-data/mx_data.py "{公司} 董事长 持股比例" %TEMP%\mx_skills
 ```
 
-**定量摘要表**（写入报告第二节之前）：
+**定量摘要表**（写入报告第二节之前；表头 **`_source`** 为验收必填字段）：
 
-| 维度 | 数据要点 | 来源 |
-|------|----------|------|
-| 高管增减持 | 近3年每笔：日期、人名、增/减、股数、均价 | lixinger `governance` |
-| 大股东增减持 | 区分象征性 vs 实质性（金额占市值比） | lixinger `governance` |
-| 股东人数 | 季度趋势：集中 or 分散 | lixinger `shareholders-num`（港股可能不可用，见 `docs/channel-capability-matrix.md`） |
-| 前十大股东 | 最新持股比、较上期变化 | lixinger `shareholders` |
-| 监管记录 | 问询函、监管措施 | lixinger（A股 `inquiry`/`measures`，通过 mx-search 补充公告原文） |
+| 维度 | 数据要点 | `_source` |
+|------|----------|-----------|
+| 高管增减持 | 近3年每笔：日期、人名、增/减、股数、均价 | `lixinger`（`governance`） |
+| 大股东增减持 | 区分象征性 vs 实质性（金额占市值比） | `lixinger`（`governance`） |
+| 股东人数 | 季度趋势：集中 or 分散 | `lixinger`（`shareholders-num`；港股可能不可用，见 `docs/channel-capability-matrix.md`） |
+| 前十大股东 | 最新持股比、较上期变化 | `lixinger`（`shareholders`） |
+| 监管记录 | 问询函、监管措施 | `lixinger` / `mx-search`（公告原文） |
+| 管理层言论 | 采访、股东信、电话会 | `mx-search` |
 
 > **李录视角提示**：定量层回答「管理层说看好时，有没有减持？」「筹码是在向内部人集中还是向散户分散？」——再叠加第三步定性承诺追踪。
 

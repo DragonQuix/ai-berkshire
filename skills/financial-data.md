@@ -24,6 +24,23 @@
 | 2（副） | **妙想 Skills** (`mx-data`) | 自然语言查询实时行情、财务、股东信息，输出 Excel/JSON | 理杏仁不可用/缺字段时自动回退 |
 | 3（兜底） | **免费源**（东财/巨潮/aastocks/macrotrends 等，见下方表格） | 网页/API 抓取，部分保险报表不可用、GBK 乱码、无分位点 | 前两顺位均失败时兜底 |
 
+### `_source` 字段统一标注（所有 Skill 必遵）
+
+`tools/lxr_data.py` 及妙想 CLI 返回的 JSON **顶层**含 `_source`，报告与 Agent 输出须原样引用：
+
+| `_source` 值 | 含义 | 典型场景 |
+|-------------|------|---------|
+| `lixinger` | 理杏仁 API 结构化数据 | financials、valuation、governance、quality-metrics |
+| `mx-data` | 妙想 mx-data NLP 查询 | 实时行情、公司概况 |
+| `mx-search` | 妙想 mx-search 资讯搜索 | 公告、采访、行业新闻 |
+| `mx-xuangu` | 妙想 mx-xuangu 条件选股 | quality-screen / industry-funnel 初筛 |
+| `lixinger+mx` | 数据包理杏仁+妙想均成功 | datapack（含 mx_quote + mx_news） |
+| `lixinger+partial-mx` | 数据包理杏仁成功、妙想部分失败 | datapack 降级 |
+| `legacy` | 免费源（东财/巨潮/WebSearch 等） | 第三顺位兜底 |
+| `none` | 全部来源失败 | 须标注「数据不可用」，禁止编造 |
+
+复合数据包（`datapack`）顶层 `_source` 反映实际组合；各 `sections.*` 子块保留各自 `_source`。
+
 ### CLI 调用方式（推荐）
 
 ```bash

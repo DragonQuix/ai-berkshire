@@ -369,6 +369,27 @@ class TestQualityMetrics(unittest.TestCase):
         self.assertEqual(out["result"], "pass")
         self.assertTrue(out["checks"]["roe_10y_avg"]["pass_"])
         self.assertTrue(out["checks"]["fcf_5y_cumulative"]["pass_"])
+        self.assertEqual(out["checks"]["share_dilution_5y"]["status"], "pass")
+
+    def test_share_dilution_missing_when_annual_window_too_short(self):
+        def rec(date, tsc):
+            return {"date": date, "q": {"bs": {"tsc": {"t": tsc}}, "ps": {"np": {"t": 1}, "oi": {"t": 10}},
+                    "cfs": {"ncffoa": {"t": 1}, "ncffia": {"t": 0}}}}
+
+        annual = [rec(f"{y}-12-31", 1e9) for y in range(2021, 2026)]
+        out = lxd._compute_quality_checks("non_financial", annual, 5, 5)
+        self.assertEqual(out["checks"]["share_dilution_5y"]["status"], "missing")
+        self.assertIn("年报不足", out["summary"].get("share_dilution_note", ""))
+
+    def test_share_dilution_computed_with_six_annual_points(self):
+        def rec(date, tsc):
+            return {"date": date, "q": {"bs": {"tsc": {"t": tsc}}, "ps": {"np": {"t": 1}, "oi": {"t": 10}},
+                    "cfs": {"ncffoa": {"t": 1}, "ncffia": {"t": 0}}}}
+
+        annual = [rec(f"{y}-12-31", 1e9 if y < 2025 else 1.1e9) for y in range(2020, 2026)]
+        out = lxd._compute_quality_checks("non_financial", annual, 5, 5)
+        self.assertEqual(out["checks"]["share_dilution_5y"]["status"], "pass")
+        self.assertAlmostEqual(out["summary"]["share_dilution_5y_pct"], 10.0, places=1)
 
     def test_interest_coverage_na_for_bank(self):
         annual = [{"date": "2025-12-31", "q": {"ps": {"np": {"t": 1}}, "bs": {"tsc": {"t": 1}}}}]

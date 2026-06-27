@@ -244,11 +244,16 @@ def _compute_quality_checks(report_type: str, annual: list, roe_years: int, fcf_
     nm_avg = sum(nm_vals) / len(nm_vals) if nm_vals else None
 
     dilution_pct = None
+    dilution_note = None
     if len(annual) >= fcf_years + 1:
         tsc_old = _fs_metric(annual[-(fcf_years + 1)], "bs.tsc.t")
         tsc_new = _fs_metric(annual[-1], "bs.tsc.t")
-        if tsc_old and tsc_new and float(tsc_old) != 0:
+        if tsc_old is not None and tsc_new is not None and float(tsc_old) != 0:
             dilution_pct = (float(tsc_new) - float(tsc_old)) / float(tsc_old) * 100.0
+        elif tsc_old is None or tsc_new is None:
+            dilution_note = "q.bs.tsc.t 在理杏仁 fs 年报中缺失"
+    else:
+        dilution_note = f"年报不足 {fcf_years + 1} 期，无法计算 {fcf_years} 年股本膨胀"
 
     def _chk(name, value, threshold, op="gte", na=False):
         row = {"metric": name, "value": value, "threshold": threshold}
@@ -287,6 +292,7 @@ def _compute_quality_checks(report_type: str, annual: list, roe_years: int, fcf_
             "ocf_ni_5y_avg": ocf_ni_avg,
             "net_margin_avg": nm_avg,
             "share_dilution_5y_pct": dilution_pct,
+            "share_dilution_note": dilution_note,
             "annual_years_used": len(annual),
             "fcf_method": "sum(ncffoa + ncffia) 近5年年报；ncffia 为投资活动现金流净额",
         },
@@ -1462,7 +1468,9 @@ class LxrData:
 
     def get_quality_metrics(self, code: str, years: int = 10, fcf_years: int = 5) -> dict:
         """计算去劣筛选 7 条硬指标（理杏仁财报本地精算）。"""
-        fin = self.get_financials(code, years=min(years, 10), source="lixinger")
+        # 股本膨胀需 fcf_years+1 个年末点；ROE/净利率窗口取 max(years, fcf_years+1)
+        span_years = min(max(years, fcf_years + 1), 10)
+        fin = self.get_financials(code, years=span_years, source="lixinger")
         if fin.get("_source") != "lixinger":
             return {
                 "_source": "none",
