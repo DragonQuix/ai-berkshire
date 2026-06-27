@@ -28,6 +28,11 @@
 - get_revenue_constitution：分产品/分地区营收构成（dataList 收入/占比/毛利率 + 境内/境外）。
 - get_governance：高管增减持 + 大股东增减持（A股）；港股董事权益变动。
 
+阶段 5 增量（宏观 + 指数估值 + 行业对比）：
+- get_macro_national_debt / get_macro_interest_rates / get_bond_yield_10y：国债收益率（10年期）+ LPR/Shibor/MLF 利率，利差分析输入。
+- get_index_valuation：沪深300/恒生指数等 PE/PB/PS/股息率 当前值 + 10年分位点 + 收盘点位。
+- get_industry_of_stock / get_industry_valuation / compare_industry_valuation：申万二级行业归属 + 行业估值 + 公司vs行业估值对比表。
+
 CLI：
     python tools/lxr_data.py financials 601336 --years 5 --source lixinger
     python tools/lxr_data.py valuation 600519 --source lixinger
@@ -38,6 +43,10 @@ CLI：
     python tools/lxr_data.py industry-deep 601336 --years 5
     python tools/lxr_data.py revenue 600519 --years 3
     python tools/lxr_data.py governance 601336 --years 2
+    python tools/lxr_data.py macro-debt --area cn
+    python tools/lxr_data.py macro-rates --area cn
+    python tools/lxr_data.py index-val 000300 --market cn
+    python tools/lxr_data.py industry-compare 600519
 """
 
 from __future__ import annotations
@@ -904,6 +913,269 @@ class LxrData:
         }
 
     # ------------------------------------------------------------------
+    # 宏观模块（P5.1：国债收益率/利率，利差分析输入）
+    # ------------------------------------------------------------------
+
+    # 国债收益率指标（macro/national-debt，flat 指标，无 q. 前缀）
+    MACRO_DEBT_METRICS = ["tcm_y10", "tcm_y30", "tcm_y5", "tcm_y1", "tcm_m3"]
+    # 利率指标（macro/interest-rates，cn）
+    MACRO_RATE_METRICS_CN = ["lpr_y1", "lpr_y5", "shibor_m3", "mlf_y1_r", "fr_d7"]
+
+    def get_macro_national_debt(self, area: str = "cn", years: int = 10) -> dict:
+        """国债收益率序列（中美）。返回 latest_10y 便于利差分析。"""
+        end = _dt.date.today()
+        start = end - _dt.timedelta(days=365 * years + 10)
+        payload = {
+            "areaCode": area,
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+            "metricsList": self.MACRO_DEBT_METRICS,
+        }
+        data = self.client.post("macro/national-debt", payload, ttl_seconds=self._ttl("macro", 86400))
+        records = data if isinstance(data, list) else ([data] if isinstance(data, dict) else [])
+        records.sort(key=lambda r: r.get("date", ""), reverse=True)
+        latest = records[0] if records else {}
+        # 国债每日更新，但仍按最新非空 tcm_y10 兜底
+        y10 = latest.get("tcm_y10")
+        if y10 is None:
+            for r in records:
+                if r.get("tcm_y10") is not None:
+                    y10 = r.get("tcm_y10")
+                    break
+        return {
+            "source_detail": "lixinger:macro/national-debt",
+            "area": area, "records": records,
+            "latest_10y": y10,
+            "latest_date": str(latest.get("date", ""))[:10],
+            "_source": "lixinger",
+        }
+
+    def get_macro_interest_rates(self, area: str = "cn", years: int = 5) -> dict:
+        """利率序列（LPR/Shibor/MLF 等）。"""
+        end = _dt.date.today()
+        start = end - _dt.timedelta(days=365 * years + 10)
+        metrics = self.MACRO_RATE_METRICS_CN if area == "cn" else ["hibor_m3", "hibor_y1"]
+        payload = {
+            "areaCode": area,
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+            "metricsList": metrics,
+        }
+        data = self.client.post("macro/interest-rates", payload, ttl_seconds=self._ttl("macro", 86400))
+        records = data if isinstance(data, list) else ([data] if isinstance(data, dict) else [])
+        records.sort(key=lambda r: r.get("date", ""), reverse=True)
+        # 各指标仅在更新日有值（如 LPR 月度、Shibor 日度），取每个指标的最新非空值
+        latest = {}
+        for m in metrics:
+            for r in records:
+                if isinstance(r, dict) and r.get(m) is not None:
+                    latest[m] = r.get(m)
+                    break
+        return {
+            "source_detail": "lixinger:macro/interest-rates",
+            "area": area, "records": records, "latest": latest,
+            "_source": "lixinger",
+        }
+
+    def get_bond_yield_10y(self, area: str = "cn") -> dict:
+        """准出便利方法：当前10年期国债收益率（利差分析基准）。"""
+        d = self.get_macro_national_debt(area=area, years=1)
+        return {
+            "area": area, "yield_10y": d.get("latest_10y"),
+            "date": d.get("latest_date"), "_source": "lixinger",
+            "source_detail": d.get("source_detail"),
+        }
+
+    # ------------------------------------------------------------------
+    # 指数估值模块（P5.2：沪深300/恒生 PE/PB 分位点）
+    # ------------------------------------------------------------------
+
+    INDEX_CODES_CN = {
+        "沪深300": "000300", "上证50": "000016", "中证500": "000905",
+        "中证1000": "000852", "创业板指": "399006", "科创50": "000688",
+    }
+    INDEX_CODES_HK = {"恒生指数": "HSI", "恒生中国企业指数": "HSCEI", "恒生科技指数": "HSTECH"}
+    # 指数/行业基本面指标：4指标 × (当前值+10年分位) + 收盘点位（指数专有）
+    INDEX_VAL_METRICS = [
+        "pe_ttm.y10.mcw.cv", "pe_ttm.y10.mcw.cvpos",
+        "pb.y10.mcw.cv", "pb.y10.mcw.cvpos",
+        "ps_ttm.y10.mcw.cv", "ps_ttm.y10.mcw.cvpos",
+        "dyr.y10.mcw.cv", "dyr.y10.mcw.cvpos",
+        "cp",
+    ]
+    # 行业基本面指标：同上但无 cp（行业无收盘点位，传 cp 会触发 invalid price metrics）
+    INDUSTRY_VAL_METRICS = [m for m in INDEX_VAL_METRICS if m != "cp"]
+
+    @staticmethod
+    def _flatten_index_val(record: dict) -> dict:
+        """指数/行业基本面返回扁平点号键（如 pe_ttm.y10.mcw.cv），展平为 {pe_ttm:{cv,cvpos},...}。"""
+        out = {}
+        if not isinstance(record, dict):
+            return out
+        for name in ("pe_ttm", "pb", "ps_ttm", "dyr"):
+            out[name] = {
+                "cv": record.get(f"{name}.y10.mcw.cv"),
+                "cvpos": record.get(f"{name}.y10.mcw.cvpos"),
+            }
+        out["cp"] = record.get("cp")
+        return out
+
+    def get_index_valuation(self, index_code: str, market: str = "cn", years: int = 10) -> dict:
+        """指数估值：PE/PB/PS/股息率 当前值 + 10年分位点 + 收盘点位。"""
+        endpoint = f"{market}/index/fundamental"
+        end = _dt.date.today()
+        start = end - _dt.timedelta(days=365 * years + 10)
+        payload = {
+            "stockCodes": [index_code],
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+            "limit": 1,
+            "metricsList": self.INDEX_VAL_METRICS,
+        }
+        data = self.client.post(endpoint, payload, ttl_seconds=self._ttl("index_val", 86400))
+        records = data if isinstance(data, list) else ([data] if isinstance(data, dict) else [])
+        records.sort(key=lambda r: r.get("date", ""), reverse=True)
+        latest = records[0] if records else {}
+        return {
+            "source_detail": f"lixinger:{endpoint}",
+            "index_code": index_code, "market": market,
+            "date": str(latest.get("date", ""))[:10],
+            "valuation": self._flatten_index_val(latest),
+            "_source": "lixinger",
+        }
+
+    # ------------------------------------------------------------------
+    # 行业对比模块（P5.3：申万二级行业估值对比表）
+    # ------------------------------------------------------------------
+
+    def _sw_industry_map(self, source: str = "sw_2021") -> dict:
+        """构建股票→所属行业码列表 + 行业码→{name,level,fsTableType}。
+        constituents 省略 stockCodes 返回所有行业成分（同一股票出现在一/二/三级各一条）；
+        cn/industry 不传 level 返回全部 511 条带 level 字段，用于按层级精确选取。"""
+        ttl = self._ttl("industry_map", 7 * 86400)
+        cons = self.client.post(f"cn/industry/constituents/{source}",
+                                {"date": "latest"}, ttl_seconds=ttl)
+        cons_list = cons if isinstance(cons, list) else ([cons] if isinstance(cons, dict) else [])
+        info = self.client.post("cn/industry", {"source": source}, ttl_seconds=ttl)
+        info_list = info if isinstance(info, list) else ([info] if isinstance(info, dict) else [])
+        code_info = {}
+        for it in info_list:
+            if isinstance(it, dict) and it.get("stockCode"):
+                code_info[it["stockCode"]] = {
+                    "name": it.get("name"), "level": it.get("level"),
+                    "fsTableType": it.get("fsTableType"),
+                }
+        stock2codes = {}
+        for blk in cons_list:
+            if not isinstance(blk, dict):
+                continue
+            ind_code = blk.get("stockCode")
+            for c in blk.get("constituents", []) or []:
+                sc = c.get("stockCode") if isinstance(c, dict) else None
+                if sc:
+                    stock2codes.setdefault(sc, []).append(ind_code)
+        return {"code_info": code_info, "stock2codes": stock2codes}
+
+    def get_industry_of_stock(self, code: str, source: str = "sw_2021", level: str = "two") -> dict:
+        """返回股票所属申万行业（默认二级）。constituents 同时返回一/二/三级，按 level 精确选取。
+        level: one/two/three；若目标层级缺失则降级到最细可用层级。仅支持A股。"""
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        if market != "cn":
+            return {"source_detail": "lixinger:not_available", "code": norm, "market": market,
+                    "industry_code": None, "industry_name": None, "level": None,
+                    "note": "申万行业分类仅覆盖A股", "_source": "none"}
+        m = self._sw_industry_map(source=source)
+        codes = m["stock2codes"].get(norm, [])
+        if not codes:
+            return {"source_detail": f"lixinger:cn/industry/constituents/{source}",
+                    "code": norm, "market": "cn", "industry_code": None, "industry_name": None,
+                    "level": None, "note": "未匹配到申万行业（可能为非主板/退市）", "_source": "none"}
+        lvl_rank = {"one": 1, "two": 2, "three": 3}
+        target_rank = lvl_rank.get(level, 2)
+        # 优先精确匹配目标层级；否则取最接近且更细的层级
+        chosen = None
+        for cd in codes:
+            ci = m["code_info"].get(cd, {})
+            if ci.get("level") == level:
+                chosen = (cd, ci)
+                break
+        if not chosen:
+            best = None
+            for cd in codes:
+                ci = m["code_info"].get(cd, {})
+                r = lvl_rank.get(ci.get("level"), 0)
+                if r and (best is None or abs(r - target_rank) < abs(best[2] - target_rank)):
+                    best = (cd, ci, r)
+            if best:
+                chosen = (best[0], best[1])
+        if not chosen:
+            cd = codes[0]
+            chosen = (cd, m["code_info"].get(cd, {}))
+        cd, ci = chosen
+        return {
+            "source_detail": f"lixinger:cn/industry/constituents/{source}",
+            "code": norm, "market": "cn", "source": source,
+            "industry_code": cd, "industry_name": ci.get("name") or cd,
+            "level": ci.get("level"), "fsTableType": ci.get("fsTableType"),
+            "_source": "lixinger",
+        }
+
+    def get_industry_valuation(self, industry_code: str, source: str = "sw_2021", years: int = 10) -> dict:
+        """行业估值：PE/PB/PS/股息率 当前值 + 10年分位点。"""
+        endpoint = f"cn/industry/fundamental/{source}"
+        end = _dt.date.today()
+        start = end - _dt.timedelta(days=365 * years + 10)
+        payload = {
+            "stockCodes": [industry_code],
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+            "limit": 1,
+            "metricsList": self.INDUSTRY_VAL_METRICS,
+        }
+        data = self.client.post(endpoint, payload, ttl_seconds=self._ttl("ind_val", 86400))
+        records = data if isinstance(data, list) else ([data] if isinstance(data, dict) else [])
+        records.sort(key=lambda r: r.get("date", ""), reverse=True)
+        latest = records[0] if records else {}
+        return {
+            "source_detail": f"lixinger:{endpoint}",
+            "industry_code": industry_code, "source": source,
+            "date": str(latest.get("date", ""))[:10],
+            "valuation": self._flatten_index_val(latest),
+            "_source": "lixinger",
+        }
+
+    def compare_industry_valuation(self, code: str, source: str = "sw_2021", level: str = "two") -> dict:
+        """一键输出：股票所属申万二级行业估值 + 公司估值 对比表。"""
+        ind = self.get_industry_of_stock(code, source=source, level=level)
+        result = {
+            "source_detail": "lixinger:industry-compare",
+            "code": ind.get("code", _norm_code(code, _detect_market(code))),
+            "market": ind.get("market"), "industry": ind, "comparison": None,
+            "_source": ind.get("_source"),
+        }
+        if not ind.get("industry_code"):
+            return result
+        ind_val = self.get_industry_valuation(ind["industry_code"], source=source)
+        comp_val = self.get_valuation(code)
+        flat = comp_val.get("latest", {}) if isinstance(comp_val, dict) else {}
+        rows = []
+        for name in ("pe_ttm", "pb", "ps_ttm", "dyr"):
+            iv = ind_val.get("valuation", {}).get(name, {})
+            rows.append({
+                "metric": name,
+                "industry_cv": iv.get("cv"), "industry_cvpos": iv.get("cvpos"),
+                "company_cv": flat.get(name),
+                "company_cvpos": flat.get(f"{name}.y10.cvpos"),
+            })
+        result["comparison"] = {
+            "industry_valuation": ind_val,
+            "company_valuation": comp_val,
+            "table": rows,
+        }
+        return result
+
+    # ------------------------------------------------------------------
     # 子进程调用妙想 mx-data
     # ------------------------------------------------------------------
 
@@ -1029,6 +1301,28 @@ def _cli():
     p_gv.add_argument("--years", type=int, default=2)
     p_gv.add_argument("--quiet", action="store_true")
 
+    p_md = sub.add_parser("macro-debt", help="国债收益率（10年期等，利差分析基准）")
+    p_md.add_argument("--area", default="cn", choices=["cn", "us"])
+    p_md.add_argument("--years", type=int, default=10)
+    p_md.add_argument("--quiet", action="store_true")
+
+    p_mr = sub.add_parser("macro-rates", help="利率（LPR/Shibor/MLF 等）")
+    p_mr.add_argument("--area", default="cn", choices=["cn", "hk", "us"])
+    p_mr.add_argument("--years", type=int, default=5)
+    p_mr.add_argument("--quiet", action="store_true")
+
+    p_iv = sub.add_parser("index-val", help="指数估值（沪深300/恒生指数 PE/PB 分位点）")
+    p_iv.add_argument("index_code", help="指数代码，如 000300(沪深300) / HSI(恒生)")
+    p_iv.add_argument("--market", default="cn", choices=["cn", "hk"])
+    p_iv.add_argument("--years", type=int, default=10)
+    p_iv.add_argument("--quiet", action="store_true")
+
+    p_ic = sub.add_parser("industry-compare", help="一键输出公司所属申万二级行业估值对比表")
+    p_ic.add_argument("code", help="A股代码，如 600519")
+    p_ic.add_argument("--source", default="sw_2021", choices=["sw", "sw_2021", "cni"])
+    p_ic.add_argument("--level", default="two", choices=["one", "two", "three"])
+    p_ic.add_argument("--quiet", action="store_true")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -1074,6 +1368,22 @@ def _cli():
     elif args.command == "governance":
         data = LxrData(verbose=not args.quiet).get_governance(
             args.code, years=args.years,
+        )
+    elif args.command == "macro-debt":
+        data = LxrData(verbose=not args.quiet).get_macro_national_debt(
+            area=args.area, years=args.years,
+        )
+    elif args.command == "macro-rates":
+        data = LxrData(verbose=not args.quiet).get_macro_interest_rates(
+            area=args.area, years=args.years,
+        )
+    elif args.command == "index-val":
+        data = LxrData(verbose=not args.quiet).get_index_valuation(
+            args.index_code, market=args.market, years=args.years,
+        )
+    elif args.command == "industry-compare":
+        data = LxrData(verbose=not args.quiet).compare_industry_valuation(
+            args.code, source=args.source, level=args.level,
         )
     else:
         parser.print_help()

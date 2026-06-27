@@ -143,5 +143,12 @@ python tools/financial_rigor.py verify-market-cap --price 510 --shares 9.11e9 --
 | 三七互娱 | `ashare_data.py ... --source lixinger`（理杏仁） | eastmoney.com（002555） |
 | 吉比特 | `ashare_data.py ... --source lixinger`（理杏仁） | eastmoney.com（603444） |
 | 保险/银行/证券 | `ashare_data.py ... --source lixinger`（理杏仁专属报表） | 妙想 mx-data / 巨潮年报PDF |
+| 保险EV/NBV/偿付能力 | `lxr_data.py industry-deep 601336` | 巨潮年报PDF |
+| 营收构成(分产品/地区) | `lxr_data.py revenue 600519` | 年报附注 |
+| 高管/大股东增减持 | `lxr_data.py governance 601336` | 巨潮公告 |
+| 10年期国债收益率(利差基准) | `lxr_data.py macro-debt --area cn` | 人民银行/中债网 |
+| LPR/Shibor/MLF利率 | `lxr_data.py macro-rates --area cn` | 人民银行 |
+| 指数估值(沪深300/恒生PE/PB分位) | `lxr_data.py index-val 000300 --market cn` | aastocks / mx-data |
+| 申万二级行业估值对比 | `lxr_data.py industry-compare 600519` | mx-data "白酒板块估值" |
 | Nintendo | macrotrends.net/stocks/charts/NTDOY | stockanalysis.com/stocks/ntdoy |
 | Capcom | macrotrends（CCOEY） | stockanalysis（CCOEY） |

@@ -126,9 +126,14 @@ class TestLixingerClient(unittest.TestCase):
             with mock.patch.dict(os.environ, {"LIXINGER_TOKEN": os.environ.get("LIXINGER_TOKEN", "")}):
                 if not os.environ.get("LIXINGER_TOKEN"):
                     self.skipTest("无真实 token，跳过 429 重试成功用例")
-                data = c.post("cn/company/fs/non_financial",
-                              {"stockCodes": ["600519"], "date": "latest",
-                               "metricsList": ["q.ps.toi.t"]}, ttl_seconds=None)
+                try:
+                    data = c.post("cn/company/fs/non_financial",
+                                  {"stockCodes": ["600519"], "date": "latest",
+                                   "metricsList": ["q.ps.toi.t"]}, ttl_seconds=None)
+                except lxc.LixingerError as e:
+                    if "网络错误" in str(e) or "timed out" in str(e):
+                        self.skipTest("网络超时，跳过 429 重试成功用例")
+                    raise
                 self.assertEqual(calls["n"], 3)
                 self.assertIsInstance(data, list)
 

@@ -277,5 +277,72 @@ class TestIndustryDeepAndGovernance(unittest.TestCase):
         self.assertIn("hk/company/hot/director_equity_change", eps)
 
 
+class TestMacroAndIndexValuation(unittest.TestCase):
+    def test_flatten_index_val_flat_keys(self):
+        rec = {"date": "2026-06-26", "pe_ttm.y10.mcw.cv": 14.33,
+               "pe_ttm.y10.mcw.cvpos": 0.85, "cp": 4868.22}
+        out = lxd.LxrData._flatten_index_val(rec)
+        self.assertEqual(out["pe_ttm"]["cv"], 14.33)
+        self.assertEqual(out["pe_ttm"]["cvpos"], 0.85)
+        self.assertEqual(out["cp"], 4868.22)
+        self.assertIsNone(out["pb"]["cv"])
+
+    def test_interest_rates_latest_non_null(self):
+        # 各指标仅更新日有值；按日期降序后取每指标最新非空
+        cli = FakeClient({"macro/interest-rates": [[
+            {"date": "2026-05-21", "shibor_m3": 0.014065},
+            {"date": "2026-05-20", "lpr_y1": 0.03, "lpr_y5": 0.035, "shibor_m3": 0.014045},
+            {"date": "2026-05-19", "shibor_m3": 0.01404},
+        ]]})
+        d = lxd.LxrData(client=cli, verbose=False)
+        r = d.get_macro_interest_rates(area="cn", years=1)
+        self.assertEqual(r["latest"]["lpr_y1"], 0.03)
+        self.assertEqual(r["latest"]["lpr_y5"], 0.035)
+        self.assertEqual(r["latest"]["shibor_m3"], 0.014065)
+
+    def test_bond_yield_10y(self):
+        cli = FakeClient({"macro/national-debt": [[
+            {"date": "2026-06-26", "tcm_y10": 0.0173, "tcm_y1": 0.015},
+        ]]})
+        d = lxd.LxrData(client=cli, verbose=False)
+        r = d.get_bond_yield_10y(area="cn")
+        self.assertAlmostEqual(r["yield_10y"], 0.0173)
+
+    def test_industry_of_stock_level_two(self):
+        cli = FakeClient({
+            "cn/industry/constituents/sw_2021": [[
+                {"stockCode": "340000", "constituents": [{"stockCode": "600519"}]},
+                {"stockCode": "340500", "constituents": [{"stockCode": "600519"}]},
+                {"stockCode": "340501", "constituents": [{"stockCode": "600519"}]},
+            ]],
+            "cn/industry": [[
+                {"stockCode": "340000", "name": "食品饮料", "level": "one"},
+                {"stockCode": "340500", "name": "白酒", "level": "two"},
+                {"stockCode": "340501", "name": "白酒", "level": "three"},
+            ]],
+        })
+        d = lxd.LxrData(client=cli, verbose=False)
+        r = d.get_industry_of_stock("600519", source="sw_2021", level="two")
+        self.assertEqual(r["industry_code"], "340500")
+        self.assertEqual(r["industry_name"], "白酒")
+        self.assertEqual(r["level"], "two")
+
+    def test_industry_of_stock_hk_not_available(self):
+        d = lxd.LxrData(client=FakeClient(), verbose=False)
+        r = d.get_industry_of_stock("00700")
+        self.assertIsNone(r["industry_code"])
+        self.assertEqual(r["_source"], "none")
+
+    def test_industry_valuation_uses_no_cp(self):
+        cli = FakeClient({"cn/industry/fundamental/sw_2021": [[
+            {"date": "2026-06-26", "pe_ttm.y10.mcw.cv": 17.78, "pe_ttm.y10.mcw.cvpos": 0.016},
+        ]]})
+        d = lxd.LxrData(client=cli, verbose=False)
+        r = d.get_industry_valuation("340500", source="sw_2021")
+        sent = [p for e, p in cli.calls if e == "cn/industry/fundamental/sw_2021"][0]
+        self.assertNotIn("cp", sent["metricsList"])
+        self.assertEqual(r["valuation"]["pe_ttm"]["cv"], 17.78)
+
+
 if __name__ == "__main__":
     unittest.main()
