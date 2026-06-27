@@ -35,9 +35,20 @@
 
 ### A0：数据收集
 
-使用 WebSearch 获取当前股价、估值指标（PE/PB/股息率）、最新财报核心数据，用于填写估值锚点。如果已有该公司的 `/investment-research` 或 `/investment-team` 报告，优先从中读取。
+A股/港股优先理杏仁 + 妙想（禁止仅 WebSearch）：
 
-使用 `tools/financial_rigor.py verify-valuation` 校验估值数据。
+```bash
+python tools/lxr_data.py valuation {code} --source lixinger
+python tools/lxr_data.py percentiles {code}
+python tools/lxr_data.py governance {code} --years 2
+python tools/lxr_data.py financials {code} --years 3 --source lixinger
+```
+
+```bash
+python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{公司} 负面 监管 最新" --output-dir %TEMP%\mx_skills
+```
+
+若已有 `/investment-research` 或 `/investment-team` 报告，优先读取。使用 `tools/financial_rigor.py verify-valuation` 校验估值。
 
 ### A1：核心论文（必须用200字以内写清楚）
 
@@ -115,11 +126,22 @@
 
 ### B2：收集最新数据
 
-使用 WebSearch 收集：
-1. 最新财报数据（如果有新的季报/年报）
-2. 近期重大事件（管理层变动、监管政策、竞争动态）
-3. 当前股价和估值指标
-4. 内部人交易记录（大股东增减持）
+```bash
+python tools/lxr_data.py valuation {code} --source lixinger
+python tools/lxr_data.py percentiles {code}
+python tools/lxr_data.py governance {code} --years 1
+python tools/lxr_data.py financials {code} --years 2 --source lixinger
+```
+
+```bash
+python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{公司} 最新公告 负面" --output-dir %TEMP%\mx_skills
+python C:/Users/admin/.claude/skills/mx-data/mx_data.py "{公司} 最新价 涨跌幅" %TEMP%\mx_skills
+```
+
+1. 最新财报：理杏仁 `financials`（有季报则对比论文假设）
+2. 重大事件：mx-search
+3. 股价估值：`valuation` + mx-data
+4. 内部人交易：`governance`（禁止仅用 WebSearch）
 
 ### B3：逐条检查核心假设
 

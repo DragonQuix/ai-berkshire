@@ -41,6 +41,26 @@ description: 公司新闻脉搏：股价异动时快速归因。用 4 个并行 
 
 将评级告知每个 Agent，影响其侦察方式。
 
+### 第二步半：理杏仁事件触发器 + 实时异动（结构化，优先于 Agent）
+
+对 A股/港股代码，在启动 4 Agent 之前先拉取**可编码事件**（`_source: lixinger` / `mx-data`）：
+
+```bash
+python tools/lxr_data.py governance {code} --years 1          # 高管/大股东增减持
+python tools/lxr_data.py kline {code} --days 14               # 近14日K线定量
+python tools/lxr_data.py valuation {code} --source lixinger   # 估值水位
+```
+
+A股另查（经 `lxr_data.py` 或文档中的 hot 端点）：龙虎榜 `trading-abnormal`、大宗交易 `block-deal`、融资融券与陆股通（如已封装）。
+
+实时异动快照（1 次 MX，Windows 传输出目录）：
+
+```bash
+python C:/Users/admin/.claude/skills/mx-data/mx_data.py "{公司}最新价 涨跌幅 主力资金" %TEMP%\mx_skills
+```
+
+将触发器结果写入报告「结构化异动摘要」：Agent 只负责解释**无法编码**的新闻与政策，禁止重复查增减持/K线。
+
 ### 第三步：创建团队
 
 使用 TeamCreate 创建团队：
@@ -127,7 +147,7 @@ description: 公司新闻脉搏：股价异动时快速归因。用 4 个并行 
 {任务description的内容}
 
 **侦察方法**：
-- 优先使用 WebSearch 搜索时效性查询（关键词加日期或"最近"、"latest"、"2026"）
+- 优先使用 **mx-search**（`python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{关键词}" --output-dir %TEMP%\mx_skills`）检索财经信源；失败时降级 WebSearch
 - 关键事件用 WebFetch 精读原始来源（公告原文、财报、监管文件）
 - 对每个事件做"独立信源验证"——传言至少要 2 个独立来源
 - **不要被标题党误导**：标题与正文不符的事件要标注"标题误导"

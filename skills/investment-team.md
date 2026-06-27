@@ -31,6 +31,29 @@
 
 将评级结果告知每个Agent，影响其研究方式。
 
+### 第一步又四分之一：共享数据包（Team 启动前必须执行）
+
+对 A股/港股目标公司，Team Lead **先**拉取一次数据包（各 Agent 共享，禁止重复取数）：
+
+```bash
+python tools/lxr_data.py financials {code} --years 5 --source lixinger
+python tools/lxr_data.py valuation {code} --source lixinger
+python tools/lxr_data.py industry-deep {code} --years 5    # 保险/银行/证券自动路由
+python tools/lxr_data.py revenue {code} --years 3
+python tools/lxr_data.py governance {code} --years 2
+python tools/lxr_data.py shareholders {code} --kind majority
+python tools/lxr_data.py industry-compare {code}
+```
+
+将 JSON 摘要写入 `reports/{公司名}/data-pack.json`（或团队共享目录），并在创建 Task 时**注入各 Agent description**：
+
+| Agent | 注入数据维度 | Agent 专注分析（不取数） |
+|-------|-------------|------------------------|
+| business-analyst | `revenue` 营收构成 + 业务描述 | 商业模式、护城河定性 |
+| financial-analyst | `financials` + `valuation` + 分位点 | 估值判断、安全边际 |
+| industry-researcher | `industry-compare` + mx-search 竞对资讯 | 竞争格局、行业趋势 |
+| risk-assessor | `governance` + `industry-deep` 风险字段 | 风险、管理层诚信 |
+
 ### 第二步：创建团队
 
 使用 TeamCreate 创建团队：
