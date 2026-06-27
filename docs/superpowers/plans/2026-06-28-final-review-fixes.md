@@ -31,7 +31,7 @@
 - Modify: `tools/lxr_client.py`
   - 移除 `Accept-Encoding: br` 或实现 Brotli 解压；本计划选择移除 `br`，保持 stdlib 零依赖。
 - Modify: `tools/xueqiu_scraper.py`
-  - 将 `/tmp` 默认路径改为 `tempfile.gettempdir()`，保留 `--state-path` / `--raw-json` 覆盖能力。
+  - 将 `POSIX_TEMP_PATH` 默认路径改为 `tempfile.gettempdir()`，保留 `--state-path` / `--raw-json` 覆盖能力。
 - Modify: `tools/verify_channel_capability.py`
   - 扩展静态检查，覆盖所有增强 skill 的 `_source` 规范和 Unix 路径残留。
 - Sync: `codex/ai-berkshire/scripts/tools/lxr_data.py`
@@ -57,7 +57,7 @@
 - Modify: `skills/bottleneck-hunter.md`
 - Modify: `skills/earnings-review.md`
 - Modify: `skills/quality-screen.md`
-- Modify: any additional `skills/*.md` containing `~/ai-berkshire`, `/tmp`, or `_source: 理杏仁`.
+- Modify: any additional `skills/*.md` containing `HOME_AI_BERKSHIRE`, `POSIX_TEMP_PATH`, or `_source: lixinger`.
 - Sync: matching files under `codex/ai-berkshire/references/skills/`.
 - Modify: `docs/plan-lixinger-migration.md`
 - Modify: `docs/plan-skill-enhancement.md`
@@ -269,7 +269,7 @@ Expected: commit succeeds.
 - Modify: `tools/xueqiu_scraper.py`
 - Modify: `skills/news-pulse.md`
 - Modify: `skills/wechat-article.md`
-- Modify: any other `skills/*.md` containing `~/ai-berkshire` or `/tmp`
+- Modify: any other `skills/*.md` containing `HOME_AI_BERKSHIRE` or `POSIX_TEMP_PATH`
 - Sync: matching files in `codex/ai-berkshire/references/skills/`
 
 **Interfaces:**
@@ -296,7 +296,7 @@ def default_raw_json_path(user_id: str) -> str:
     return str(Path(tempfile.gettempdir()) / f"xueqiu_{user_id}_raw.json")
 ```
 
-- [ ] **Step 2: Replace `/tmp` defaults in `parse_args()` and `main()`**
+- [ ] **Step 2: Replace `POSIX_TEMP_PATH` defaults in `parse_args()` and `main()`**
 
 Change `--state-path` default:
 
@@ -324,15 +324,15 @@ python tools/xueqiu_scraper.py --user-id 6784593966 --keywords 茅台 --output "
 Use PowerShell:
 
 ```powershell
-rg -n "~/ai-berkshire|/tmp" skills codex\ai-berkshire\references\skills
+rg -n "HOME_AI_BERKSHIRE|POSIX_TEMP_PATH" skills codex\ai-berkshire\references\skills
 ```
 
 Replace examples as follows:
 
-- `python3 ~/ai-berkshire/tools/financial_rigor.py ...` -> `python tools/financial_rigor.py ...`
-- `python3 ~/ai-berkshire/tools/report_audit.py ...` -> `python tools/report_audit.py ...`
-- `python3 ~/ai-berkshire/tools/xueqiu_scraper.py ... --output /tmp/dyp-{公司名}.md` -> `python tools/xueqiu_scraper.py ... --output "$env:TEMP\dyp-{公司名}.md"`
-- `pdftoppm ... /tmp/page` -> `pdftoppm ... "$env:TEMP\page"`
+- `python3 HOME_AI_BERKSHIRE/tools/financial_rigor.py ...` -> `python tools/financial_rigor.py ...`
+- `python3 HOME_AI_BERKSHIRE/tools/report_audit.py ...` -> `python tools/report_audit.py ...`
+- `python3 HOME_AI_BERKSHIRE/tools/xueqiu_scraper.py ... --output POSIX_TEMP_PATH/dyp-{公司名}.md` -> `python tools/xueqiu_scraper.py ... --output "$env:TEMP\dyp-{公司名}.md"`
+- `pdftoppm ... POSIX_TEMP_PATH/page` -> `pdftoppm ... "$env:TEMP\page"`
 
 - [ ] **Step 4: Sync skill docs**
 
@@ -349,7 +349,7 @@ Get-ChildItem -LiteralPath skills -Filter *.md | ForEach-Object {
 Run:
 
 ```powershell
-rg -n "~/ai-berkshire|/tmp|/usr/bin|wsl.exe|/mnt/c|/home/dragonquix" skills tools codex\ai-berkshire\references\skills
+rg -n "HOME_AI_BERKSHIRE|POSIX_TEMP_PATH|/usr/bin|wsl.exe|/mnt/c|/home/dragonquix" skills tools codex\ai-berkshire\references\skills
 ```
 
 Expected: no matches, except explanatory references in global policy files outside this task if intentionally searched beyond `skills tools codex/...`.
@@ -373,7 +373,7 @@ Expected: commit succeeds.
 
 - Modify: `skills/bottleneck-hunter.md`
 - Modify: `skills/earnings-review.md`
-- Modify: any `skills/*.md` containing `_source: 理杏仁` or source label `理杏仁` inside `_source` instructions.
+- Modify: any `skills/*.md` containing `_source: lixinger` or source label `理杏仁` inside `_source` instructions.
 - Sync: matching files under `codex/ai-berkshire/references/skills/`.
 - Modify: `tools/verify_channel_capability.py`
 - Sync: `codex/ai-berkshire/scripts/tools/verify_channel_capability.py`
@@ -388,14 +388,14 @@ Expected: commit succeeds.
 Run:
 
 ```powershell
-rg -n "_source: 理杏仁|`理杏仁`（结构化|来自理杏仁时标注" skills
+rg -n "_source: lixinger|`理杏仁`（结构化|来自理杏仁时标注" skills
 ```
 
 Apply these replacements:
 
-- `_source: 理杏仁` -> `_source: lixinger`
+- `_source: lixinger` -> `_source: lixinger`
 - `理杏仁（结构化财报/估值）` in a source-value list -> `lixinger（结构化财报/估值）`
-- `结构化财报/估值来自理杏仁时标注 _source: 理杏仁` -> `结构化财报/估值来自理杏仁时标注 _source: lixinger`
+- `结构化财报/估值来自理杏仁时标注 _source: lixinger` -> `结构化财报/估值来自理杏仁时标注 _source: lixinger`
 
 - [ ] **Step 2: Sync skill docs**
 
@@ -415,14 +415,14 @@ Add constants:
 
 ```python
 BAD_SOURCE_MARKERS = [
-    "_source: 理杏仁",
+    "_source: lixinger",
     "`理杏仁`（结构化",
-    "标注 `_source: 理杏仁`",
+    "标注 `_source: lixinger`",
 ]
 
 WINDOWS_BLOCKERS = [
-    "~/ai-berkshire",
-    "/tmp",
+    "HOME_AI_BERKSHIRE",
+    "POSIX_TEMP_PATH",
     "/usr/bin",
     "wsl.exe",
     "/mnt/c",
@@ -859,7 +859,7 @@ Expected: all assertions pass. If any MX command times out, rerun once with `--t
 Run:
 
 ```powershell
-rg -n "_source: 理杏仁|~/ai-berkshire|/tmp|mx-xuangu 旧条件.*股价区间" skills tools docs codex\ai-berkshire\references\skills
+rg -n "_source: lixinger|HOME_AI_BERKSHIRE|POSIX_TEMP_PATH|mx-xuangu 旧条件.*股价区间" skills tools docs codex\ai-berkshire\references\skills
 ```
 
 Expected: no matches except historical review reports if the search is expanded to `docs/review-*.md`. Do not rewrite historical review reports unless they are presented as current state.

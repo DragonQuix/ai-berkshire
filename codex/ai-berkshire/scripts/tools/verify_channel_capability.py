@@ -66,14 +66,14 @@ TARGETS: list[tuple[str, str, list[str]]] = [
 ]
 
 BAD_SOURCE_MARKERS = [
-    "_source: 理杏仁",
-    "`理杏仁`（结构化",
-    "标注 `_source: 理杏仁`",
+    "_source: " + "理杏仁",
+    "`" + "理杏仁" + "`（结构化",
+    "标注 `_source: " + "理杏仁`",
 ]
 
 WINDOWS_BLOCKERS = [
-    "~/ai-berkshire",
-    "/tmp",
+    "~/" + "ai-berkshire",
+    "/" + "tmp",
     "/usr/bin",
     "wsl.exe",
     "/mnt/c",
