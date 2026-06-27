@@ -6,9 +6,9 @@
 >
 > 用 AI 重新定义投资研究的深度与效率。
 
-**AI Berkshire** 是一套基于 [Claude Code](https://claude.ai/code) 的投资研究 Skill 合集，将巴菲特、芒格、段永平、李录四位价值投资大师的方法论系统化、结构化，通过 AI Agent 实现专业级投资研究。
+**AI Berkshire** 是一套基于 [Claude Code](https://claude.ai/code) 与 [Codex](https://codex.openai.com) 的投资研究 Skill 合集，将巴菲特、芒格、段永平、李录四位价值投资大师的方法论系统化、结构化，通过 AI Agent 实现专业级投资研究。
 
-一个人 + Claude = 一个投研团队。
+一个人 + Claude/Codex = 一个投研团队。
 
 ---
 
@@ -240,11 +240,14 @@ cd $HOME\ai-berkshire; pwsh install.ps1
 > **安装脚本做了什么？**
 > 1. 检查前置条件（git, python, claude）
 > 2. Clone/更新仓库到 `~/ai-berkshire/`
-> 3. 将 18 个 Skill 安装到 `~/.claude/commands/`
+> 3. 将 18 个 Skill 安装到 ~/.claude/commands/（Claude Code 命令）
+> 4. 安装 Codex 原生 Skill 到 `$CODEX_HOME/skills/ai-berkshire`
 > 4. 检查 Python 工具依赖
 >
 > macOS/Linux 默认使用**符号链接**（`git pull` 后自动更新），Windows 使用文件拷贝。
-> 也支持手动安装：直接将 `skills/*.md` 复制到 `~/.claude/commands/` 即可。
+> 也支持手动安装：直接将 skills/*.md 复制到 ~/.claude/commands/ 即可。
+>
+> **Codex 用户**：运行 `bash install.sh`（或 `pwsh install.ps1`）即可同时安装 Claude Code 命令和 Codex 原生 Skill。手动安装 Codex Skill：将 `codex/ai-berkshire/` 复制到 `$CODEX_HOME/skills/`（Windows 默认 C:\Users\<用户>\.codex\skills）。
 
 #### 更新
 
@@ -291,6 +294,26 @@ cd $HOME\ai-berkshire; pwsh install.ps1 -Uninstall  # Windows
 # 思维工具
 /dyp-ask 拼多多的护城河到底在哪里？
 ```
+
+### 在 Codex 中使用
+
+安装后，Codex 会自动发现 `ai-berkshire` Skill。在 Codex 对话中直接描述你的研究意图即可触发对应工作流，无需输入 `/` 命令：
+
+```
+帮我深度研究腾讯，用四大师框架
+分析美团 2025Q4 财报
+核电行业有哪些投资机会
+我的持仓：腾讯30%、美团20%、茅台20%，帮我做组合审查
+段永平会怎么看拼多多的护城河？
+```
+
+也可以显式调用：`Use $ai-berkshire to research 腾讯 with a Buffett-Munger-Duan-Li value investing framework.`
+
+> **Codex 与 Claude Code 的差异**：
+> - Claude Code 使用 `/slash-command` 触发，每个 Skill 是独立的 `.md` 命令文件
+> - Codex 使用单一 `ai-berkshire` Skill 入口，内部路由到对应工作流
+> - 两个平台共享同一套投研框架和 Python 工具，报告质量和数据严谨度一致
+> - 安装或更新 Codex Skill 后，请新开会话或重启 Codex App 再验证是否生效
 
 ---
 
@@ -656,3 +679,4 @@ MIT License
 如果这个项目对你有帮助，请给一个 Star 支持！
 
 [![Star History Chart](https://api.star-history.com/svg?repos=xbtlin/ai-berkshire&type=Date)](https://star-history.com/#xbtlin/ai-berkshire&Date)
+

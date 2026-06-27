@@ -1,12 +1,14 @@
 <#
 .SYNOPSIS
-    AI Berkshire — Claude Code 安装脚本 (Windows PowerShell)
+    AI Berkshire — Claude Code + Codex 安装脚本 (Windows PowerShell)
 .DESCRIPTION
-    将 AI Berkshire 投资研究 Skill 合集安装到 Claude Code。
+    将 AI Berkshire 投资研究 Skill 合集安装到 Claude Code，并安装 Codex 原生 Skill。
 .PARAMETER Uninstall
     卸载所有已安装的 skills
 .PARAMETER SkipDeps
     跳过 Python 依赖安装
+.PARAMETER SkipCodex
+    跳过 Codex 原生 Skill 安装
 .PARAMETER InstallDir
     自定义安装目录（默认: $HOME/ai-berkshire）
 .EXAMPLE
@@ -16,6 +18,7 @@
 param(
     [switch]$Uninstall = $false,
     [switch]$SkipDeps = $false,
+    [switch]$SkipCodex = $false,
     [string]$InstallDir = ""
 )
 
@@ -29,6 +32,16 @@ if (-not $InstallDir) {
     $InstallDir = Join-Path $HOME "ai-berkshire"
 }
 $CommandsDir = Join-Path $HOME ".claude\commands"
+$CodexSkillName = "ai-berkshire"
+$CodexHome = $env:CODEX_HOME
+if (-not $CodexHome) {
+    $CodexHome = [Environment]::GetEnvironmentVariable("CODEX_HOME", "User")
+}
+if (-not $CodexHome) {
+    $CodexHome = Join-Path $HOME ".codex"
+}
+$CodexSkillsDir = Join-Path $CodexHome "skills"
+$CodexSkillDest = Join-Path $CodexSkillsDir $CodexSkillName
 
 # ---------------------------------------------------------------------------
 # 帮助函数
@@ -36,7 +49,7 @@ $CommandsDir = Join-Path $HOME ".claude\commands"
 function Write-Banner {
     Write-Host ""
     Write-Host "══════════════════════════════════════════════════════" -ForegroundColor Cyan
-    Write-Host "   AI Berkshire — Claude Code 投资研究 Skill 安装器" -ForegroundColor Cyan
+    Write-Host "   AI Berkshire — Claude Code + Codex Skill 安装器" -ForegroundColor Cyan
     Write-Host "══════════════════════════════════════════════════════" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -85,6 +98,11 @@ if ($Uninstall) {
         Write-Host "  共移除 $removed 个技能文件"
     }
 
+    if (-not $SkipCodex -and (Test-Path $CodexSkillDest)) {
+        Remove-Item -LiteralPath $CodexSkillDest -Recurse -Force
+        Write-Host "  移除 Codex Skill: $CodexSkillDest"
+    }
+
     if (Test-Path $InstallDir) {
         Write-Host ""
         Write-Host "[卸载] 仓库目录保留在: $InstallDir" -ForegroundColor Yellow
@@ -103,7 +121,7 @@ if ($Uninstall) {
 Write-Banner
 
 # ---- 前置条件 ----
-Write-Step 1 5 "检查前置条件..."
+Write-Step 1 6 "检查前置条件..."
 
 $allOk = $true
 if (-not (Test-Command git))    { $allOk = $false }
@@ -119,7 +137,7 @@ $pythonCmd = (Get-Command python).Source
 Write-Host ""
 
 # ---- Clone / 更新 ----
-Write-Step 2 5 "准备仓库..."
+Write-Step 2 6 "准备仓库..."
 
 if (Test-Path (Join-Path $InstallDir ".git")) {
     Write-Host "  仓库已存在，执行 git pull 更新..."
@@ -142,7 +160,7 @@ if (Test-Path (Join-Path $InstallDir ".git")) {
 Write-Host ""
 
 # ---- 安装 Skills ----
-Write-Step 3 5 "安装 Skills → $CommandsDir"
+Write-Step 3 6 "安装 Claude Code Commands → $CommandsDir"
 
 if (-not (Test-Path $CommandsDir)) {
     New-Item -ItemType Directory -Path $CommandsDir -Force | Out-Null
@@ -172,8 +190,54 @@ Write-Host "  共安装 $installed 个技能"
 
 Write-Host ""
 
+# ---- 安装 Codex Skill ----
+Write-Step 4 6 "安装 Codex Skill → $CodexSkillDest"
+
+$codexSkillSrc = Join-Path $InstallDir "codex\$CodexSkillName"
+if ($SkipCodex) {
+    Write-Host "  已跳过"
+} elseif (-not (Test-Path $codexSkillSrc)) {
+    Write-Host "  ✗ 找不到 Codex Skill 目录: $codexSkillSrc" -ForegroundColor Red
+    exit 1
+} else {
+    if (-not (Test-Path $CodexSkillsDir)) {
+        New-Item -ItemType Directory -Path $CodexSkillsDir -Force | Out-Null
+    }
+
+    if (Test-Path $CodexSkillDest) {
+        Remove-Item -LiteralPath $CodexSkillDest -Recurse -Force
+    }
+
+    Copy-Item -LiteralPath $codexSkillSrc -Destination $CodexSkillDest -Recurse -Force
+
+    $codexRefSkillsDir = Join-Path $CodexSkillDest "references\skills"
+    New-Item -ItemType Directory -Path $codexRefSkillsDir -Force | Out-Null
+    Get-ChildItem -Path (Join-Path $skillsDir "*.md") | Copy-Item -Destination $codexRefSkillsDir -Force
+
+    $codexToolsDir = Join-Path $CodexSkillDest "scripts\tools"
+    New-Item -ItemType Directory -Path $codexToolsDir -Force | Out-Null
+    $toolFiles = @(
+        "financial_rigor.py",
+        "report_audit.py",
+        "stock_screener.py",
+        "morningstar_fair_value.py",
+        "ashare_data.py"
+    )
+    foreach ($toolFile in $toolFiles) {
+        $srcTool = Join-Path $InstallDir "tools\$toolFile"
+        if (Test-Path $srcTool) {
+            Copy-Item -LiteralPath $srcTool -Destination $codexToolsDir -Force
+        }
+    }
+
+    Write-Host "  已安装: $CodexSkillName"
+    Write-Host "  Codex Home: $CodexHome"
+}
+
+Write-Host ""
+
 # ---- Python 依赖 ----
-Write-Step 4 5 "Python 工具依赖..."
+Write-Step 5 6 "Python 工具依赖..."
 
 if ($SkipDeps) {
     Write-Host "  已跳过"
@@ -195,15 +259,18 @@ if ($SkipDeps) {
 Write-Host ""
 
 # ---- 完成 ----
-Write-Step 5 5 "安装完成！"
+Write-Step 6 6 "安装完成！"
 Write-Host ""
 Write-Host "══════════════════════════════════════════════════════" -ForegroundColor Green
 Write-Host "  ✅ AI Berkshire 已就绪" -ForegroundColor Green
 Write-Host "══════════════════════════════════════════════════════" -ForegroundColor Green
 Write-Host ""
 Write-Host "  安装目录: $InstallDir"
-Write-Host "  技能目录: $CommandsDir"
-Write-Host "  已安装:   $installed 个投资研究技能"
+Write-Host "  Claude Code Commands: $CommandsDir"
+if (-not $SkipCodex) {
+    Write-Host "  Codex Skill:          $CodexSkillDest"
+}
+Write-Host "  已安装:               $installed 个 Claude Code 命令"
 Write-Host ""
 Write-Host "  快速开始:" -ForegroundColor Cyan
 Write-Host "    /investment-research 腾讯        # 深度研究一家公司"
@@ -215,4 +282,9 @@ Write-Host "    /portfolio-review                # 组合仓位管理"
 Write-Host ""
 Write-Host "  更新:" -ForegroundColor Cyan
 Write-Host "    cd $InstallDir; git pull; pwsh install.ps1        # Windows 拷贝模式，需重新运行"
+if (-not $SkipCodex) {
+    Write-Host ""
+    Write-Host "  Codex 提示:" -ForegroundColor Cyan
+    Write-Host "    安装或更新 Codex Skill 后，请新开会话或重启 Codex App 再验证是否生效。"
+}
 Write-Host ""

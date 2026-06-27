@@ -1,0 +1,8 @@
+interface:
+  display_name: "AI Berkshire"
+  short_description: "巴菲特/芒格/段永平/李录四大师价值投资研究工作流"
+  default_prompt: "Use $ai-berkshire to run /investment-research 腾讯 with a Buffett-Munger-Duan-Li value investing framework."
+
+policy:
+  allow_implicit_invocation: true
+
