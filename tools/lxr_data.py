@@ -15,10 +15,20 @@
 - get_valuation：基本面 + 估值历史分位点（PE/PB/PS/股息率 × 上市以来/20/10/5/3/1年 × 分位点%）。
 - get_verification_inputs：为 financial_rigor 自动获取股价/总股本/市值/EPS/BVPS 等验算输入。
 
+阶段 3 增量（港股 + 新增能力）：
+- 全链路市场自动路由：A股 cn/* / 港股 hk/*，代码归一化（港股补零至5位 00700，A股保留6位）。
+- get_kline：前复权K线（hk/company/candlestick），替代 Yahoo Finance 供动量扫描。
+- get_majority_shareholders / get_shareholders_num / get_fund_shareholders：股东分析
+  （A股 majority-shareholders + shareholders-num + fund-shareholders；港股 latest-shareholders + fund-shareholders）。
+- get_valuation_percentiles：PE/PB/PS/股息率 × 6时间维度 × 8统计量 全分位矩阵（分批请求合并）。
+
 CLI：
     python tools/lxr_data.py financials 601336 --years 5 --source lixinger
     python tools/lxr_data.py valuation 600519 --source lixinger
     python tools/lxr_data.py verify-inputs 601336
+    python tools/lxr_data.py kline 00700 --days 120
+    python tools/lxr_data.py shareholders 600519 --kind majority
+    python tools/lxr_data.py percentiles 600519
 """
 
 from __future__ import annotations
@@ -38,7 +48,9 @@ from lxr_client import LixingerAuthError, LixingerClient, LixingerError, Lixinge
 # 指标集
 # ---------------------------------------------------------------------------
 
-FS_TYPES = ("non_financial", "bank", "insurance", "security", "other_financial")
+FS_TYPES = ("non_financial", "bank", "insurance", "security", "other_financial", "reit")
+HK_FS_TYPES = ("non_financial", "bank", "insurance", "security", "other_financial", "reit")
+CN_FS_TYPES = ("non_financial", "bank", "insurance", "security", "other_financial")
 
 # 非金融：核心绝对值指标（expressionCalculateType = t 当期值），已验证有效。
 DEFAULT_FINANCIALS_METRICS = [
@@ -108,7 +120,19 @@ DEFAULT_PERCENTILE_METRICS = [
     "pe_ttm.y10.q5v", "pb.y10.q5v",  # 10年中位数参考值
 ]
 
+# 估值分位点全矩阵：4 指标 × 6 时间维度 × 8 统计量 = 192（单股≤36，需分批请求）
+PERCENTILE_METRICS_NAME = ("pe_ttm", "pb", "ps_ttm", "dyr")
+PERCENTILE_GRANULARITY = ("fs", "y20", "y10", "y5", "y3", "y1")
+PERCENTILE_STATS = ("cvpos", "q2v", "q5v", "q8v", "minv", "maxv", "maxpv", "avgv")
+
 # 验算输入：总股本/市值从 fs date=latest 取当前值；EPS/BVPS 取最近年报（见 get_verification_inputs）。
+
+# K线复权类型
+KLINE_ADJUST = {
+    "none": "ex_rights",         # 不复权
+    "forward": "lxr_fc_rights",  # 理杏仁前复权
+    "backward": "bc_rights",     # 后复权
+}
 
 
 class MXError(Exception):
@@ -131,21 +155,46 @@ def _default_legacy_script() -> str:
     return os.path.join(here, "ashare_data.py")
 
 
-def _norm_code(code: str) -> str:
-    return code.strip().upper().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
+def _detect_market(code: str) -> str:
+    """根据代码判定市场：'hk'（港股，≤5位数字或 .HK 后缀）或 'cn'（A股，6位数字）。"""
+    c = code.strip().upper()
+    if c.endswith(".HK"):
+        return "hk"
+    digits = re.sub(r"\D", "", c)
+    return "hk" if len(digits) <= 5 else "cn"
+
+
+def _norm_code(code: str, market: Optional[str] = None) -> str:
+    """按市场归一化代码：港股补零至5位（00700），A股保留6位（600519）。"""
+    m = market or _detect_market(code)
+    c = code.strip().upper().replace(".SH", "").replace(".SZ", "").replace(".BJ", "").replace(".HK", "")
+    digits = re.sub(r"\D", "", c)
+    if m == "hk":
+        return digits.zfill(5)
+    return digits
 
 
 def _extract_invalid_metrics(err: LixingerValidationError) -> set:
-    """从校验错误中解析无效指标码。"""
+    """从校验错误中解析无效指标码。
+
+    只信任 message 文本中 "(a,b,c) are invalid ..." 形式的括号列表——这是权威无效集。
+    不使用 details 的 value 字段：某些端点（如 fundamental）的 value 是提交的全量指标列表
+    而非无效子集，直接采用会误伤全部指标。
+    """
     invalid = set()
-    for m in err.details:
+    msgs: list = []
+    for m in err.details or []:
         if isinstance(m, dict):
-            val = m.get("value")
-            if isinstance(val, list):
-                invalid.update(str(v) for v in val)
-            msg = m.get("message", "")
-            if isinstance(msg, str):
-                invalid.update(re.findall(r"\(([^()]+)\)", msg))
+            msgs.append(m.get("message", ""))
+        elif isinstance(m, str):
+            msgs.append(m)
+    msgs.append(str(err))
+    for msg in msgs:
+        if not isinstance(msg, str):
+            continue
+        for group in re.findall(r"\(([^()]+)\)", msg):
+            invalid.update(s.strip() for s in group.split(","))
+    invalid.discard("")
     return invalid
 
 
@@ -176,15 +225,18 @@ class LxrData:
     # ------------------------------------------------------------------
 
     def detect_fs_type(self, code: str) -> str:
-        """通过 cn/company 获取股票的财报类型 fsTableType。"""
-        payload = {"stockCodes": [_norm_code(code)], "pageIndex": 0}
-        data = self.client.post("cn/company", payload, ttl_seconds=self._ttl("company_list", 604800))
+        """通过 {market}/company 获取股票的财报类型 fsTableType（A股/港股自动路由）。"""
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        payload = {"stockCodes": [norm], "pageIndex": 0}
+        data = self.client.post(f"{market}/company", payload,
+                                ttl_seconds=self._ttl("company_list", 604800))
         items = data.get("list") if isinstance(data, dict) else data
         if not items or not isinstance(items, list):
-            raise LixingerError(f"cn/company 未返回公司列表: {code}")
+            raise LixingerError(f"{market}/company 未返回公司列表: {norm}")
         fs_type = items[0].get("fsTableType") if isinstance(items[0], dict) else None
         if not fs_type:
-            raise LixingerError(f"cn/company 未返回 fsTableType: {code}")
+            raise LixingerError(f"{market}/company 未返回 fsTableType: {norm}")
         return fs_type
 
     # ------------------------------------------------------------------
@@ -255,22 +307,25 @@ class LxrData:
         return self._run_chain(tiers)
 
     def _get_financials_lixinger(self, code: str, years: int, report_type: Optional[str]) -> dict:
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
         fs_type = report_type or self.detect_fs_type(code)
         if fs_type not in FS_TYPES:
             raise LixingerError(f"未知财报类型 {fs_type}（股票 {code}）")
-        endpoint = f"cn/company/fs/{fs_type}"
+        endpoint = f"{market}/company/fs/{fs_type}"
         metrics = METRICS_BY_TYPE.get(fs_type, DEFAULT_FINANCIALS_METRICS)
         end = _dt.date.today()
         start = end - _dt.timedelta(days=365 * years + 10)
         base = {
-            "stockCodes": [_norm_code(code)],
+            "stockCodes": [norm],
             "startDate": start.strftime("%Y-%m-%d"),
             "endDate": end.strftime("%Y-%m-%d"),
         }
         records, used = self._post_fs(endpoint, base, metrics, self._ttl("financials", 86400))
         return {
             "source_detail": f"lixinger:{endpoint}",
-            "code": _norm_code(code),
+            "code": norm,
+            "market": market,
             "years": years,
             "report_type": fs_type,
             "records": records,
@@ -322,35 +377,45 @@ class LxrData:
         return self._run_chain(tiers)
 
     def _get_valuation_lixinger(self, code: str, report_type: Optional[str]) -> dict:
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
         fs_type = report_type or self.detect_fs_type(code)
-        endpoint = f"cn/company/fundamental/{fs_type}"
+        endpoint = f"{market}/company/fundamental/{fs_type}"
         metrics = DEFAULT_VALUATION_METRICS + DEFAULT_PERCENTILE_METRICS
         end = _dt.date.today()
         start = end - _dt.timedelta(days=14)
         base = {
-            "stockCodes": [_norm_code(code)],
+            "stockCodes": [norm],
             "startDate": start.strftime("%Y-%m-%d"),
             "endDate": end.strftime("%Y-%m-%d"),
         }
         payload = dict(base)
-        payload["metricsList"] = metrics
         ttl = self._ttl("valuation", 3600)
-        try:
-            data = self.client.post(endpoint, payload, ttl_seconds=ttl)
-        except LixingerValidationError as e:
-            # 分位点指标在某些类型可能不支持，剔除后重试
-            invalid = _extract_invalid_metrics(e)
-            if not invalid:
-                raise
-            metrics = [m for m in metrics if m not in invalid]
-            payload["metricsList"] = metrics
-            data = self.client.post(endpoint, payload, ttl_seconds=ttl)
+        current = list(metrics)
+        data = None
+        for _ in range(5):
+            payload["metricsList"] = current
+            try:
+                data = self.client.post(endpoint, payload, ttl_seconds=ttl)
+                break
+            except LixingerValidationError as e:
+                invalid = _extract_invalid_metrics(e)
+                if not invalid:
+                    raise
+                pruned = [m for m in current if m not in invalid]
+                if not pruned or len(pruned) == len(current):
+                    raise
+                self._log(f"[剪枝] {endpoint} 剔除无效指标 {sorted(invalid)}，{len(current)}→{len(pruned)}")
+                current = pruned
+        if data is None:
+            raise LixingerError(f"{endpoint} 估值指标剪枝后仍失败")
         records = data if isinstance(data, list) else []
         latest = records[-1] if records else {}
         flat = self._flatten_latest(latest)
         return {
             "source_detail": f"lixinger:{endpoint}",
-            "code": _norm_code(code),
+            "code": norm,
+            "market": market,
             "report_type": fs_type,
             "latest": flat,
             "record_count": len(records),
@@ -402,14 +467,16 @@ class LxrData:
         - EPS/BVPS 取最近**年报**（当期值即全年），用于 PE=股价/年化EPS、ROE=EPS/BVPS 验算。
         """
         fs_type = report_type or self.detect_fs_type(code)
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
         val = self._get_valuation_lixinger(code, fs_type)
         latest_val = val.get("latest", {})
         # 一次 fs 调用：近2年记录，含当前总股本 + 年报 EPS/每股净资产
-        fs_endpoint = f"cn/company/fs/{fs_type}"
+        fs_endpoint = f"{market}/company/fs/{fs_type}"
         end = _dt.date.today()
         start = end - _dt.timedelta(days=365 * 2 + 10)
         fs_base = {
-            "stockCodes": [_norm_code(code)],
+            "stockCodes": [norm],
             "startDate": start.strftime("%Y-%m-%d"),
             "endDate": end.strftime("%Y-%m-%d"),
         }
@@ -431,8 +498,10 @@ class LxrData:
 
         sp = latest_val.get("sp")
         mc = latest_val.get("mc")
+        currency = "HKD" if market == "hk" else "CNY"
         return {
-            "code": _norm_code(code),
+            "code": norm,
+            "market": market,
             "report_type": fs_type,
             "price": sp,
             "shares": tsc,
@@ -443,7 +512,7 @@ class LxrData:
             "pb": latest_val.get("pb"),
             "ps_ttm": latest_val.get("ps_ttm"),
             "dividend_yield": latest_val.get("dyr"),
-            "currency": "CNY",
+            "currency": currency,
             "valuation_percentiles": {
                 k: v for k, v in latest_val.items() if ".cvpos" in k
             },
@@ -459,6 +528,171 @@ class LxrData:
             else:
                 return None
         return cur
+
+    # ------------------------------------------------------------------
+    # K线数据（P3.2，替代 Yahoo Finance 用于动量扫描）
+    # ------------------------------------------------------------------
+
+    def get_kline(self, code: str, days: int = 120, adjust: str = "forward") -> dict:
+        """获取前复权K线。返回 {code, market, records:[{date,open,close,high,low,volume,amount,change,to_r}]}。"""
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        end = _dt.date.today()
+        start = end - _dt.timedelta(days=days)
+        payload = {
+            "stockCode": norm,
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+            "type": KLINE_ADJUST.get(adjust, KLINE_ADJUST["forward"]),
+        }
+        data = self.client.post(f"{market}/company/candlestick", payload,
+                                ttl_seconds=self._ttl("kline", 1800))
+        records = data if isinstance(data, list) else []
+        return {
+            "source_detail": f"lixinger:{market}/company/candlestick",
+            "code": norm,
+            "market": market,
+            "adjust": adjust,
+            "records": records,
+            "_source": "lixinger",
+        }
+
+    # ------------------------------------------------------------------
+    # 股东分析（P3.4）
+    # ------------------------------------------------------------------
+
+    def get_majority_shareholders(self, code: str, years: int = 3) -> dict:
+        """前十大股东（A股用 cn/company/majority-shareholders；港股用 hk/company/latest-shareholders）。"""
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        end = _dt.date.today()
+        start = end - _dt.timedelta(days=365 * years + 10)
+        if market == "hk":
+            endpoint = "hk/company/latest-shareholders"
+        else:
+            endpoint = "cn/company/majority-shareholders"
+        payload = {
+            "stockCode": norm,
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+        }
+        data = self.client.post(endpoint, payload, ttl_seconds=self._ttl("shareholders", 86400))
+        records = data if isinstance(data, list) else []
+        return {
+            "source_detail": f"lixinger:{endpoint}",
+            "code": norm, "market": market, "records": records, "_source": "lixinger",
+        }
+
+    def get_shareholders_num(self, code: str, years: int = 5) -> dict:
+        """股东人数与变化率（仅A股；港股无此端点，返回 not_available 标记）。"""
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        if market == "hk":
+            return {"source_detail": "lixinger:not_available",
+                    "code": norm, "market": "hk",
+                    "records": [], "note": "港股无股东人数端点", "_source": "none"}
+        end = _dt.date.today()
+        start = end - _dt.timedelta(days=365 * years + 10)
+        payload = {
+            "stockCode": norm,
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+        }
+        data = self.client.post("cn/company/shareholders-num", payload,
+                                ttl_seconds=self._ttl("shareholders", 86400))
+        records = data if isinstance(data, list) else []
+        return {
+            "source_detail": "lixinger:cn/company/shareholders-num",
+            "code": norm, "market": "cn", "records": records, "_source": "lixinger",
+        }
+
+    def get_fund_shareholders(self, code: str, years: int = 3) -> dict:
+        """公募/内资基金持股（A股 cn/company/fund-shareholders；港股 hk/company/fund-shareholders）。"""
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        end = _dt.date.today()
+        start = end - _dt.timedelta(days=365 * years + 10)
+        payload = {
+            "stockCode": norm,
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+        }
+        endpoint = f"{market}/company/fund-shareholders"
+        data = self.client.post(endpoint, payload, ttl_seconds=self._ttl("shareholders", 86400))
+        records = data if isinstance(data, list) else []
+        return {
+            "source_detail": f"lixinger:{endpoint}",
+            "code": norm, "market": market, "records": records, "_source": "lixinger",
+        }
+
+    # ------------------------------------------------------------------
+    # 估值分位点全矩阵（P3.5）：4指标 × 6时间维度 × 8统计量
+    # ------------------------------------------------------------------
+
+    def get_valuation_percentiles(self, code: str, report_type: Optional[str] = None) -> dict:
+        """请求 PE/PB/PS/股息率 的 6×8 全分位矩阵（单股≤36指标，分批请求并合并）。"""
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        fs_type = report_type or self.detect_fs_type(code)
+        endpoint = f"{market}/company/fundamental/{fs_type}"
+        all_metrics = [
+            f"{name}.{g}.{s}"
+            for name in PERCENTILE_METRICS_NAME
+            for g in PERCENTILE_GRANULARITY
+            for s in PERCENTILE_STATS
+        ]
+        end = _dt.date.today()
+        start = end - _dt.timedelta(days=14)
+        base = {
+            "stockCodes": [norm],
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+        }
+        merged = {}
+        used = []
+        # 单股≤36，按30分批；每批遇无效指标循环剪枝，彻底失败的批次跳过（分位点为尽力而为）
+        for i in range(0, len(all_metrics), 30):
+            chunk = all_metrics[i:i + 30]
+            payload = dict(base)
+            payload["metricsList"] = chunk
+            data = None
+            for _ in range(4):
+                try:
+                    data = self.client.post(endpoint, payload, ttl_seconds=self._ttl("valuation", 3600))
+                    break
+                except LixingerValidationError as e:
+                    invalid = _extract_invalid_metrics(e)
+                    if not invalid:
+                        break
+                    pruned = [m for m in chunk if m not in invalid]
+                    if not pruned or len(pruned) == len(chunk):
+                        chunk = pruned
+                        break
+                    chunk = pruned
+                    payload["metricsList"] = chunk
+            if data is None:
+                self._log(f"[分位点] 批次 {i} 全部失败，跳过")
+                continue
+            records = data if isinstance(data, list) else []
+            if records:
+                flat = self._flatten_latest(records[-1])
+                merged.update(flat)
+                used.extend(chunk)
+        # 结构化为 {metric: {granularity: {stat: value}}}
+        matrix = {}
+        for name in PERCENTILE_METRICS_NAME:
+            matrix[name] = {}
+            for g in PERCENTILE_GRANULARITY:
+                matrix[name][g] = {}
+                for s in PERCENTILE_STATS:
+                    key = f"{name}.{g}.{s}"
+                    if key in merged:
+                        matrix[name][g][s] = merged[key]
+        return {
+            "source_detail": f"lixinger:{endpoint}",
+            "code": norm, "market": market, "report_type": fs_type,
+            "matrix": matrix, "metric_count": len(used), "_source": "lixinger",
+        }
 
     # ------------------------------------------------------------------
     # 子进程调用妙想 mx-data
@@ -553,6 +787,23 @@ def _cli():
     p_vi.add_argument("--report-type", default=None, choices=list(FS_TYPES))
     p_vi.add_argument("--quiet", action="store_true")
 
+    p_kl = sub.add_parser("kline", help="K线数据（前复权，替代 Yahoo Finance）")
+    p_kl.add_argument("code", help="股票代码，如 00700 / 600519")
+    p_kl.add_argument("--days", type=int, default=120)
+    p_kl.add_argument("--adjust", choices=list(KLINE_ADJUST.keys()), default="forward")
+    p_kl.add_argument("--quiet", action="store_true")
+
+    p_sh = sub.add_parser("shareholders", help="股东分析（前十大/股东人数/基金持股）")
+    p_sh.add_argument("code", help="股票代码")
+    p_sh.add_argument("--kind", choices=["majority", "num", "fund"], default="majority")
+    p_sh.add_argument("--years", type=int, default=3)
+    p_sh.add_argument("--quiet", action="store_true")
+
+    p_pc = sub.add_parser("percentiles", help="估值分位点全矩阵（4指标×6维度×8统计量）")
+    p_pc.add_argument("code", help="股票代码")
+    p_pc.add_argument("--report-type", default=None, choices=list(FS_TYPES))
+    p_pc.add_argument("--quiet", action="store_true")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -569,6 +820,22 @@ def _cli():
         )
     elif args.command == "verify-inputs":
         data = LxrData(verbose=not args.quiet).get_verification_inputs(
+            args.code, report_type=args.report_type,
+        )
+    elif args.command == "kline":
+        data = LxrData(verbose=not args.quiet).get_kline(
+            args.code, days=args.days, adjust=args.adjust,
+        )
+    elif args.command == "shareholders":
+        d = LxrData(verbose=not args.quiet)
+        if args.kind == "majority":
+            data = d.get_majority_shareholders(args.code, years=args.years)
+        elif args.kind == "num":
+            data = d.get_shareholders_num(args.code, years=args.years)
+        else:
+            data = d.get_fund_shareholders(args.code, years=args.years)
+    elif args.command == "percentiles":
+        data = LxrData(verbose=not args.quiet).get_valuation_percentiles(
             args.code, report_type=args.report_type,
         )
     else:
