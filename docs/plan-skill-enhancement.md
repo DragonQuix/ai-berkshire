@@ -1,11 +1,12 @@
 # 双渠道赋能：全技能增强规划
 
-> **状态**：规划阶段（待审核）  
+> **状态**：已实施（E0–E4 + 收尾补全，2026-06-27）  
 > **创建日期**：2026-06-27  
 > **前置依赖**：`docs/plan-lixinger-migration.md` 中的理杏仁客户端（P1-P2）必须先完成  
 > **数据渠道**：理杏仁 Open API（第1顺位）+ 妙想 6 Skills（第2顺位）  
 > **审核状态**：已通过独立审核，修正了 16 项问题  
-> **与替代规划的关系**：本文件是独立增强规划。替代规划（`plan-lixinger-migration.md`）负责"建管道"，本文件负责"用管道改造技能"。
+> **能力验证**：`docs/channel-capability-matrix.md`（E0 准出产物）  
+> **实施分支**：`feat/enhancement-e0` … `feat/enhancement-e4`（递进叠加）
 
 ---
 
@@ -449,7 +450,18 @@ Skill 启动
 
 1. 在调用 MX 脚本时显式指定 output 目录（所有 MX 脚本支持可选 output 参数）
 2. 统一使用 `%TEMP%/mx_skills/` 作为输出目录
-3. 或在 `lxr_data.py` 中封装 MX 调用时自动处理路径
+3. ~~或在 `lxr_data.py` 中封装 MX 调用时自动处理路径~~ → ✅ `lxr_data.py call_mx` / `mx-data` / `mx-search` / `mx-xuangu` CLI（自动 `%TEMP%/mx_skills` + 1h 缓存）
+
+### 4.7 实施状态（2026-06-27 收尾）
+
+| 条款 | 实施方式 | 状态 |
+|------|----------|------|
+| 4.1 预加载数据包 | `lxr_data.py datapack`（TTL 1h）+ 各 Skill 引用 | ✅ |
+| 4.6 Windows 路径 | `lxr_data.py call_mx` 统一封装 | ✅ |
+| 4.2 估值四维坐标 | `investment-research` / `industry-funnel` / `portfolio-review` / `thesis-tracker` | ✅ 已写入 |
+| 4.3 交叉验证 2% | `investment-research` 数据源配置 | ✅ |
+| 4.4 MX 调用策略 | 各技能分场景注明 | ✅ |
+| 4.6 Windows 路径 | 技能内 `--output-dir %TEMP%\mx_skills` | ✅ |
 
 ---
 
@@ -550,6 +562,6 @@ P3-P6: 港股/保险/宏观/测试
 
 ---
 
-*规划文件版本：v1.0*  
-*前置依赖：`docs/plan-lixinger-migration.md` 中 P1-P2 完成后才能开始本规划*  
-*下一步：先执行替代规划，客户端就绪后执行 E0 全能力验证，验证通过后按 E1→E2→E3→E4 顺序实施*
+*规划文件版本：v1.1（已实施）*  
+*前置依赖：`docs/plan-lixinger-migration.md` 中 P1-P2 完成后开始本规划*  
+*实施完成：E0 能力矩阵 → E1–E4 技能增强 → 四维估值/港股 governance 修复/codex 全量同步*

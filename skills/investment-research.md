@@ -32,6 +32,63 @@
 
 将信息丰富度评级结果写入报告开头，并在最终结论中注明"AI研究置信度"与"实际投资确定性"的区别。
 
+### 第〇步：数据预处理（双渠道数据包，必须执行）
+
+> 能力边界参见 `docs/channel-capability-matrix.md`（E0 已验证）。A股/港股结构化数据**禁止**先用 WebSearch 拼凑。
+
+**0.1 解析目标**：从 `$ARGUMENTS` 提取公司名与股票代码（A股6位 / 港股5位）。无法确定代码时，先用 `python tools/lxr_data.py` 配合公司搜索或 mx-data 问句解析，再进入批量拉取。
+
+**0.2 一次性拉取数据包**（推荐单命令，TTL 1h 跨模块共享）：
+
+```bash
+python tools/lxr_data.py datapack {code} --years 5
+# 跳过妙想（省日限额）：python tools/lxr_data.py datapack {code} --no-mx
+```
+
+或按维度分拆（理杏仁为主，妙想补 tick/资讯；单次研究约 5–8 次理杏仁 + 2 次 MX）：
+
+| 维度 | 命令 / 渠道 | `_source` 标注 |
+|------|------------|----------------|
+| 财报 5 年 | `python tools/lxr_data.py financials {code} --years 5 --source lixinger` | lixinger |
+| 估值 + 分位点 | `python tools/lxr_data.py valuation {code} --source lixinger` | lixinger |
+| 验算输入 | `python tools/lxr_data.py verify-inputs {code}` | lixinger |
+| 行业深度 | `python tools/lxr_data.py industry-deep {code} --years 5` | lixinger |
+| 营收构成 | `python tools/lxr_data.py revenue {code} --years 3`（A股） | lixinger |
+| 股东 + 治理 | `shareholders --kind majority/num` + `governance --years 2` | lixinger |
+| 行业估值对比 | `python tools/lxr_data.py industry-compare {code}`（A股） | lixinger |
+| 宏观利率 | `python tools/lxr_data.py macro-debt` + `macro-rates` | lixinger |
+| 实时快照 | `python tools/lxr_data.py mx-data "{公司}最新价 涨跌幅 PE PB"` | mx-data |
+| 重要资讯 | `python tools/lxr_data.py mx-search "{公司}最新公告 业绩"` | mx-search |
+
+Windows 终端：`$env:PYTHONIOENCODING='utf-8'`；MX 脚本**必须**传 `--output-dir` 或输出目录参数（默认 `/root/.openclaw/...` 在 Windows 不可用）。
+
+**0.3 保险 / 银行 / 证券专属字段**（`industry-deep` 自动路由 `report_type`）：
+
+| 类型 | 理杏仁直接获取（E0.4 已验证 601336） | 仍需年报原文的场景 |
+|------|--------------------------------------|-------------------|
+| 保险 | EV、NBV、核心/综合偿付能力、保险业务收支 | 个别字段 `deep_summary` 为 null；代理人渠道等经营细节 |
+| 银行 | 资本充足率、净息差、不良率、拨备覆盖率 | 逐笔不良贷款明细 |
+| 证券 | 经纪/投行/资管/自营净收入 | 业务条线口头披露口径核对 |
+
+保险股 PEV = 市值 / EV，EV/NBV **标注「理杏仁直接获取」**；仅当面值缺失或需与年报脚注核对时使用 WebFetch 年报 PDF。
+
+**0.4 数据包注入模板**（写入报告「数据摘要」节，再进入四大师分析）：
+
+```markdown
+## 数据摘要（预处理）
+| 指标 | 最新值 | 来源 |
+|------|--------|------|
+| 市值 / PE-TTM / PB | ... | lixinger |
+| PE 历史分位（10年） | ...% | lixinger |
+| 营收 / 归母净利润（近5年） | 表 | lixinger |
+| [保险] EV / NBV / 偿付能力 | ... | lixinger |
+| 前十大股东（最新） | 表 | lixinger |
+| 高管/大股东增减持（2年） | 表 | lixinger |
+| 实时价 / 涨跌幅 | ... | mx-data |
+```
+
+**0.5 Agent 分工调整**：结构化数字由数据包提供；Task Agent **仅**负责竞争格局、商业模式定性、管理层履历、行业 TAM、风险事件等**无法编码**的维度。禁止 3 个 Agent 并行重复拉取财报。
+
 ### 第一步：数据收集
 
 > **数据源规范**：参见 `skills/financial-data.md`。理杏仁第1顺位 → 妙想第2顺位 → 免费源第3顺位（兜底）。
@@ -52,17 +109,17 @@
 > `industry-deep` 直接返回（如 601336 2025 EV=2878亿/NBV=98亿），**不再依赖 WebFetch 抓年报补漏**。
 > 仅当理杏仁字段为空（如个别公司不披露营运利润）或需历史口径核对时，再回到年报原文。
 
-使用 Task 工具启动后台 Agent，从网络收集以下数据：
+数据包（第〇步）已覆盖 1、2、9 的结构化部分。使用 Task 工具补充以下**非结构化**信息（优先 mx-search，降级 WebSearch）：
 
-1. 收入结构：最近财年及近4季度分部收入、增速、毛利率
-2. 财务指标：近5年收入、净利润、毛利率、经营利润率、自由现金流、现金储备
+1. 收入结构：**分产品叙事**（理杏仁 `revenue` 已有则直接引用）；缺省再搜
+2. ~~财务指标~~ → 已由 `financials` + `industry-deep` 提供
 3. 竞争格局：市场份额、主要竞争对手对比
 4. 商业模式与护城河：核心竞争优势来源
 5. 技术能力：核心技术栈、研发投入
-6. 管理层：创始人/CEO履历、持股比例、关键决策记录
+6. 管理层：创始人/CEO履历、**持股比例以理杏仁 `shareholders`/`governance` 为准**，履历与决策用 mx-search
 7. 行业前景：TAM（总可寻址市场）、增长预测
-8. 风险因素：地缘政治、监管、供应链等
-9. 当前估值：市值、PE、PS、PEG、EV/Revenue
+8. 风险因素：地缘政治、监管、供应链等（mx-search 监管公告 + 理杏仁 `inquiry`/`measures` 如有）
+9. ~~当前估值~~ → 已由 `valuation` + `verify-inputs` 提供；PEV/PEG 用工具验算
 10. 多空双方核心论点
 
 #### 数据交叉验证（必须执行，使用金融严谨性工具）
@@ -171,6 +228,17 @@ python3 ~/ai-berkshire/tools/financial_rigor.py verify-valuation \
 
 ### 第七步：估值与安全边际 — 巴菲特"内在价值" + 段永平"对的价格"
 
+#### 估值四维坐标（必须填写）
+
+| 维度 | 问题 | 取数 | `_source` |
+|------|------|------|-----------|
+| D1 自身水位 | PE 处于自身历史什么分位？ | `percentiles` + `valuation` 的 PE-TTM 分位点 | lixinger |
+| D2 行业水位 | PE 处于申万同业什么位置？ | `industry-compare` 对比表中位数/分位 | lixinger |
+| D3 全市场位置 | 全市场多少家更便宜且质量不输？ | mx-xuangu「PE低于{本公司PE}且ROE大于{本公司ROE}%的A股」 | mx-xuangu |
+| D4 利率环境 | 10Y 国债收益率下当前 PE 合理吗？ | `macro-debt` 最新 10Y + 与历史 ERP 直觉对照 | lixinger |
+
+写入报告估值节前的「四维坐标表」，四维度结论综合后再做三情景 DCF/PE 估值。
+
 - 当前市场定价（关键估值指标表格）—— **必须通过工具验算**
 - 反向DCF：当前股价隐含了什么增长预期？
 - 三情景估值 —— **必须通过工具精确计算，禁止心算**：
@@ -244,5 +312,19 @@ python3 ~/ai-berkshire/tools/report_audit.py verdict \
   --report <报告文件名>
 ```
 
-- **【准出】**：所有抽检点偏差 ≤ 1% → 报告可发布
-- **【打回】**：任意点偏差 > 1% → 修正对应数据后重新抽检，直到准出
+- **【准出】**：所有抽检点按 `skills/financial-data.md` 交叉验证阈值通过（同口径结构化双源 ≤2%）→ 报告可发布
+- **【打回】**：任意抽检点超阈或口径冲突未说明 → 修正后重新抽检
+
+## 数据源配置（增强后）
+
+| 优先级 | 渠道 | 适用场景 | 日限额 |
+|--------|------|----------|--------|
+| 1 | 理杏仁 `tools/lxr_data.py` | A股/港股财报、估值分位、股东、治理、宏观、行业对比 | ~144k/天 |
+| 2 | mx-data | 实时 tick、NLP 即席查数、港股行情快照 | 150/天 |
+| 2 | mx-search | 公告、研报、新闻、管理层采访 | 150/天 |
+| 3 | 免费源 | 理杏仁+妙想均失败时（见 `skills/financial-data.md`） | — |
+| 3 | 年报 PDF / WebFetch | 保险经营细节核对、口径脚注 | — |
+
+**交叉验证**（可选，出稿前一次）：理杏仁 vs mx-data 同一指标（如 PE-TTM）差异 >2% 标注双源；>5% 标「数据异常」人工核查。NLP 源与结构化源口径不同则不强行对比。
+
+**美股**：理杏仁/妙想均无公司级数据，保持 macrotrends + stockanalysis，本预处理步骤跳过。

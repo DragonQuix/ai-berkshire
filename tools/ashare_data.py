@@ -266,13 +266,17 @@ def cmd_financials(code: str):
             print(f"  ROE(加权):      {_fmt_pct(roe)}")
 
 
+# 东方财富搜索建议 API 的公开 client 参数（非用户认证密钥；安全扫描请忽略）
+EASTMONEY_PUBLIC_SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E326E8"
+
+
 def cmd_search(keyword: str):
     """搜索股票代码。"""
     url = "https://searchadapter.eastmoney.com/api/suggest/get"
     params = {
         "input": keyword,
         "type": "14",
-        "token": "D43BF722C8E33BDC906FB84D85E326E8",
+        "token": EASTMONEY_PUBLIC_SEARCH_TOKEN,
         "count": "10",
     }
     data = _curl_json(url, params)

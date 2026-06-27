@@ -19,6 +19,26 @@
 
 ## 阶段一：四大师并行研究
 
+### 第〇步：结构化数据预填充（与 `/earnings-review` 相同）
+
+Team Lead 在分派任务前执行：
+
+```bash
+python tools/lxr_data.py financials {code} --years 5 --source lixinger
+python tools/lxr_data.py valuation {code} --source lixinger
+python tools/lxr_data.py industry-deep {code} --years 3
+```
+
+**`_source` 标注**（注入各大师 Agent 前写入数据摘要）：
+
+| 数据块 | `_source` |
+|--------|-----------|
+| financials / valuation / industry-deep | `lixinger` |
+| 业绩会纪要 / 券商点评（mx-search） | `mx-search` |
+| 财报原文（巨潮/SEC/HKEX 抓取） | `legacy` |
+
+`mx-search` 拉业绩会纪要摘要；四大师 Agent **分析**同比/环比与指引兑现，不再 WebSearch 抄财务表。
+
 ### 第一步：获取一手资料
 
 使用 Agent 工具启动后台 Agent **并行**获取以下原始材料：

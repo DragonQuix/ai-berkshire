@@ -1,18 +1,45 @@
 # 财务数据获取与交叉验证规范
 
-本规范适用于所有涉及企业财务数据的研究。**每个关键数据必须来自两个独立来源，误差>1%须标记。**
+本规范适用于所有涉及企业财务数据的研究。**每个关键数据必须来自两个独立来源；同口径结构化双源或理杏仁 vs mx-data 同指标按下方阈值标记差异。**
+
+### 交叉验证阈值（统一，2026-06 修订）
+
+| 场景 | ≤2% | 2%–5% | >5% |
+|------|-----|-------|-----|
+| **同口径结构化双源**（理杏仁 vs 东财/巨潮/aastocks/macrotrends，字段定义相同） | ✅ 一致，取主源并标注双源 | ⚠️ 标注「数据存在轻微差异」，说明可能原因（汇率/会计口径） | ❌ 标注「数据异常」，须查年报核实 |
+| **理杏仁 vs mx-data NLP 同指标**（如 TTM PE，口径已确认相同） | ✅ 静默通过，优先采纳理杏仁 | ⚠️ 注明双源轻微差异，优先理杏仁 | ❌ 标「数据异常」，建议人工核查 |
+| **不同口径**（NLP 提取 vs 结构化编码、TTM vs 静态 PE 等） | — | — | **不强行比较**，分别标注口径 |
+
+> 旧版「误差>1%须标记」已废止。`financial_rigor.py cross-validate` 默认容差 2%。
 
 ---
 
 ## 数据源优先级（自动化三级体系）
 
-自 2026-06 起，A股/港股财务与估值数据改为**自动化三级回退**获取，优先使用理杏仁 API（结构化、含估值分位点、覆盖保险/银行/证券专属报表），失败时回退妙想 Skills，再失败回退免费源。优先级与 `docs/plan-lixinger-migration.md` 一致。
+自 2026-06 起，A股/港股财务与估值数据改为**自动化三级回退**获取，优先使用理杏仁 API（结构化、含估值分位点、覆盖保险/银行/证券专属报表），失败时回退妙想 Skills，再失败回退免费源。优先级与 `docs/plan-lixinger-migration.md` 一致。**能力边界实测**见 `docs/channel-capability-matrix.md`（E0 准出，含保险 EV/NBV 已确认可用）。
 
 | 顺位 | 来源 | 能力 | 何时用 |
 |------|------|------|--------|
 | 1（主） | **理杏仁 API** | 结构化财务报表（非金融/保险/银行/证券四类）、估值与历史分位点（1/5/10年）、总股本/市值 | 默认。`--source lixinger` |
 | 2（副） | **妙想 Skills** (`mx-data`) | 自然语言查询实时行情、财务、股东信息，输出 Excel/JSON | 理杏仁不可用/缺字段时自动回退 |
 | 3（兜底） | **免费源**（东财/巨潮/aastocks/macrotrends 等，见下方表格） | 网页/API 抓取，部分保险报表不可用、GBK 乱码、无分位点 | 前两顺位均失败时兜底 |
+
+### `_source` 字段统一标注（所有 Skill 必遵）
+
+`tools/lxr_data.py` 及妙想 CLI 返回的 JSON **顶层**含 `_source`，报告与 Agent 输出须原样引用：
+
+| `_source` 值 | 含义 | 典型场景 |
+|-------------|------|---------|
+| `lixinger` | 理杏仁 API 结构化数据 | financials、valuation、governance、quality-metrics |
+| `mx-data` | 妙想 mx-data NLP 查询 | 实时行情、公司概况 |
+| `mx-search` | 妙想 mx-search 资讯搜索 | 公告、采访、行业新闻 |
+| `mx-xuangu` | 妙想 mx-xuangu 条件选股 | quality-screen / industry-funnel 初筛 |
+| `lixinger+mx` | 数据包理杏仁+妙想均成功 | datapack（含 mx_quote + mx_news） |
+| `lixinger+partial-mx` | 数据包理杏仁成功、妙想部分失败 | datapack 降级 |
+| `legacy` | 免费源（东财/巨潮/WebSearch 等） | 第三顺位兜底 |
+| `none` | 全部来源失败 | 须标注「数据不可用」，禁止编造 |
+
+复合数据包（`datapack`）顶层 `_source` 反映实际组合；各 `sections.*` 子块保留各自 `_source`。
 
 ### CLI 调用方式（推荐）
 
@@ -81,14 +108,10 @@ python tools/financial_rigor.py verify-market-cap --price 510 --shares 9.11e9 --
 ### 第二步：误差计算与标记
 
 ```
-误差率 = |来源1数值 - 来源2数值| / 来源1数值 × 100%
+误差率 = |来源1数值 - 来源2数值| / 参考中位数 × 100%
 ```
 
-| 误差 | 处理方式 |
-|------|---------|
-| ≤ 1% | ✅ 一致，取来源1数值，标注两个来源 |
-| 1% ~ 5% | ⚠️ 标记"数据存在差异"，注明两个数值，说明可能原因（汇率/会计口径） |
-| > 5% | ❌ 标记"数据存在重大差异"，必须查原始财报核实，不得直接使用 |
+按上文「交叉验证阈值」三档处理；**禁止**对口径不同的来源强行计算误差。
 
 ### 第三步：数据呈现格式
 
@@ -150,5 +173,9 @@ python tools/financial_rigor.py verify-market-cap --price 510 --shares 9.11e9 --
 | LPR/Shibor/MLF利率 | `lxr_data.py macro-rates --area cn` | 人民银行 |
 | 指数估值(沪深300/恒生PE/PB分位) | `lxr_data.py index-val 000300 --market cn` | aastocks / mx-data |
 | 申万二级行业估值对比 | `lxr_data.py industry-compare 600519` | mx-data "白酒板块估值" |
+| **投研数据包（推荐）** | `lxr_data.py datapack 600519 --years 5`（TTL 1h） | 分拆 CLI |
+| **去劣 7 指标精算** | `lxr_data.py quality-metrics 600519 --years 10` | 手算 financials |
+| 妙想资讯搜索 | `lxr_data.py mx-search "{公司} 最新公告"` | 直调 mx_search.py |
+| 妙想智能选股 | `lxr_data.py mx-xuangu "ROE>15%的A股"` | 直调 mx_xuangu.py |
 | Nintendo | macrotrends.net/stocks/charts/NTDOY | stockanalysis.com/stocks/ntdoy |
 | Capcom | macrotrends（CCOEY） | stockanalysis（CCOEY） |

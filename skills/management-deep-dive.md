@@ -22,6 +22,39 @@ AI无法和管理层吃饭，但可以通过公开信息做到：
 
 ## 执行流程
 
+### 第〇步：定量数据层（理杏仁 + 妙想，必须执行）
+
+在定性研究之前，先拉取可量化的「言行一致」证据。统一走 `tools/lxr_data.py`，禁止直调理杏仁 API。
+
+```bash
+# A股/港股（代码自动路由）
+python tools/lxr_data.py governance {code} --years 3      # 高管/大股东增减持（含均价、变动股数）
+python tools/lxr_data.py shareholders {code} --kind majority --years 2
+python tools/lxr_data.py shareholders {code} --kind num --years 3   # 股东人数趋势（A股；港股见矩阵说明）
+python tools/lxr_data.py financials {code} --years 5 --source lixinger  # 回购/分红金额核对
+python tools/lxr_data.py valuation {code} --source lixinger
+```
+
+**妙想补充**（Windows：`$env:PYTHONIOENCODING='utf-8'`，输出目录 `%TEMP%\mx_skills`）：
+
+```bash
+python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{公司} {CEO姓名} 采访 股东信" --output-dir %TEMP%\mx_skills
+python C:/Users/admin/.claude/skills/mx-data/mx_data.py "{公司} 董事长 持股比例" %TEMP%\mx_skills
+```
+
+**定量摘要表**（写入报告第二节之前；表头 **`_source`** 为验收必填字段）：
+
+| 维度 | 数据要点 | `_source` |
+|------|----------|-----------|
+| 高管增减持 | 近3年每笔：日期、人名、增/减、股数、均价 | `lixinger`（`governance`） |
+| 大股东增减持 | 区分象征性 vs 实质性（金额占市值比） | `lixinger`（`governance`） |
+| 股东人数 | 季度趋势：集中 or 分散 | `lixinger`（`shareholders-num`；港股可能不可用，见 `docs/channel-capability-matrix.md`） |
+| 前十大股东 | 最新持股比、较上期变化 | `lixinger`（`shareholders`） |
+| 监管记录 | 问询函、监管措施 | `lixinger` / `mx-search`（公告原文） |
+| 管理层言论 | 采访、股东信、电话会 | `mx-search` |
+
+> **李录视角提示**：定量层回答「管理层说看好时，有没有减持？」「筹码是在向内部人集中还是向散户分散？」——再叠加第三步定性承诺追踪。
+
 ### 第一步：识别关键管理层并启动并行数据收集
 
 使用 WebSearch 确认以下关键人物：
@@ -36,10 +69,10 @@ AI无法和管理层吃饭，但可以通过公开信息做到：
 
 **注意**：区分"谁在做决策"和"谁的名字在头衔上"。有些公司创始人虽然卸任但仍是灵魂人物（如黄峥之于拼多多）。
 
-确认关键人物后，使用 Task 工具启动多个后台 Agent **并行**收集以下数据：
-1. Agent 1：CEO公开发言与预测记录（股东信、电话会、采访、社交媒体）
-2. Agent 2：资本配置决策记录（并购、回购、分红、新业务投资）
-3. Agent 3：治理结构与薪酬（股权结构、关联交易、高管薪酬）
+确认关键人物后，使用 Task 工具启动多个后台 Agent **并行**收集以下**定性**数据（定量层已由第〇步覆盖，Agent 禁止重复查增减持/股东）：
+1. Agent 1：CEO公开发言与预测记录（**优先 mx-search**，降级 WebSearch）
+2. Agent 2：资本配置决策记录（并购、回购、分红、新业务投资；金额与第〇步 `financials` 交叉核对）
+3. Agent 3：治理结构与薪酬（股权结构、关联交易、高管薪酬；持股以理杏仁为准）
 4. Agent 4：侧面验证信息（员工评价、客户反馈、行业口碑）
 
 ### 第二步：CEO能力圈评估
@@ -160,13 +193,15 @@ AI无法和管理层吃饭，但可以通过公开信息做到：
 
 #### 5.1 股权结构
 
-| 项目 | 详情 | 风险评估 |
-|------|------|---------|
-| 是否有AB股/超级投票权？ | | |
-| 创始人/实控人持股比例？ | | |
-| 是否有VIE结构？ | | |
-| 独立董事是否真正独立？ | | |
-| 大股东近期增减持记录？ | | |
+| 项目 | 详情 | 风险评估 | 数据来源 |
+|------|------|---------|---------|
+| 是否有AB股/超级投票权？ | | | 年报 / mx-search |
+| 创始人/实控人持股比例？ | | | **lixinger** `shareholders` |
+| 是否有VIE结构？ | | | 年报 |
+| 独立董事是否真正独立？ | | | 年报 |
+| 大股东近期增减持记录？ | | | **lixinger** `governance`（含均价） |
+
+**言行一致快检**：将 5.1 增减持与第三步「承诺vs兑现」对照——口头看多期间若存在大额减持，诚信度降档。
 
 #### 5.2 薪酬合理性
 

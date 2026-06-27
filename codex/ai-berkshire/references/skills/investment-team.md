@@ -31,6 +31,33 @@
 
 将评级结果告知每个Agent，影响其研究方式。
 
+### 第一步又四分之一：共享数据包（Team 启动前必须执行）
+
+对 A股/港股目标公司，Team Lead **先**拉取一次数据包：
+
+```bash
+python tools/lxr_data.py datapack {code} --years 5
+```
+
+或分拆拉取（与 `/investment-research` 第〇步相同）：
+
+将 JSON 摘要写入 `reports/{公司名}/data-pack.json`（或团队共享目录），并在创建 Task 时**注入各 Agent description**。
+
+**`_source` 标注**（数据包与各 Agent 输出须一致，见 `docs/channel-capability-matrix.md`）：
+
+| 数据块 | `_source` |
+|--------|-----------|
+| datapack / financials / valuation / governance 等 | `lixinger` |
+| mx_quote | `mx-data` |
+| mx_news / 竞对资讯 | `mx-search` |
+
+| Agent | 注入数据维度 | Agent 专注分析（不取数） |
+|-------|-------------|------------------------|
+| business-analyst | `revenue` 营收构成 + 业务描述 | 商业模式、护城河定性 |
+| financial-analyst | `financials` + `valuation` + 分位点 | 估值判断、安全边际 |
+| industry-researcher | `industry-compare` + mx-search 竞对资讯 | 竞争格局、行业趋势 |
+| risk-assessor | `governance` + `industry-deep` 风险字段 | 风险、管理层诚信 |
+
 ### 第二步：创建团队
 
 使用 TeamCreate 创建团队：
@@ -113,7 +140,7 @@
 
 **研究方法**：
 - 使用 WebSearch 搜索最新公开信息（财报、行业报告、新闻）
-- **财务数据必须来自两个独立来源**，按 `skills/financial-data.md` 规范执行（美股：macrotrends+stockanalysis；港股：aastocks+macrotrends；A股：东方财富+巨潮资讯），两源误差>1%须标记
+- **财务数据必须来自两个独立来源**，按 `skills/financial-data.md` 交叉验证阈值（同口径 ≤2% / 2–5% 标注差异 / >5% 异常）执行
 - 确保数据准确，关键数据标注来源
 - 分析要深入，不流于表面
 

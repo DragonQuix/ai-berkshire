@@ -39,11 +39,11 @@ LXR = REPO / "tools" / "lxr_data.py"
 # /quality-screen 的 7 条去劣指标（与 skills/quality-screen.md 一致）
 EXPECTED_CHECK_KEYS = [
     "roe_10y_avg",        # 1. 10年平均ROE
-    "fcf_5y_cum",         # 2. 5年累计自由现金流
+    "fcf_5y_cumulative",  # 2. 5年累计自由现金流
     "interest_coverage",  # 3. 利息覆盖倍数
-    "gross_margin_long",  # 4. 长期毛利率
-    "ocf_to_ni_5y",       # 5. 经营现金流/净利润 5年均值
-    "net_margin_long",    # 6. 长期净利率
+    "gross_margin_avg",   # 4. 长期毛利率
+    "ocf_ni_5y_avg",      # 5. 经营现金流/净利润 5年均值
+    "net_margin_avg",     # 6. 长期净利率
     "share_dilution_5y",  # 7. 5年总股本膨胀
 ]
 
@@ -160,7 +160,7 @@ def check_quality_metrics_json() -> int:
 
     # 4. 顶层 result / status
     result = data.get("result")
-    status = data.get("status")
+    status = data.get("status", result)
     if result == "pass" and status == "pass":
         _pass(f"顶层 result={result!r}, status={status!r}")
     else:

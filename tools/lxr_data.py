@@ -47,6 +47,10 @@ CLI：
     python tools/lxr_data.py macro-rates --area cn
     python tools/lxr_data.py index-val 000300 --market cn
     python tools/lxr_data.py industry-compare 600519
+    python tools/lxr_data.py datapack 601336 --years 5
+    python tools/lxr_data.py quality-metrics 600519 --years 10
+    python tools/lxr_data.py mx-search "新华保险最新公告"
+    python tools/lxr_data.py mx-xuangu "ROE大于15%的A股，返回前10只"
 """
 
 from __future__ import annotations
@@ -58,6 +62,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from typing import Any, Optional
 
 from lxr_client import LixingerAuthError, LixingerClient, LixingerError, LixingerValidationError
@@ -80,6 +85,8 @@ DEFAULT_FINANCIALS_METRICS = [
     "q.ps.op.t",             # 营业利润
     "q.ps.tp.t",             # 利润总额
     "q.ps.ite.t",            # 所得税费用
+    "q.ps.ie.t",             # 利息费用（利息覆盖倍数）
+    "q.ps.fe.t",             # 财务费用（利息费用缺失时备用）
     "q.ps.beps.t",           # 基本每股收益
     "q.bs.ta.t",             # 资产总计
     "q.bs.tl.t",             # 负债合计
@@ -121,6 +128,179 @@ METRICS_BY_TYPE = {
     "non_financial": DEFAULT_FINANCIALS_METRICS,
     "insurance": INSURANCE_FINANCIALS_METRICS,
 }
+
+_SKIP_INTEREST_COVERAGE = frozenset({"bank", "insurance", "security", "other_financial"})
+
+
+def _annual_fs_records(records: list) -> list:
+    annual = [r for r in records if str(r.get("date", ""))[:10].endswith("-12-31")]
+    annual.sort(key=lambda r: r.get("date", ""))
+    return annual
+
+
+def _dig_q(node, path: str):
+    cur = node
+    for seg in path.split("."):
+        if isinstance(cur, dict) and seg in cur:
+            cur = cur[seg]
+        else:
+            return None
+    return cur
+
+
+def _fs_metric(record: dict, path: str):
+    q = record.get("q", {}) if isinstance(record, dict) else {}
+    p = path[2:] if path.startswith("q.") else path
+    return _dig_q(q, p)
+
+
+def _safe_ratio(num, den):
+    if num is None or den is None:
+        return None
+    try:
+        d = float(den)
+        if d == 0:
+            return None
+        return float(num) / d
+    except (TypeError, ValueError):
+        return None
+
+
+def _datapack_source(pack: dict, include_mx: bool) -> str:
+    if not include_mx:
+        return "lixinger"
+    sections = pack.get("sections", {})
+    mx_keys = [k for k in ("mx_quote", "mx_news") if k in sections]
+    if not mx_keys:
+        return "lixinger"
+    ok_flags = []
+    for key in mx_keys:
+        sec = sections[key]
+        if not isinstance(sec, dict):
+            ok_flags.append(False)
+            continue
+        src = sec.get("_source", "none")
+        ok_flags.append(src not in (None, "", "none") and not sec.get("error"))
+    if all(ok_flags):
+        return "lixinger+mx"
+    if not any(ok_flags):
+        return "lixinger"
+    return "lixinger+partial-mx"
+
+
+def _compute_quality_checks(report_type: str, annual: list, roe_years: int, fcf_years: int) -> dict:
+    """从年报序列计算 /quality-screen 7 条硬指标及通过/失败判定。"""
+    if not annual:
+        return {"error": "无年报数据", "checks": {}}
+
+    roe_slice = annual[-roe_years:]
+    roe_vals = [
+        _safe_ratio(_fs_metric(r, "ps.npatoshopc.t"), _fs_metric(r, "bs.tetoshopc.t"))
+        for r in roe_slice
+    ]
+    roe_vals = [v for v in roe_vals if v is not None]
+    roe_avg = sum(roe_vals) / len(roe_vals) if roe_vals else None
+
+    fcf_slice = annual[-fcf_years:]
+    fcf_annual = []
+    for r in fcf_slice:
+        ocf = _fs_metric(r, "cfs.ncffoa.t")
+        icf = _fs_metric(r, "cfs.ncffia.t")
+        if ocf is None:
+            continue
+        icf_val = float(icf) if icf is not None else 0.0
+        fcf_annual.append(float(ocf) + icf_val)
+    fcf_5y_sum = sum(fcf_annual) if fcf_annual else None
+
+    latest = annual[-1]
+    op = _fs_metric(latest, "ps.op.t")
+    ie = _fs_metric(latest, "ps.ie.t")
+    if ie is None or float(ie) == 0:
+        fe = _fs_metric(latest, "ps.fe.t")
+        ie = abs(float(fe)) if fe is not None and float(fe) != 0 else ie
+    skip_interest = report_type in _SKIP_INTEREST_COVERAGE
+    interest_cov = None if skip_interest else _safe_ratio(op, abs(float(ie)) if ie is not None else None)
+
+    gm_vals = []
+    for r in annual[-10:]:
+        oi = _fs_metric(r, "ps.oi.t")
+        oc = _fs_metric(r, "ps.oc.t")
+        if oi is not None and oc is not None and float(oi) != 0:
+            gm_vals.append((float(oi) - float(oc)) / float(oi))
+    gm_avg = sum(gm_vals) / len(gm_vals) if gm_vals else None
+
+    ocf_ni_vals = [
+        _safe_ratio(_fs_metric(r, "cfs.ncffoa.t"), _fs_metric(r, "ps.np.t"))
+        for r in annual[-5:]
+    ]
+    ocf_ni_vals = [v for v in ocf_ni_vals if v is not None]
+    ocf_ni_avg = sum(ocf_ni_vals) / len(ocf_ni_vals) if ocf_ni_vals else None
+
+    nm_vals = [
+        _safe_ratio(_fs_metric(r, "ps.np.t"), _fs_metric(r, "ps.oi.t"))
+        for r in annual[-10:]
+    ]
+    nm_vals = [v for v in nm_vals if v is not None]
+    nm_avg = sum(nm_vals) / len(nm_vals) if nm_vals else None
+
+    dilution_pct = None
+    dilution_note = None
+    if len(annual) >= fcf_years + 1:
+        tsc_old = _fs_metric(annual[-(fcf_years + 1)], "bs.tsc.t")
+        tsc_new = _fs_metric(annual[-1], "bs.tsc.t")
+        if tsc_old is not None and tsc_new is not None and float(tsc_old) != 0:
+            dilution_pct = (float(tsc_new) - float(tsc_old)) / float(tsc_old) * 100.0
+        elif tsc_old is None or tsc_new is None:
+            dilution_note = "q.bs.tsc.t 在理杏仁 fs 年报中缺失"
+    else:
+        dilution_note = f"年报不足 {fcf_years + 1} 期，无法计算 {fcf_years} 年股本膨胀"
+
+    def _chk(name, value, threshold, op="gte", na=False):
+        row = {"metric": name, "value": value, "threshold": threshold}
+        if na:
+            row.update(status="na", pass_=None, note="银行/保险/证券不适用")
+            return row
+        if value is None:
+            row.update(status="missing", pass_=None, note="数据不足")
+            return row
+        if op == "gte":
+            passed = value >= threshold
+        elif op == "lte":
+            passed = value <= threshold
+        else:
+            passed = value > threshold
+        row.update(status="pass" if passed else "fail", pass_=passed)
+        return row
+
+    checks = {
+        "roe_10y_avg": _chk("①10年平均ROE", roe_avg, 0.08),
+        "fcf_5y_cumulative": _chk("②5年累计FCF", fcf_5y_sum, 0, op="gt"),
+        "interest_coverage": _chk("③利息覆盖", interest_cov, 2.0, na=skip_interest),
+        "gross_margin_avg": _chk("④长期毛利率", gm_avg, 0.15),
+        "ocf_ni_5y_avg": _chk("⑤OCF/NI 5年均值", ocf_ni_avg, 0.7),
+        "net_margin_avg": _chk("⑥长期净利率", nm_avg, 0.05),
+        "share_dilution_5y": _chk("⑦5年股本膨胀", dilution_pct, 20.0, op="lte"),
+    }
+    fail_count = sum(1 for c in checks.values() if c.get("pass_") is False)
+    missing = sum(1 for c in checks.values() if c.get("status") == "missing")
+    return {
+        "summary": {
+            "roe_10y_avg": roe_avg,
+            "fcf_5y_cumulative": fcf_5y_sum,
+            "interest_coverage": interest_cov,
+            "gross_margin_avg": gm_avg,
+            "ocf_ni_5y_avg": ocf_ni_avg,
+            "net_margin_avg": nm_avg,
+            "share_dilution_5y_pct": dilution_pct,
+            "share_dilution_note": dilution_note,
+            "annual_years_used": len(annual),
+            "fcf_method": "sum(ncffoa + ncffia) 近5年年报；ncffia 为投资活动现金流净额",
+        },
+        "checks": checks,
+        "result": "fail" if fail_count else ("incomplete" if missing else "pass"),
+        "fail_count": fail_count,
+        "missing_count": missing,
+    }
 
 # ---------------------------------------------------------------------------
 # 阶段4：行业深度指标集（保险/银行/证券专属，单股≤128，自动剪枝保有效）
@@ -233,6 +413,14 @@ KLINE_ADJUST = {
     "backward": "bc_rights",     # 后复权
 }
 
+# 港股董事权益变动（hot 端点：stockCodes + metricsList，无日期区间）
+HK_DIRECTOR_EQUITY_METRICS = [
+    "dec_a_last", "dec_cap_rc_last",
+    "dec_a_m1", "dec_a_m3", "dec_a_m6", "dec_a_y1", "dec_a_y2", "dec_a_y3",
+    "dec_cap_rc_m1", "dec_cap_rc_m3", "dec_cap_rc_m6",
+    "dec_cap_rc_y1", "dec_cap_rc_y2", "dec_cap_rc_y3",
+]
+
 
 class MXError(Exception):
     """妙想 skill 调用失败。"""
@@ -243,19 +431,42 @@ class LegacyError(Exception):
 
 
 def _default_mx_script() -> str:
-    """妙想 mx_data.py 默认路径：优先环境变量，再按 claude→codex 顺序查找。"""
-    env = os.environ.get("MX_DATA_SCRIPT", "").strip()
-    if env and os.path.isfile(env):
-        return env
+    """妙想 mx_data.py 默认路径（兼容旧接口）。"""
+    return _resolve_mx_script("mx-data")
+
+
+_MX_SKILLS = ("mx-data", "mx-search", "mx-xuangu")
+_MX_TTL_DEFAULT = 3600  # 妙想日限额敏感，默认 1h 磁盘缓存
+
+
+def _resolve_mx_script(skill: str) -> str:
+    """解析妙想 skill 脚本路径：环境变量 > ~/.claude > ~/.codex。"""
+    skill = skill.strip().lower()
+    if skill not in _MX_SKILLS:
+        raise MXError(f"未知妙想 skill: {skill}（支持 {_MX_SKILLS}）")
+    env_keys = {
+        "mx-data": "MX_DATA_SCRIPT",
+        "mx-search": "MX_SEARCH_SCRIPT",
+        "mx-xuangu": "MX_XUANGU_SCRIPT",
+    }
+    env_val = os.environ.get(env_keys[skill], "").strip()
+    if env_val and os.path.isfile(env_val):
+        return env_val
+    script_name = skill.replace("-", "_") + ".py"
     home = os.path.expanduser("~")
-    candidates = [
-        os.path.join(home, ".claude", "skills", "mx-data", "mx_data.py"),
-        os.path.join(home, ".codex", "skills", "mx-data", "mx_data.py"),
-    ]
-    for p in candidates:
-        if os.path.isfile(p):
-            return p
-    return candidates[0]
+    for base in (".claude", ".codex"):
+        path = os.path.join(home, base, "skills", skill, script_name)
+        if os.path.isfile(path):
+            return path
+    return os.path.join(home, ".claude", "skills", skill, script_name)
+
+
+def _mx_output_dir(cache_root: Optional[str] = None) -> str:
+    """妙想输出目录（Windows 兼容，默认 %TEMP%/mx_skills）。"""
+    root = cache_root or tempfile.gettempdir()
+    out = os.path.join(root, "mx_skills")
+    os.makedirs(out, exist_ok=True)
+    return out
 
 
 def _default_legacy_script() -> str:
@@ -897,10 +1108,16 @@ class LxrData:
         start = end - _dt.timedelta(days=365 * years + 10)
         date_range = {"startDate": start.strftime("%Y-%m-%d"), "endDate": end.strftime("%Y-%m-%d")}
         if market == "hk":
-            payload = {"stockCode": norm, **date_range}
-            data = self.client.post("hk/company/hot/director_equity_change", payload,
-                                    ttl_seconds=self._ttl("governance", 86400))
-            records = data if isinstance(data, list) else []
+            payload = {
+                "stockCodes": [norm],
+                "metricsList": HK_DIRECTOR_EQUITY_METRICS,
+            }
+            data = self.client.post(
+                "hk/company/hot/director_equity_change",
+                payload,
+                ttl_seconds=self._ttl("governance", 86400),
+            )
+            records = data if isinstance(data, list) else ([data] if isinstance(data, dict) else [])
             return {
                 "source_detail": "lixinger:hk/company/hot/director_equity_change",
                 "code": norm, "market": "hk",
@@ -1185,29 +1402,162 @@ class LxrData:
         return result
 
     # ------------------------------------------------------------------
-    # 子进程调用妙想 mx-data
+    # 妙想 Skills 统一封装（mx-data / mx-search / mx-xuangu）
     # ------------------------------------------------------------------
 
-    def _call_mx_skill(self, query: str) -> dict:
-        if not os.path.isfile(self.mx_script):
-            raise MXError(f"mx_data 脚本不存在: {self.mx_script}")
-        out_dir = os.path.join(self.client.cache.dir, "mx_out")
-        os.makedirs(out_dir, exist_ok=True)
+    def _mx_cache_get(self, skill: str, query: str, ttl_seconds: int) -> Optional[dict]:
+        hit, val = self.client.cache.get(f"mx/{skill}", {"query": query}, ttl_seconds)
+        return val if hit else None
+
+    def _mx_cache_set(self, skill: str, query: str, value: dict) -> None:
+        self.client.cache.set(f"mx/{skill}", {"query": query}, value)
+
+    def call_mx(self, skill: str, query: str, ttl_seconds: int = _MX_TTL_DEFAULT) -> dict:
+        """调用妙想 skill 子进程，返回 raw JSON + 路径；带 1h 默认磁盘缓存。"""
+        skill = skill.strip().lower()
+        cached = self._mx_cache_get(skill, query, ttl_seconds) if ttl_seconds > 0 else None
+        if cached is not None:
+            return {**cached, "_cache": "hit"}
+
+        script = _resolve_mx_script(skill)
+        if not os.path.isfile(script):
+            raise MXError(f"{skill} 脚本不存在: {script}")
+        out_dir = _mx_output_dir(self.client.cache.dir)
         env = dict(os.environ)
         env["PYTHONIOENCODING"] = "utf-8"
+        if skill == "mx-xuangu":
+            cmd = [sys.executable, script, query, "--output-dir", out_dir]
+        else:
+            cmd = [sys.executable, script, query, out_dir]
         proc = subprocess.run(
-            [sys.executable, self.mx_script, query, out_dir],
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
             env=env, timeout=120,
         )
         if proc.returncode != 0:
             tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-5:]
-            raise MXError("mx_data 退出码 %d: %s" % (proc.returncode, " | ".join(tail)))
-        raw_path = _latest_raw_json(out_dir)
-        if not raw_path:
+            raise MXError(f"{skill} 退出码 {proc.returncode}: {' | '.join(tail)}")
+        raw_path = _latest_mx_artifact(out_dir, skill)
+        raw: Any = None
+        if raw_path:
+            with open(raw_path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+        result = {
+            "_source": skill,
+            "query": query,
+            "raw": raw,
+            "raw_path": raw_path,
+            "output_dir": out_dir,
+            "stdout_preview": (proc.stdout or "")[:2000],
+        }
+        if ttl_seconds > 0:
+            self._mx_cache_set(skill, query, result)
+        return result
+
+    def mx_data(self, query: str, ttl_seconds: int = _MX_TTL_DEFAULT) -> dict:
+        return self.call_mx("mx-data", query, ttl_seconds)
+
+    def mx_search(self, query: str, ttl_seconds: int = _MX_TTL_DEFAULT) -> dict:
+        return self.call_mx("mx-search", query, ttl_seconds)
+
+    def mx_xuangu(self, query: str, ttl_seconds: int = _MX_TTL_DEFAULT) -> dict:
+        return self.call_mx("mx-xuangu", query, ttl_seconds)
+
+    # ------------------------------------------------------------------
+    # /quality-screen 精确 7 指标
+    # ------------------------------------------------------------------
+
+    def get_quality_metrics(self, code: str, years: int = 10, fcf_years: int = 5) -> dict:
+        """计算去劣筛选 7 条硬指标（理杏仁财报本地精算）。"""
+        # 股本膨胀需 fcf_years+1 个年末点；ROE/净利率窗口取 max(years, fcf_years+1)
+        span_years = min(max(years, fcf_years + 1), 10)
+        fin = self.get_financials(code, years=span_years, source="lixinger")
+        if fin.get("_source") != "lixinger":
+            return {
+                "_source": "none",
+                "code": _norm_code(code, _detect_market(code)),
+                "error": fin.get("error", "financials 不可用"),
+            }
+        report_type = fin.get("report_type", "non_financial")
+        annual = _annual_fs_records(fin.get("records") or [])
+        computed = _compute_quality_checks(report_type, annual, years, fcf_years)
+        return {
+            "source_detail": "lixinger:quality-metrics",
+            "code": fin.get("code"),
+            "market": fin.get("market"),
+            "report_type": report_type,
+            "years": years,
+            "fcf_years": fcf_years,
+            **computed,
+            "status": computed.get("result"),
+            "_source": "lixinger",
+        }
+
+    # ------------------------------------------------------------------
+    # 研究数据包（跨 Skill 共享，TTL 1h）
+    # ------------------------------------------------------------------
+
+    def get_research_datapack(
+        self,
+        code: str,
+        years: int = 5,
+        name: Optional[str] = None,
+        include_mx: bool = True,
+        ttl_seconds: int = 3600,
+    ) -> dict:
+        """一次性拉取投研常用数据包，缓存 1 小时供多 Skill/多模块共享。"""
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        cache_key = {"code": norm, "market": market, "years": years, "include_mx": include_mx}
+        hit, cached = self.client.cache.get("datapack/research", cache_key, ttl_seconds)
+        if hit and isinstance(cached, dict):
+            return {**cached, "_cache": "hit"}
+
+        pack: dict[str, Any] = {
+            "code": norm,
+            "market": market,
+            "years": years,
+            "fetched_at": _dt.datetime.now().isoformat(),
+            "sections": {},
+        }
+
+        def _section(key: str, fn) -> None:
+            try:
+                data = fn()
+                pack["sections"][key] = data
+            except Exception as exc:
+                pack["sections"][key] = {"_source": "none", "error": str(exc)}
+
+        _section("financials", lambda: self.get_financials(norm, years=years, source="lixinger"))
+        _section("valuation", lambda: self.get_valuation(norm, source="lixinger"))
+        _section("verify_inputs", lambda: self.get_verification_inputs(norm))
+        _section("percentiles", lambda: self.get_valuation_percentiles(norm))
+        _section("governance", lambda: self.get_governance(norm, years=2))
+        _section("shareholders", lambda: self.get_majority_shareholders(norm, years=2))
+        if market == "cn":
+            _section("revenue", lambda: self.get_revenue_constitution(norm, years=3))
+            _section("industry_compare", lambda: self.compare_industry_valuation(norm))
+        fs_type = self.detect_fs_type(norm)
+        if fs_type in ("insurance", "bank", "security"):
+            _section("industry_deep", lambda: self.get_industry_deep(norm, years=years))
+        if include_mx:
+            label = name or norm
+            _section("mx_quote", lambda: self.mx_data(f"{label} 最新价 涨跌幅 PE PB"))
+            _section("mx_news", lambda: self.mx_search(f"{label} 最新公告 业绩"))
+
+        pack["_source"] = _datapack_source(pack, include_mx)
+        self.client.cache.set("datapack/research", cache_key, pack)
+        return pack
+
+    # ------------------------------------------------------------------
+    # 子进程调用妙想 mx-data（兼容旧路径）
+    # ------------------------------------------------------------------
+
+    def _call_mx_skill(self, query: str) -> dict:
+        result = self.call_mx("mx-data", query, ttl_seconds=_MX_TTL_DEFAULT)
+        raw = result.get("raw")
+        if raw is None:
             raise MXError("mx_data 成功但未生成 raw.json")
-        with open(raw_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        return raw if isinstance(raw, dict) else {}
 
     # ------------------------------------------------------------------
     # 子进程调用免费源 ashare_data
@@ -1230,18 +1580,30 @@ class LxrData:
 
 
 def _latest_raw_json(dir_path: str) -> Optional[str]:
-    latest = None
+    return _latest_mx_artifact(dir_path, "mx-data")
+
+
+def _latest_mx_artifact(dir_path: str, skill: str) -> Optional[str]:
+    """查找妙想 skill 最近一次输出的 JSON 文件。"""
+    prefix = skill.replace("-", "_") + "_"
+    latest: Optional[str] = None
     latest_mtime = -1.0
     for name in os.listdir(dir_path):
-        if name.endswith("_raw.json"):
-            path = os.path.join(dir_path, name)
-            try:
-                m = os.path.getmtime(path)
-            except OSError:
+        if not name.startswith(prefix):
+            continue
+        if skill == "mx-search":
+            if not name.endswith(".json"):
                 continue
-            if m > latest_mtime:
-                latest_mtime = m
-                latest = path
+        elif not name.endswith("_raw.json"):
+            continue
+        path = os.path.join(dir_path, name)
+        try:
+            m = os.path.getmtime(path)
+        except OSError:
+            continue
+        if m > latest_mtime:
+            latest_mtime = m
+            latest = path
     return latest
 
 
@@ -1332,6 +1694,25 @@ def _cli():
     p_ic.add_argument("--level", default="two", choices=["one", "two", "three"])
     p_ic.add_argument("--quiet", action="store_true")
 
+    p_dp = sub.add_parser("datapack", help="投研数据包（理杏仁批量+妙想，TTL 1h 缓存）")
+    p_dp.add_argument("code", help="股票代码")
+    p_dp.add_argument("--years", type=int, default=5)
+    p_dp.add_argument("--name", default=None, help="公司中文名（妙想查询用）")
+    p_dp.add_argument("--no-mx", action="store_true", help="跳过妙想 tick/资讯（节省日限额）")
+    p_dp.add_argument("--quiet", action="store_true")
+
+    p_qm = sub.add_parser("quality-metrics", help="/quality-screen 精确 7 指标（理杏仁本地计算）")
+    p_qm.add_argument("code", help="股票代码")
+    p_qm.add_argument("--years", type=int, default=10, help="ROE/净利率均值窗口（年）")
+    p_qm.add_argument("--fcf-years", type=int, default=5, help="FCF 累计窗口（年）")
+    p_qm.add_argument("--quiet", action="store_true")
+
+    for skill in _MX_SKILLS:
+        p_mx = sub.add_parser(skill, help=f"调用妙想 {skill}（1h 缓存，自动 Windows 输出目录）")
+        p_mx.add_argument("query", help="自然语言查询")
+        p_mx.add_argument("--ttl", type=int, default=_MX_TTL_DEFAULT, help="缓存秒数，0=不缓存")
+        p_mx.add_argument("--quiet", action="store_true")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -1394,6 +1775,17 @@ def _cli():
         data = LxrData(verbose=not args.quiet).compare_industry_valuation(
             args.code, source=args.source, level=args.level,
         )
+    elif args.command == "quality-metrics":
+        data = LxrData(verbose=not args.quiet).get_quality_metrics(
+            args.code, years=args.years, fcf_years=args.fcf_years,
+        )
+    elif args.command == "datapack":
+        data = LxrData(verbose=not args.quiet).get_research_datapack(
+            args.code, years=args.years, name=args.name, include_mx=not args.no_mx,
+        )
+    elif args.command in _MX_SKILLS:
+        d = LxrData(verbose=not args.quiet)
+        data = d.call_mx(args.command, args.query, ttl_seconds=args.ttl)
     else:
         parser.print_help()
         sys.exit(1)

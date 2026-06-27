@@ -29,6 +29,20 @@
 | B级 | 仅获取到部分原文或第三方汇总 | 标注"非原始来源"，降低附注分析权重 |
 | C级 | 仅有新闻报道和数据网站摘要 | 聚焦核心财务数据变化，跳过附注挖掘，标注"一手资料不足" |
 
+### 前置步骤：结构化财报预填充（A股/港股）
+
+在获取 PDF 原文之前，先用理杏仁注入精确数字（`_source: lixinger`），避免从网页手抄：
+
+```bash
+python tools/lxr_data.py financials {code} --years 5 --source lixinger
+python tools/lxr_data.py industry-deep {code} --years 3   # 金融股专属科目
+python tools/lxr_data.py verify-inputs {code}
+```
+
+业绩会/券商点评（1 次 MX）：`mx-search "{公司} {季度} 业绩会 研报"`（`--output-dir %TEMP%\mx_skills`）。
+
+市场反应：`mx-data "{公司} 财报发布日 涨跌幅"`。
+
 ### 第一步：获取一手资料
 
 使用 Task 工具启动多个后台 Agent **并行**获取以下原始材料：
@@ -40,7 +54,7 @@
 5. **券商即时点评**：财报发布后用 `mx-search` 检索"{公司名} 财报点评 / 研报"获取卖方第一时间点评；**凡进入报告的券商点评，必须标注 `_source: mx-search`**（含机构名与观点摘要）
 6. **市场反应快照（mx-data）**：财报发布当日/次日用 `mx-data` 取"{公司名} 当日涨跌幅 成交额 主力资金流向"快照，量化市场用钱投票的结论；**凡进入报告的 mx-data 市场反应数据点，必须标注 `_source: mx-data`**（含数值与日期）
 
-如果无法获取完整原文，按 `skills/financial-data.md` 规范使用标准数据源拼凑（美股：macrotrends+stockanalysis；港股：aastocks+macrotrends；A股：东方财富+巨潮资讯），但必须标注"非原始财报，来自第三方汇总"，且关键数据两源误差>1%须标记。
+如果无法获取完整原文，按 `skills/financial-data.md` 规范使用标准数据源拼凑，但必须标注"非原始财报，来自第三方汇总"，且关键数据按交叉验证阈值（同口径 ≤2%）核验。
 
 > **`_source` 标注规范**：本 Skill 涉及多渠道数据，报告正文每个关键数据/资讯点须以 `_source: xxx` 标注来源渠道——`mx-search`（业绩会纪要/券商点评/资讯）、`mx-data`（市场反应实时快照）、`理杏仁`（结构化财报/估值）、`web`（WebSearch/WebFetch 一手原文）。来源渠道不可省略，便于读者追溯。
 
