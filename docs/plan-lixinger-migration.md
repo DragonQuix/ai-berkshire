@@ -1,11 +1,13 @@
 # 理杏仁 API 取数升级规划（含妙想分工）
 
-> **状态**：规划阶段（待审核）  
+> **状态**：已实施（P1-P6 核心链路已落地；2026-06-28 终审要求补充修复见 `docs/superpowers/plans/2026-06-28-final-review-fixes.md`）  
 > **创建日期**：2026-06-27  
 > **依赖**：
 > - 理杏仁 Open API v1.22.25（文档快照 2026-05-15）
 > - 东方财富妙想 Skills Hub API（`mkapi2.dfcfs.com`，已集成在 uzi-skill v3.13.0）  
 > **API Key**：理杏仁 token + 妙想 MX_APIKEY 均已在本机配置，可直接用于开发测试  
+
+> **实现口径说明**：当前 `financials` CLI 拉取精选指标集，不等同于一次性拉取 API schema 全字段；需要全字段审计时应新增专门命令或分批请求，不得把 schema 字段数写成当前 CLI 实际输出字段数。
 
 ---
 

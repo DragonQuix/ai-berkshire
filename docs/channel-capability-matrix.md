@@ -53,7 +53,7 @@ python tools/lxr_data.py financials 601336 --years 5 --source lixinger
 
 | 端点 / 能力 | 600519 茅台 | 601336 新华保险 | 600036 招行 | 002594 比亚迪 | 00700 腾讯 |
 |------------|------------|----------------|------------|--------------|-----------|
-| `financials` 财报 | ✅ non_financial | ✅ **insurance** | ✅ bank | ✅ non_financial | ✅ non_financial (227字段) |
+| `financials` 财报 | ✅ non_financial | ✅ **insurance** | ✅ bank | ✅ non_financial | ✅ non_financial（schema 227 字段；当前精选指标集） |
 | `valuation` 估值 | ✅ | ✅ insurance 类型 | ✅ bank 类型 | ✅ | ✅ |
 | `verify-inputs` 验算输入 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `kline` 日K线 | ✅ | ✅ | ✅ | ✅ | ✅ 前复权 |
@@ -67,6 +67,8 @@ python tools/lxr_data.py financials 601336 --years 5 --source lixinger
 | `macro-debt` 国债收益率 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `macro-rates` 利率 | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `index-val` 指数估值 | ✅ 000300 | ✅ | ✅ | ✅ | ✅ HSI |
+
+> **字段规模口径说明**：表中的 409/357/227 是理杏仁 API 文档披露的 schema 规模，不代表 `tools/lxr_data.py financials` 当前一次性拉取的指标数。当前 CLI 采用精选指标集：600519 `financials` 实测 `metric_count=23`，601336 `financials` 实测 `metric_count=57`，00700 `financials` 实测 `metric_count=22`；保险 `industry-deep` 实测 `metric_count=128`，用于 EV/NBV/偿付能力等深度字段。
 
 ### A 股类型自动路由（实测）
 

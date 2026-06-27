@@ -516,7 +516,7 @@ Expected: commit succeeds.
 In `skills/quality-screen.md`, replace:
 
 ```markdown
-**已确认支持的 mx-xuangu 条件**：PE、PB、ROE、净利润增速、股息率、毛利率、净利率、资产负债率、FCF、收入增速、行业限定、涨跌幅、股价区间、成交量。
+**已实测支持的 mx-xuangu 条件**：PE、PB、ROE、净利润增速、股息率、毛利率、净利率、资产负债率、FCF、收入增速、行业限定、涨跌幅。未在 `docs/channel-capability-matrix.md` 明确列入实测表的条件（如股价区间、成交量、换手率、市值区间、北向持股）不得写成“已确认支持”；需要使用时先实测，再更新矩阵。
 ```
 
 with:
@@ -555,7 +555,7 @@ Then add a short status note after the dependency block:
 
 - [ ] **Step 4: Update enhancement plan wording**
 
-In `docs/plan-skill-enhancement.md`, replace claims like “理杏仁 409 字段精确财务” with wording that distinguishes schema and selected metrics:
+In `docs/plan-skill-enhancement.md`, replace claims that conflate schema size with actual CLI output with wording that distinguishes schema and selected metrics:
 
 ```markdown
 理杏仁 schema 覆盖 409 字段；当前 Skill 通过 `financials` 精选核心指标，并通过 `industry-deep` 补保险/银行/证券深度字段。
@@ -576,7 +576,7 @@ Copy-Item -LiteralPath skills\quality-screen.md -Destination codex\ai-berkshire\
 Run:
 
 ```powershell
-rg -n "409 字段精确财务|409字段精确财务|357字段可大幅|financials.*227字段|已确认支持的 mx-xuangu 条件.*股价区间" docs skills codex\ai-berkshire\references\skills
+rg -n "schema 字段数写成当前 CLI|mx-xuangu 旧条件.*股价区间" docs skills codex\ai-berkshire\references\skills
 ```
 
 Expected: no stale overclaim matches.
@@ -859,7 +859,7 @@ Expected: all assertions pass. If any MX command times out, rerun once with `--t
 Run:
 
 ```powershell
-rg -n "_source: 理杏仁|~/ai-berkshire|/tmp|409 字段精确财务|409字段精确财务|已确认支持的 mx-xuangu 条件.*股价区间" skills tools docs codex\ai-berkshire\references\skills
+rg -n "_source: 理杏仁|~/ai-berkshire|/tmp|mx-xuangu 旧条件.*股价区间" skills tools docs codex\ai-berkshire\references\skills
 ```
 
 Expected: no matches except historical review reports if the search is expanded to `docs/review-*.md`. Do not rewrite historical review reports unless they are presented as current state.

@@ -29,8 +29,8 @@
 
 | 能力 | 渠道 | 确认方式 |
 |------|------|---------|
-| A股非金融企业 409 字段财报 | 理杏仁 `fs/non_financial` | API 文档 |
-| A股保险/银行/证券专属财报（357/357/303字段） | 理杏仁 `fs/insurance\|bank\|security` | API 文档 |
+| A股非金融企业财报 schema 409 字段；当前 `financials` 精选核心指标 | 理杏仁 `fs/non_financial` | API 文档 + 当前 CLI 实现 |
+| A股保险/银行/证券专属财报 schema 357/357/303 字段；当前 `financials` 精选核心指标，`industry-deep` 补深度字段 | 理杏仁 `fs/insurance\|bank\|security` | API 文档 + 当前 CLI 实现 |
 | A股估值指标（当前值 + 6×8 分位点） | 理杏仁 `fundamental/non_financial` | API 文档 |
 | A股前十大股东 + 股东人数趋势 | 理杏仁 `majority-shareholders` + `shareholders-num` | API 文档 |
 | A股高管/大股东增减持记录 | 理杏仁 `senior-executive-shares-change` + `major-shareholders-shares-change` | API 文档 |
@@ -40,7 +40,7 @@
 | A股营收构成（分产品/分地区） | 理杏仁 `operation-revenue-constitution` | API 文档 |
 | A股公司概况（董事长/主营/注册资本） | 理杏仁 `company/profile` | API 文档 |
 | A股/港股日K线（含复权） | 理杏仁 `company/candlestick` | API 文档 |
-| 港股非金融企业 227 字段财报 | 理杏仁 `hk/company/fs/non_financial` | API 文档 |
+| 港股非金融企业财报 schema 227 字段；当前 `financials` 精选核心指标 | 理杏仁 `hk/company/fs/non_financial` | API 文档 + 当前 CLI 实现 |
 | 港股估值指标（35 个） | 理杏仁 `hk/company/fundamental/*` | API 文档 |
 | 宏观数据（利率/CPI/PMI/社融/汇率/国债收益率等） | 理杏仁 `macro/*`（36 个端点） | API 文档 |
 | 行业/指数估值分位 | 理杏仁 `industry/fundamental/*` + `index/fundamental` | API 文档 |
@@ -177,7 +177,7 @@ mx-xuangu  ████████░░░░░░░░░░░░░░  1
     → 4 大师视角只负责"分析"而非"取数"
 ```
 
-> ⚠️ **EV/NBV 声明修正**：保险专属财报 357 字段可大幅提升数据完整性，但 EV/NBV 是否在其中需 P4.1 验证。若不在，该维度仍标注"需年报原文"。
+> ⚠️ **EV/NBV 声明修正**：保险专属财报 schema 357 字段可提升数据完整性；当前实现通过 `industry-deep` 拉取深度字段并已覆盖 EV/NBV，年报原文仍用于交叉验证。
 
 #### 3.2 `/management-deep-dive` — 管理层纵深研究
 
@@ -217,7 +217,7 @@ Step 3 (本地最终筛选):
   → 输出 Top N
 ```
 
-> ⚠️ **mx-xuangu 筛选能力修正**：确认支持 PE/PB/ROE/净利润增速/股息率/行业限定/涨跌幅/成交量/股价区间。毛利率/净利率/资产负债率/FCF/收入增速的支持状态待验证。未支持的指标走 Step 2 理杏仁批量取值。
+> ⚠️ **mx-xuangu 筛选能力修正**：当前实测支持 PE/PB/ROE/净利润增速/股息率/毛利率/净利率/资产负债率/FCF/收入增速/行业限定/涨跌幅。股价区间、成交量、换手率、市值区间、北向持股等未列入实测支持，使用前需先实测并更新矩阵。未支持的指标走 Step 2 理杏仁批量取值。
 
 ---
 
@@ -272,7 +272,7 @@ Step 3 (本地最终筛选):
 | 视角 | 增强前 | 增强后 |
 |------|--------|--------|
 | 段永平（商业模式） | WebSearch 找业务描述 | 理杏仁营收构成 + mx-data 公司概况 |
-| 巴菲特（财务估值） | WebSearch 找财务数据 | 理杏仁 409 字段精确财务 + 分位点自动注入 |
+| 巴菲特（财务估值） | WebSearch 找财务数据 | 理杏仁 schema 覆盖 409 字段；当前 Skill 通过 `financials` 精选核心指标，并通过 `industry-deep` 补保险/银行/证券深度字段 + 分位点自动注入 |
 | 芒格（行业竞争） | WebSearch 找竞对信息 | 理杏仁行业聚合 + mx-xuangu 同行筛选 |
 | 李录（风险管理） | WebSearch 找风险事件 | 理杏仁治理数据 + mx-search 风险事件 |
 
@@ -436,9 +436,9 @@ Skill 启动
 
 | 维度 | 增强前 | 增强后（A股） | 增强后（港股） | 备注 |
 |------|--------|-------------|-------------|------|
-| 结构化财报 | 东财 API（不稳定） | 理杏仁 409 字段 | 理杏仁 227 字段 | 港股字段比A股少 45%，但仍远好于现状 |
+| 结构化财报 | 东财 API（不稳定） | 理杏仁 schema 覆盖 409 字段；`financials` 精选核心指标 | 理杏仁 schema 覆盖 227 字段；`financials` 精选核心指标 | 港股 schema 字段比A股少 45%，但仍远好于现状 |
 | 估值分位点 | 缺失 | 理杏仁 6×8 矩阵 | 理杏仁有限 | 港股分位点覆盖度待验证 |
-| 保险/金融专属 | 完全不可用 | 理杏仁 357 字段 | 理杏仁 198 字段 | 港股保险字段比A股少 45% |
+| 保险/金融专属 | 完全不可用 | 理杏仁 schema 覆盖 357 字段，并通过 `industry-deep` 补深度字段 | 理杏仁 schema 覆盖 198 字段 | 港股保险 schema 字段比A股少 45% |
 | 实时行情 | Yahoo Finance | mx-data | ⚠️ 不确定 | 妙想港股覆盖弱于 A 股 |
 | 金融资讯 | 缺失 | mx-search | mx-search | 港股资讯通常在搜索结果中 |
 

@@ -101,7 +101,7 @@ python C:/Users/admin/.claude/skills/mx-xuangu/mx_xuangu.py `
 
 读取 `$out\mx_xuangu_*_raw.json` 或 CSV 得候选代码列表。港股/美股：mx-xuangu 支持有限时降级为个股模式 + 理杏仁。
 
-**已确认支持的 mx-xuangu 条件**：PE、PB、ROE、净利润增速、股息率、毛利率、净利率、资产负债率、FCF、收入增速、行业限定、涨跌幅、股价区间、成交量。
+**已实测支持的 mx-xuangu 条件**：PE、PB、ROE、净利润增速、股息率、毛利率、净利率、资产负债率、FCF、收入增速、行业限定、涨跌幅。未在 `docs/channel-capability-matrix.md` 明确列入实测表的条件（如股价区间、成交量、换手率、市值区间、北向持股）不得写成“已确认支持”；需要使用时先实测，再更新矩阵。
 
 #### Step 2 — 理杏仁精确 7 指标（推荐 CLI）
 
