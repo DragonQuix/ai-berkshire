@@ -34,10 +34,23 @@
 
 ### 第一步：数据收集
 
-> **数据源规范**：参见 `skills/financial-data.md`。所有财务数据必须来自两个独立来源，误差>1%须标记。
+> **数据源规范**：参见 `skills/financial-data.md`。理杏仁第1顺位 → 妙想第2顺位 → 免费源第3顺位（兜底）。
 > - 美股：macrotrends（主）+ stockanalysis（副）
 > - 港股：aastocks（主）+ macrotrends ADR（副）
 > - A股：东方财富（主）+ 巨潮资讯（副）
+>
+> **A股/港股结构化数据优先用理杏仁 CLI**（避免免费源 GBK 乱码、保险报表缺失、无估值分位点）：
+> ```
+> python tools/lxr_data.py financials 601336 --years 5 --source lixinger   # 财报（自动判定保险/银行/证券/非金融）
+> python tools/lxr_data.py valuation 600519 --source lixinger              # 估值 + 历史分位点
+> python tools/lxr_data.py industry-deep 601336 --years 5                  # 行业深度（保险EV/NBV/偿付能力、银行资本充足率/净息差、证券经纪/投行/资管）
+> python tools/lxr_data.py revenue 600519 --years 3                        # 营收构成（分产品/分地区）
+> python tools/lxr_data.py governance 601336 --years 2                     # 公司治理（高管/大股东增减持）
+> python tools/lxr_data.py shareholders 600519 --kind majority             # 前十大股东/股东人数/基金持股
+> ```
+> **保险股研究特别说明**：EV（内含价值）、NBV（新业务价值）、偿付能力充足率、营运利润均已由
+> `industry-deep` 直接返回（如 601336 2025 EV=2878亿/NBV=98亿），**不再依赖 WebFetch 抓年报补漏**。
+> 仅当理杏仁字段为空（如个别公司不披露营运利润）或需历史口径核对时，再回到年报原文。
 
 使用 Task 工具启动后台 Agent，从网络收集以下数据：
 

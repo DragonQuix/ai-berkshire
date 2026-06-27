@@ -22,6 +22,12 @@
   （A股 majority-shareholders + shareholders-num + fund-shareholders；港股 latest-shareholders + fund-shareholders）。
 - get_valuation_percentiles：PE/PB/PS/股息率 × 6时间维度 × 8统计量 全分位矩阵（分批请求合并）。
 
+阶段 4 增量（保险/银行/证券深度 + 营收构成 + 公司治理）：
+- get_industry_deep：保险(EV/NBV/偿付能力/营运利润/保险业务收支)、银行(资本充足率/净息差/不良/拨备)、
+  证券(经纪/投行/资管/自营)专属深度报表，自动判定类型 + 指标自动剪枝，附 deep_summary 关键字段近3年值。
+- get_revenue_constitution：分产品/分地区营收构成（dataList 收入/占比/毛利率 + 境内/境外）。
+- get_governance：高管增减持 + 大股东增减持（A股）；港股董事权益变动。
+
 CLI：
     python tools/lxr_data.py financials 601336 --years 5 --source lixinger
     python tools/lxr_data.py valuation 600519 --source lixinger
@@ -29,6 +35,9 @@ CLI：
     python tools/lxr_data.py kline 00700 --days 120
     python tools/lxr_data.py shareholders 600519 --kind majority
     python tools/lxr_data.py percentiles 600519
+    python tools/lxr_data.py industry-deep 601336 --years 5
+    python tools/lxr_data.py revenue 600519 --years 3
+    python tools/lxr_data.py governance 601336 --years 2
 """
 
 from __future__ import annotations
@@ -102,6 +111,87 @@ INSURANCE_FINANCIALS_METRICS = [
 METRICS_BY_TYPE = {
     "non_financial": DEFAULT_FINANCIALS_METRICS,
     "insurance": INSURANCE_FINANCIALS_METRICS,
+}
+
+# ---------------------------------------------------------------------------
+# 阶段4：行业深度指标集（保险/银行/证券专属，单股≤128，自动剪枝保有效）
+# ---------------------------------------------------------------------------
+
+# 保险深度：内含价值(EV)/新业务价值(NBV)/偿付能力/营运利润/保险业务收支 + 完整报表覆盖（>100候选，自动剪枝）
+INSURANCE_DEEP_METRICS = [
+    # —— 资产负债表 ——
+    "q.bs.ta.t", "q.bs.cabb.t", "q.bs.pr.t", "q.bs.ar.t", "q.bs.ir.t",
+    "q.bs.rir.t", "q.bs.dfa.t", "q.bs.ica.t", "q.bs.rica.t", "q.bs.phpl.t",
+    "q.bs.ltar.t", "q.bs.laatc.t", "q.bs.td.t", "q.bs.t_fi.t", "q.bs.fiaac.t",
+    "q.bs.fiafvtpol.t", "q.bs.afsfa.t", "q.bs.ltei.t", "q.bs.sd.t", "q.bs.rei.t",
+    "q.bs.fa.t", "q.bs.ia.t", "q.bs.gw.t", "q.bs.roua.t", "q.bs.dita.t", "q.bs.oa.t",
+    # —— 负债 ——
+    "q.bs.tl.t", "q.bs.tl_ta_r.t", "q.bs.stl.t", "q.bs.dfl.t", "q.bs.fasurpa.t",
+    "q.bs.cd.t", "q.bs.icl.t", "q.bs.ricl.t", "q.bs.ap.t", "q.bs.pria.t",
+    "q.bs.facp.t", "q.bs.sawp.t", "q.bs.tp.t", "q.bs.cp.t", "q.bs.phdp.t",
+    "q.bs.phd.t", "q.bs.icr.t", "q.bs.uepr.t", "q.bs.cr.t", "q.bs.lir.t",
+    "q.bs.lthir.t", "q.bs.ltl.t", "q.bs.bp.t", "q.bs.ditl.t", "q.bs.ol.t",
+    # —— 所有者权益 ——
+    "q.bs.toe.t", "q.bs.sc.t", "q.bs.capr.t", "q.bs.oci.t", "q.bs.surr.t",
+    "q.bs.pogr.t", "q.bs.rtp.t", "q.bs.tetshaoehopc.t", "q.bs.tetoshopc.t",
+    "q.bs.tetoshopc_ps.t", "q.bs.etmsh.t",
+    # —— 内含价值与偿付能力 ——
+    "q.bs.ev.t", "q.bs.evolahib.t", "q.bs.evolib.t", "q.bs.evohib.t",
+    "q.bs.ccap.t", "q.bs.acap.t", "q.bs.mcap.t", "q.bs.coresr.t", "q.bs.compsr.t",
+    # —— 利润表（保险业务收支 + 利润）——
+    "q.ps.oi.t", "q.ps.pi.t", "q.ps.ripi.t", "q.ps.pctri.t", "q.ps.ciupr.t",
+    "q.ps.ep.t", "q.ps.ir.t", "q.ps.niifb.t", "q.ps.nnifaci.t", "q.ps.ivi.t",
+    "q.ps.ciofv.t", "q.ps.ei.t", "q.ps.adi.t", "q.ps.oic.t", "q.ps.ooi.t",
+    "q.ps.oe.t", "q.ps.s.t", "q.ps.ce.t", "q.ps.iiicr.t", "q.ps.phdrfpip.t",
+    "q.ps.rie.t", "q.ps.faceoio.t", "q.ps.ise.t", "q.ps.baae.t", "q.ps.tas.t",
+    "q.ps.op.t", "q.ps.tp.t", "q.ps.ite.t", "q.ps.np.t", "q.ps.npatshaoehopc.t",
+    "q.ps.npatoshopc.t", "q.ps.npatmsh.t", "q.ps.opatshopc.t", "q.ps.nbv.t",
+    "q.ps.wroe.t", "q.ps.beps.t", "q.ps.deps.t", "q.ps.da.t", "q.ps.d_np_r.t",
+    # —— 现金流量表关键项 ——
+    "q.cfs.crfp.t", "q.cfs.cpfc.t", "q.cfs.ncffoa.t", "q.cfs.ncffia.t",
+    "q.cfs.ncfffa.t", "q.cfs.stciffoa.t", "q.cfs.stcoffoa.t",
+    # —— 估值与股本 ——
+    "q.bs.mc.t", "q.bs.tsc.t", "q.bs.csc.t", "q.bs.pe_ttm.t", "q.bs.pb.t",
+    "q.bs.ps_ttm.t", "q.bs.dyr.t",
+    # —— 区域收入 ——
+    "q.ps.d_oi.t", "q.ps.d_oi_r.t", "q.ps.o_oi.t", "q.ps.o_oi_r.t",
+]
+
+# 银行深度：资本充足率/净息差/不良/拨备/存贷
+BANK_DEEP_METRICS = [
+    "q.bs.car.t", "q.bs.ct1car.t", "q.bs.t1car.t",     # 资本充足率/核心一级/一级
+    "q.bs.nis.t", "q.bs.nim.t",                          # 净利差/净息差
+    "q.bs.npl.t", "q.bs.llr_npl_r.t",                    # 不良贷款余额/拨备覆盖率
+    "q.bs.cd.t", "q.bs.laatc.t",                         # 客户存款/发放贷款及垫款
+    "q.bs.ta.t", "q.bs.tl.t", "q.bs.toe.t", "q.bs.tetoshopc.t",
+    "q.ps.oi.t", "q.ps.nii.t", "q.ps.nfaci.t",          # 营业收入/净利息收入/手续费净收入
+    "q.ps.ii.t", "q.ps.ie.t",                            # 利息收入/支出
+    "q.ps.np.t", "q.ps.npatoshopc.t", "q.ps.beps.t", "q.ps.wroe.t",
+    "q.bs.tsc.t", "q.bs.mc.t", "q.bs.pb.t", "q.bs.pe_ttm.t",
+]
+
+# 证券深度：经纪/投行/资管/自营/投资收益
+SECURITY_DEEP_METRICS = [
+    "q.ps.oi.t", "q.ps.nii.t", "q.ps.nfaci.t",          # 营业收入/净利息/手续费净收入
+    "q.ps.nfifb.t", "q.ps.nfifib.t", "q.ps.nfifam.t",   # 经纪/投行/资管业务净收入
+    "q.ps.ivi.t", "q.ps.ciofv.t",                        # 投资收益/公允价值变动
+    "q.ps.np.t", "q.ps.npatoshopc.t", "q.ps.beps.t", "q.ps.wroe.t",
+    "q.bs.ta.t", "q.bs.toe.t", "q.bs.tetoshopc.t", "q.bs.tsc.t", "q.bs.mc.t",
+    "q.bs.pb.t", "q.bs.pe_ttm.t",
+    "q.bs.pc_pesaid_nc_r.t", "q.bs.pc_pnesaid_nc_r.t",  # 自营权益/非权益类占净资本
+]
+
+DEEP_METRICS_BY_TYPE = {
+    "insurance": INSURANCE_DEEP_METRICS,
+    "bank": BANK_DEEP_METRICS,
+    "security": SECURITY_DEEP_METRICS,
+}
+
+# 保险深度关键字段（用于准出摘要：EV/NBV/偿付能力）
+INSURANCE_DEEP_KEY_FIELDS = {
+    "ev": "q.bs.ev.t", "nbv": "q.ps.nbv.t",
+    "coresr": "q.bs.coresr.t", "compsr": "q.bs.compsr.t",
+    "opatshopc": "q.ps.opatshopc.t", "pi": "q.ps.pi.t",
 }
 
 # 估值当前值（基本面端点，单股 ≤36 指标）
@@ -695,6 +785,125 @@ class LxrData:
         }
 
     # ------------------------------------------------------------------
+    # 行业深度报表（P4.2/P4.3：保险/银行/证券专属指标）
+    # ------------------------------------------------------------------
+
+    def get_industry_deep(self, code: str, years: int = 5, report_type: Optional[str] = None) -> dict:
+        """保险/银行/证券专属深度财报。自动判定类型并选取专属指标集（自动剪枝）。
+
+        准出要点：保险返回 EV/NBV/偿付能力/营运利润；银行返回资本充足率/净息差/不良/拨备；
+        证券返回经纪/投行/资管/自营业务净收入。非金融类型回退到通用财务指标。
+        """
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        fs_type = report_type or self.detect_fs_type(code)
+        endpoint = f"{market}/company/fs/{fs_type}"
+        metrics = DEEP_METRICS_BY_TYPE.get(fs_type, DEFAULT_FINANCIALS_METRICS)
+        end = _dt.date.today()
+        start = end - _dt.timedelta(days=365 * years + 10)
+        base = {
+            "stockCodes": [norm],
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+        }
+        records, used = self._post_fs(endpoint, base, metrics, self._ttl("financials", 86400))
+        annual = [r for r in records if str(r.get("date", ""))[:10].endswith("-12-31")]
+        annual.sort(key=lambda r: r.get("date", ""), reverse=True)
+        summary = self._industry_deep_summary(fs_type, annual)
+        return {
+            "source_detail": f"lixinger:{endpoint}",
+            "code": norm, "market": market, "report_type": fs_type,
+            "records": records, "metric_count": len(used),
+            "available_metrics": used, "annual_count": len(annual),
+            "deep_summary": summary, "_source": "lixinger",
+        }
+
+    @staticmethod
+    def _industry_deep_summary(fs_type: str, annual: list) -> dict:
+        """提取保险/银行/证券的关键深度字段近3年值，供准出核对。"""
+        if not annual:
+            return {}
+        key_fields = {
+            "insurance": INSURANCE_DEEP_KEY_FIELDS,
+            "bank": {
+                "car": "q.bs.car.t", "nim": "q.bs.nim.t",
+                "npl_ratio": "q.bs.llr_npl_r.t", "npl": "q.bs.npl.t",
+            },
+            "security": {
+                "broker": "q.ps.nfifb.t", "ib": "q.ps.nfifib.t",
+                "am": "q.ps.nfifam.t", "nfaci": "q.ps.nfaci.t",
+            },
+        }.get(fs_type, {})
+        out = {}
+        for label, path in key_fields.items():
+            series = []
+            for r in annual[:3]:
+                q = r.get("q", {}) if isinstance(r, dict) else {}
+                val = LxrData._dig(q, path[2:]) if path.startswith("q.") else None
+                series.append({"date": str(r.get("date", ""))[:10], "value": val})
+            out[label] = series
+        return out
+
+    # ------------------------------------------------------------------
+    # 营收构成（P4.4：分产品/分地区收入）
+    # ------------------------------------------------------------------
+
+    def get_revenue_constitution(self, code: str, years: int = 3) -> dict:
+        """营收构成：境内/境外收入 + dataList（分产品/分地区收入、占比、毛利率）。"""
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        end = _dt.date.today()
+        start = end - _dt.timedelta(days=365 * years + 10)
+        payload = {
+            "stockCode": norm,
+            "startDate": start.strftime("%Y-%m-%d"),
+            "endDate": end.strftime("%Y-%m-%d"),
+        }
+        endpoint = f"{market}/company/operation-revenue-constitution"
+        data = self.client.post(endpoint, payload, ttl_seconds=self._ttl("revenue", 86400))
+        records = data if isinstance(data, list) else ([data] if isinstance(data, dict) else [])
+        return {
+            "source_detail": f"lixinger:{endpoint}",
+            "code": norm, "market": market, "records": records, "_source": "lixinger",
+        }
+
+    # ------------------------------------------------------------------
+    # 公司治理（P4.5：高管/大股东增减持；股东数据见 P3.4）
+    # ------------------------------------------------------------------
+
+    def get_governance(self, code: str, years: int = 2) -> dict:
+        """高管增减持 + 大股东增减持（A股）；港股用董事权益变动。"""
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        end = _dt.date.today()
+        start = end - _dt.timedelta(days=365 * years + 10)
+        date_range = {"startDate": start.strftime("%Y-%m-%d"), "endDate": end.strftime("%Y-%m-%d")}
+        if market == "hk":
+            payload = {"stockCode": norm, **date_range}
+            data = self.client.post("hk/company/hot/director_equity_change", payload,
+                                    ttl_seconds=self._ttl("governance", 86400))
+            records = data if isinstance(data, list) else []
+            return {
+                "source_detail": "lixinger:hk/company/hot/director_equity_change",
+                "code": norm, "market": "hk",
+                "director_changes": records, "executive_changes": [], "major_shareholder_changes": [],
+                "_source": "lixinger",
+            }
+        exec_payload = {"stockCode": norm, **date_range}
+        maj_payload = {"stockCode": norm, **date_range}
+        exec_data = self.client.post("cn/company/senior-executive-shares-change", exec_payload,
+                                     ttl_seconds=self._ttl("governance", 86400))
+        maj_data = self.client.post("cn/company/major-shareholders-shares-change", maj_payload,
+                                    ttl_seconds=self._ttl("governance", 86400))
+        return {
+            "source_detail": "lixinger:cn/company/*-shares-change",
+            "code": norm, "market": "cn",
+            "executive_changes": exec_data if isinstance(exec_data, list) else [],
+            "major_shareholder_changes": maj_data if isinstance(maj_data, list) else [],
+            "_source": "lixinger",
+        }
+
+    # ------------------------------------------------------------------
     # 子进程调用妙想 mx-data
     # ------------------------------------------------------------------
 
@@ -804,6 +1013,22 @@ def _cli():
     p_pc.add_argument("--report-type", default=None, choices=list(FS_TYPES))
     p_pc.add_argument("--quiet", action="store_true")
 
+    p_id = sub.add_parser("industry-deep", help="行业深度报表（保险EV/NBV/偿付能力、银行资本充足率/净息差、证券经纪/投行/资管）")
+    p_id.add_argument("code", help="股票代码，如 601336(保险) / 600036(银行) / 600030(证券)")
+    p_id.add_argument("--years", type=int, default=5)
+    p_id.add_argument("--report-type", default=None, choices=list(FS_TYPES))
+    p_id.add_argument("--quiet", action="store_true")
+
+    p_rc = sub.add_parser("revenue", help="营收构成（分产品/分地区收入、占比、毛利率）")
+    p_rc.add_argument("code", help="股票代码")
+    p_rc.add_argument("--years", type=int, default=3)
+    p_rc.add_argument("--quiet", action="store_true")
+
+    p_gv = sub.add_parser("governance", help="公司治理（高管/大股东增减持；港股董事权益变动）")
+    p_gv.add_argument("code", help="股票代码")
+    p_gv.add_argument("--years", type=int, default=2)
+    p_gv.add_argument("--quiet", action="store_true")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -837,6 +1062,18 @@ def _cli():
     elif args.command == "percentiles":
         data = LxrData(verbose=not args.quiet).get_valuation_percentiles(
             args.code, report_type=args.report_type,
+        )
+    elif args.command == "industry-deep":
+        data = LxrData(verbose=not args.quiet).get_industry_deep(
+            args.code, years=args.years, report_type=args.report_type,
+        )
+    elif args.command == "revenue":
+        data = LxrData(verbose=not args.quiet).get_revenue_constitution(
+            args.code, years=args.years,
+        )
+    elif args.command == "governance":
+        data = LxrData(verbose=not args.quiet).get_governance(
+            args.code, years=args.years,
         )
     else:
         parser.print_help()

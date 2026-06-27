@@ -216,5 +216,66 @@ class TestValuationPercentilesMatrix(unittest.TestCase):
         self.assertEqual(matrix["dyr"]["fs"]["avgv"], 0.5)
 
 
+class TestIndustryDeepAndGovernance(unittest.TestCase):
+    def _insurance_record(self, ev, nbv, date="2025-12-31"):
+        return {"date": date, "q": {"bs": {"ev": {"t": ev}}, "ps": {"nbv": {"t": nbv}}}}
+
+    def test_industry_deep_insurance_summary(self):
+        cli = FakeClient({
+            "cn/company": [{"list": [{"fsTableType": "insurance"}]}],
+            "cn/company/fs/insurance": [
+                [self._insurance_record(287840000000, 9842000000, "2025-12-31"),
+                 self._insurance_record(258448000000, 6253000000, "2024-12-31")]],
+        })
+        d = lxd.LxrData(client=cli, verbose=False)
+        r = d.get_industry_deep("601336", years=2)
+        self.assertEqual(r["_source"], "lixinger")
+        self.assertEqual(r["report_type"], "insurance")
+        ds = r["deep_summary"]
+        self.assertEqual(len(ds["ev"]), 2)
+        self.assertEqual(ds["ev"][0]["value"], 287840000000)
+        self.assertEqual(ds["nbv"][0]["value"], 9842000000)
+
+    def test_industry_deep_summary_pure(self):
+        annual = [
+            {"date": "2025-12-31", "q": {"bs": {"car": {"t": 0.1824}}, "ps": {}}},
+            {"date": "2024-12-31", "q": {"bs": {"car": {"t": 0.1905}}, "ps": {}}},
+        ]
+        ds = lxd.LxrData._industry_deep_summary("bank", annual)
+        self.assertEqual(ds["car"][0]["value"], 0.1824)
+
+    def test_revenue_constitution(self):
+        cli = FakeClient({
+            "cn/company/operation-revenue-constitution": [
+                [{"date": "2025-12-31", "d_oi": 1.0e12,
+                  "dataList": [{"itemName": "茅台酒", "revenue": 1.0e11, "revenuePercentage": 0.85}]}]],
+        })
+        d = lxd.LxrData(client=cli, verbose=False)
+        r = d.get_revenue_constitution("600519", years=1)
+        self.assertEqual(r["_source"], "lixinger")
+        self.assertGreater(len(r["records"]), 0)
+        self.assertIn("dataList", r["records"][0])
+
+    def test_governance_cn(self):
+        cli = FakeClient({
+            "cn/company/senior-executive-shares-change": [[{"executiveName": "张三", "changedShares": 10000}]],
+            "cn/company/major-shareholders-shares-change": [[{"shareholderName": "大股东A", "changedShares": -5000}]],
+        })
+        d = lxd.LxrData(client=cli, verbose=False)
+        r = d.get_governance("601336", years=1)
+        self.assertEqual(r["_source"], "lixinger")
+        self.assertEqual(len(r["executive_changes"]), 1)
+        self.assertEqual(len(r["major_shareholder_changes"]), 1)
+
+    def test_governance_hk_director(self):
+        cli = FakeClient({"hk/company/hot/director_equity_change": [[{"directorName": "李四"}]]})
+        d = lxd.LxrData(client=cli, verbose=False)
+        r = d.get_governance("00700", years=1)
+        self.assertEqual(r["market"], "hk")
+        self.assertEqual(len(r["director_changes"]), 1)
+        eps = [e for e, _ in cli.calls]
+        self.assertIn("hk/company/hot/director_equity_change", eps)
+
+
 if __name__ == "__main__":
     unittest.main()
