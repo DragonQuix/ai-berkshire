@@ -240,7 +240,7 @@ def sample_points(points: list, ratio: float = 0.15, seed: int = None) -> list:
 # 准出/打回判决
 # ---------------------------------------------------------------------------
 
-_TOLERANCE = 0.01   # 1% 容差
+_TOLERANCE = 0.02   # 2% 容差（与 financial-data.md / plan-skill-enhancement §4.3 一致）
 
 
 def _pct_diff(reported: float, fetched: float) -> float:
@@ -381,7 +381,7 @@ def render_verdict(results: list, report_name: str = "") -> dict:
         verdict = 'FAIL'
 
     if warn_count > 0:
-        print(f'{YELLOW}注意：{warn_count} 个数据点两来源结果不一致（超过1%），可能是口径差异（GAAP/Non-GAAP或汇率），请人工复核。{RESET}')
+        print(f'{YELLOW}注意：{warn_count} 个数据点两来源结果不一致（超过2%），可能是口径差异（GAAP/Non-GAAP或汇率），请人工复核。{RESET}')
         for wi in warn_items:
             print(f'  ⚠️  {wi["label"]}  报告:{wi["reported"]} {wi["unit"]}  偏差: {wi["diff1_pct"]}% / {wi["diff2_pct"]}%')
 

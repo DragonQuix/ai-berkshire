@@ -37,6 +37,8 @@ python tools/lxr_data.py percentiles {code}
 python tools/lxr_data.py governance {code} --years 2
 ```
 
+**`_source` 标注**：理杏仁自动项 → `lixinger`；WebSearch 补全项 → `legacy`。
+
 **可自动判断的检查项**（从理杏仁取值后直接填表）：
 | Checklist 项 | 理杏仁依据 |
 |-------------|-----------|

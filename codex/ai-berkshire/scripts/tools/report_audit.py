@@ -240,7 +240,7 @@ def sample_points(points: list, ratio: float = 0.15, seed: int = None) -> list:
 # 准出/打回判决
 # ---------------------------------------------------------------------------
 
-_TOLERANCE = 0.01   # 1% 容差
+_TOLERANCE = 0.02   # 2% 容差（与 financial-data.md / plan-skill-enhancement §4.3 一致）
 
 
 def _pct_diff(reported: float, fetched: float) -> float:

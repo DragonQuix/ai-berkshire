@@ -13,7 +13,7 @@ Use this skill to run AI Berkshire's value-investing research workflows in Codex
 - Do not pre-decide bullish or bearish conclusions. Gather data first, reason second, conclude last.
 - Use Chinese for final reports unless the user explicitly requests another language.
 - For current market data, earnings, news, prices, filings, management changes, or regulations, verify with live sources before writing conclusions.
-- For key financial numbers, require at least two independent sources when feasible. If sources differ by more than 1%, flag the mismatch.
+- For key financial numbers, require at least two independent sources when feasible. Apply cross-validation thresholds per `references/skills/financial-data.md` (≤2% pass for same-definition sources; 2–5% note discrepancy; >5% flag anomaly).
 - Never rely on LLM mental math for market cap, PE, valuation, or scenario analysis. Use the bundled Python tools or equivalent exact calculations.
 
 ## Workflow selection

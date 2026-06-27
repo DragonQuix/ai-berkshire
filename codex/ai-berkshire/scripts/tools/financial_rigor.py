@@ -364,6 +364,17 @@ def three_scenario_valuation(current_price, current_eps, shares_billion,
 # 理杏仁自动取数（--source lixinger）
 # ---------------------------------------------------------------------------
 
+def _dividend_per_share_from_yield(price, dividend_yield):
+    """理杏仁 dyr 为小数收益率（0.0409 = 4.09%）；若 >1 则视为百分数。"""
+    if price is None or dividend_yield is None:
+        return None
+    p = float(price)
+    d = float(dividend_yield)
+    if abs(d) > 1:
+        return p * d / 100.0
+    return p * d
+
+
 def _lxr_verification_inputs(code):
     """从理杏仁获取验算输入。需要在 tools/ 目录运行（同目录导入 lxr_data）。"""
     if not code:
@@ -463,10 +474,8 @@ Examples:
     elif args.command == "verify-valuation":
         if args.source == "lixinger":
             inputs = _lxr_verification_inputs(args.code)
-            dividend = None
-            dyr = inputs.get("dividend_yield")
-            if dyr is not None and inputs.get("price"):
-                dividend = inputs["price"] * float(dyr) / 100.0
+            dividend = _dividend_per_share_from_yield(
+                inputs.get("price"), inputs.get("dividend_yield"))
             verify_valuation(inputs["price"], inputs.get("eps"), inputs.get("bvps"),
                              None, dividend, None)
         else:

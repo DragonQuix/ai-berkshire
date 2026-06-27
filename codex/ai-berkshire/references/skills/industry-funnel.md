@@ -51,9 +51,11 @@ python C:/Users/admin/.claude/skills/mx-xuangu/mx_xuangu.py `
 候选池确定后，理杏仁批量拉估值/财报：
 
 ```bash
-python tools/lxr_data.py industry-compare {代表股代码}   # 行业估值水位
-python tools/lxr_data.py financials {code} --years 3 --source lixinger  # 逐家或 batch stockCodes
+python tools/lxr_data.py industry-compare {代表股代码}   # 行业估值水位，_source: lixinger
+python tools/lxr_data.py financials {code} --years 3 --source lixinger
 ```
+
+初筛候选来自 mx-xuangu 时标注 `_source: mx-xuangu`；理杏仁补数标注 `_source: lixinger`。
 
 ### 1.1 活跃股票定义（三类并集）
 

@@ -344,5 +344,51 @@ class TestMacroAndIndexValuation(unittest.TestCase):
         self.assertEqual(r["valuation"]["pe_ttm"]["cv"], 17.78)
 
 
+class TestQualityMetrics(unittest.TestCase):
+    def test_compute_quality_checks_pass(self):
+        def rec(date, **vals):
+            q = {}
+            for path, v in vals.items():
+                cur = q
+                parts = path.split(".")
+                for p in parts[:-1]:
+                    cur = cur.setdefault(p, {})
+                cur[parts[-1]] = {"t": v}
+            return {"date": date, "q": q}
+
+        annual = [
+            rec(f"{y}-12-31", **{
+                "ps.npatoshopc": 10e9, "bs.tetoshopc": 40e9,
+                "ps.oi": 20e9, "ps.oc": 8e9, "ps.np": 5e9,
+                "cfs.ncffoa": 6e9, "cfs.ncffia": -1e9,
+                "ps.op": 7e9, "ps.ie": 0.5e9, "bs.tsc": 1e9,
+            })
+            for y in range(2016, 2026)
+        ]
+        out = lxd._compute_quality_checks("non_financial", annual, 10, 5)
+        self.assertEqual(out["result"], "pass")
+        self.assertTrue(out["checks"]["roe_10y_avg"]["pass_"])
+        self.assertTrue(out["checks"]["fcf_5y_cumulative"]["pass_"])
+
+    def test_interest_coverage_na_for_bank(self):
+        annual = [{"date": "2025-12-31", "q": {"ps": {"np": {"t": 1}}, "bs": {"tsc": {"t": 1}}}}]
+        out = lxd._compute_quality_checks("bank", annual, 10, 5)
+        self.assertEqual(out["checks"]["interest_coverage"]["status"], "na")
+
+    def test_datapack_source_no_mx(self):
+        pack = {"sections": {"financials": {"_source": "lixinger"}}}
+        self.assertEqual(lxd._datapack_source(pack, False), "lixinger")
+
+    def test_datapack_source_with_mx(self):
+        pack = {
+            "sections": {
+                "financials": {"_source": "lixinger"},
+                "mx_quote": {"_source": "mx-data"},
+                "mx_news": {"_source": "mx-search"},
+            }
+        }
+        self.assertEqual(lxd._datapack_source(pack, True), "lixinger+mx")
+
+
 if __name__ == "__main__":
     unittest.main()

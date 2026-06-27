@@ -48,6 +48,8 @@ python tools/lxr_data.py financials {code} --years 3 --source lixinger
 python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{公司} 负面 监管 最新" --output-dir %TEMP%\mx_skills
 ```
 
+**`_source` 标注**：估值/分位/治理/财报 → `lixinger`；负面事件搜索 → `mx-search`。
+
 若已有 `/investment-research` 或 `/investment-team` 报告，优先读取。使用 `tools/financial_rigor.py verify-valuation` 校验估值。
 
 ### A1：核心论文（必须用200字以内写清楚）

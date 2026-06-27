@@ -103,25 +103,30 @@ python C:/Users/admin/.claude/skills/mx-xuangu/mx_xuangu.py `
 
 **已确认支持的 mx-xuangu 条件**：PE、PB、ROE、净利润增速、股息率、毛利率、净利率、资产负债率、FCF、收入增速、行业限定、涨跌幅、股价区间、成交量。
 
-#### Step 2 — 理杏仁批量取值（候选池精确 7 指标）
+#### Step 2 — 理杏仁精确 7 指标（推荐 CLI）
 
-对候选池每只股票（或个股模式的目标公司），用 `lxr_data.py` 拉 5–10 年财报算 7 条硬指标：
+对候选池每只股票（或个股模式的目标公司），**优先**使用专用命令一次输出 7 条硬指标及通过/失败判定：
 
-```bash
-python tools/lxr_data.py financials {code} --years 10 --source lixinger
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+python tools/lxr_data.py quality-metrics {code} --years 10 --fcf-years 5
 ```
 
-批量持仓场景可用理杏仁 `stockCodes` 数组（≤100，`date` 必填）一次拉多股基本面；7 指标中的 ROE/FCF/毛利率/净利率/股本等从 `financials` 记录本地计算。
+输出含 `summary`（原始数值）、`checks`（7 条 pass/fail/na）及 `_source: lixinger`。批量候选池可对每代码逐只调用，或用理杏仁 `stockCodes` batch 拉财报后本地调用同一计算逻辑。
+
+**字段与计算口径**（`quality-metrics` 内部实现，与下表一致）：
 
 | 7 条指标 | 理杏仁字段 / 计算 |
 |---------|------------------|
 | ① 10年平均ROE | 归母净利润 / 归母权益，逐年平均 |
-| ② 5年累计FCF | `q.cfs.ncffoa.t` − 资本开支（现金流量表） |
-| ③ 利息覆盖 | EBIT / 利息费用（银行/保险 **跳过**，标注 N/A） |
-| ④ 长期毛利率 | 毛利率序列均值 |
+| ② 5年累计FCF | 近5年 `sum(ncffoa + ncffia)`（投资活动现金流净额为负时体现资本开支） |
+| ③ 利息覆盖 | 营业利润 / 利息费用（`q.ps.ie.t`，缺失时用 `q.ps.fe.t`；银行/保险/证券 **N/A**） |
+| ④ 长期毛利率 | `(营业收入-营业成本)/营业收入` 序列均值 |
 | ⑤ OCF/NI 5年均值 | 经营现金流 / 净利润 |
-| ⑥ 长期净利率 | 净利率序列均值 |
-| ⑦ 5年股本膨胀 | `q.bs.tsc.t` 首尾对比 |
+| ⑥ 长期净利率 | 净利润 / 营业收入 序列均值 |
+| ⑦ 5年股本膨胀 | `q.bs.tsc.t` 首尾对比（%） |
+
+备选：需原始财报记录时仍可 `python tools/lxr_data.py financials {code} --years 10 --source lixinger` 后本地计算（须含 `q.ps.ie.t`、`q.cfs.ncffia.t` 等字段）。
 
 标注 `_source: lixinger`。与 mx-xuangu 初筛结果不一致时，**以理杏仁为准**。
 

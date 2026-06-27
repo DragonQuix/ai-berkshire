@@ -48,6 +48,7 @@ CLI：
     python tools/lxr_data.py index-val 000300 --market cn
     python tools/lxr_data.py industry-compare 600519
     python tools/lxr_data.py datapack 601336 --years 5
+    python tools/lxr_data.py quality-metrics 600519 --years 10
     python tools/lxr_data.py mx-search "新华保险最新公告"
     python tools/lxr_data.py mx-xuangu "ROE大于15%的A股，返回前10只"
 """
@@ -84,6 +85,8 @@ DEFAULT_FINANCIALS_METRICS = [
     "q.ps.op.t",             # 营业利润
     "q.ps.tp.t",             # 利润总额
     "q.ps.ite.t",            # 所得税费用
+    "q.ps.ie.t",             # 利息费用（利息覆盖倍数）
+    "q.ps.fe.t",             # 财务费用（利息费用缺失时备用）
     "q.ps.beps.t",           # 基本每股收益
     "q.bs.ta.t",             # 资产总计
     "q.bs.tl.t",             # 负债合计
@@ -125,6 +128,173 @@ METRICS_BY_TYPE = {
     "non_financial": DEFAULT_FINANCIALS_METRICS,
     "insurance": INSURANCE_FINANCIALS_METRICS,
 }
+
+_SKIP_INTEREST_COVERAGE = frozenset({"bank", "insurance", "security", "other_financial"})
+
+
+def _annual_fs_records(records: list) -> list:
+    annual = [r for r in records if str(r.get("date", ""))[:10].endswith("-12-31")]
+    annual.sort(key=lambda r: r.get("date", ""))
+    return annual
+
+
+def _dig_q(node, path: str):
+    cur = node
+    for seg in path.split("."):
+        if isinstance(cur, dict) and seg in cur:
+            cur = cur[seg]
+        else:
+            return None
+    return cur
+
+
+def _fs_metric(record: dict, path: str):
+    q = record.get("q", {}) if isinstance(record, dict) else {}
+    p = path[2:] if path.startswith("q.") else path
+    return _dig_q(q, p)
+
+
+def _safe_ratio(num, den):
+    if num is None or den is None:
+        return None
+    try:
+        d = float(den)
+        if d == 0:
+            return None
+        return float(num) / d
+    except (TypeError, ValueError):
+        return None
+
+
+def _datapack_source(pack: dict, include_mx: bool) -> str:
+    if not include_mx:
+        return "lixinger"
+    sections = pack.get("sections", {})
+    mx_keys = [k for k in ("mx_quote", "mx_news") if k in sections]
+    if not mx_keys:
+        return "lixinger"
+    ok_flags = []
+    for key in mx_keys:
+        sec = sections[key]
+        if not isinstance(sec, dict):
+            ok_flags.append(False)
+            continue
+        src = sec.get("_source", "none")
+        ok_flags.append(src not in (None, "", "none") and not sec.get("error"))
+    if all(ok_flags):
+        return "lixinger+mx"
+    if not any(ok_flags):
+        return "lixinger"
+    return "lixinger+partial-mx"
+
+
+def _compute_quality_checks(report_type: str, annual: list, roe_years: int, fcf_years: int) -> dict:
+    """从年报序列计算 /quality-screen 7 条硬指标及通过/失败判定。"""
+    if not annual:
+        return {"error": "无年报数据", "checks": {}}
+
+    roe_slice = annual[-roe_years:]
+    roe_vals = [
+        _safe_ratio(_fs_metric(r, "ps.npatoshopc.t"), _fs_metric(r, "bs.tetoshopc.t"))
+        for r in roe_slice
+    ]
+    roe_vals = [v for v in roe_vals if v is not None]
+    roe_avg = sum(roe_vals) / len(roe_vals) if roe_vals else None
+
+    fcf_slice = annual[-fcf_years:]
+    fcf_annual = []
+    for r in fcf_slice:
+        ocf = _fs_metric(r, "cfs.ncffoa.t")
+        icf = _fs_metric(r, "cfs.ncffia.t")
+        if ocf is None:
+            continue
+        icf_val = float(icf) if icf is not None else 0.0
+        fcf_annual.append(float(ocf) + icf_val)
+    fcf_5y_sum = sum(fcf_annual) if fcf_annual else None
+
+    latest = annual[-1]
+    op = _fs_metric(latest, "ps.op.t")
+    ie = _fs_metric(latest, "ps.ie.t")
+    if ie is None or float(ie) == 0:
+        fe = _fs_metric(latest, "ps.fe.t")
+        ie = abs(float(fe)) if fe is not None and float(fe) != 0 else ie
+    skip_interest = report_type in _SKIP_INTEREST_COVERAGE
+    interest_cov = None if skip_interest else _safe_ratio(op, abs(float(ie)) if ie is not None else None)
+
+    gm_vals = []
+    for r in annual[-10:]:
+        oi = _fs_metric(r, "ps.oi.t")
+        oc = _fs_metric(r, "ps.oc.t")
+        if oi is not None and oc is not None and float(oi) != 0:
+            gm_vals.append((float(oi) - float(oc)) / float(oi))
+    gm_avg = sum(gm_vals) / len(gm_vals) if gm_vals else None
+
+    ocf_ni_vals = [
+        _safe_ratio(_fs_metric(r, "cfs.ncffoa.t"), _fs_metric(r, "ps.np.t"))
+        for r in annual[-5:]
+    ]
+    ocf_ni_vals = [v for v in ocf_ni_vals if v is not None]
+    ocf_ni_avg = sum(ocf_ni_vals) / len(ocf_ni_vals) if ocf_ni_vals else None
+
+    nm_vals = [
+        _safe_ratio(_fs_metric(r, "ps.np.t"), _fs_metric(r, "ps.oi.t"))
+        for r in annual[-10:]
+    ]
+    nm_vals = [v for v in nm_vals if v is not None]
+    nm_avg = sum(nm_vals) / len(nm_vals) if nm_vals else None
+
+    dilution_pct = None
+    if len(annual) >= fcf_years + 1:
+        tsc_old = _fs_metric(annual[-(fcf_years + 1)], "bs.tsc.t")
+        tsc_new = _fs_metric(annual[-1], "bs.tsc.t")
+        if tsc_old and tsc_new and float(tsc_old) != 0:
+            dilution_pct = (float(tsc_new) - float(tsc_old)) / float(tsc_old) * 100.0
+
+    def _chk(name, value, threshold, op="gte", na=False):
+        row = {"metric": name, "value": value, "threshold": threshold}
+        if na:
+            row.update(status="na", pass_=None, note="银行/保险/证券不适用")
+            return row
+        if value is None:
+            row.update(status="missing", pass_=None, note="数据不足")
+            return row
+        if op == "gte":
+            passed = value >= threshold
+        elif op == "lte":
+            passed = value <= threshold
+        else:
+            passed = value > threshold
+        row.update(status="pass" if passed else "fail", pass_=passed)
+        return row
+
+    checks = {
+        "roe_10y_avg": _chk("①10年平均ROE", roe_avg, 0.08),
+        "fcf_5y_cumulative": _chk("②5年累计FCF", fcf_5y_sum, 0, op="gt"),
+        "interest_coverage": _chk("③利息覆盖", interest_cov, 2.0, na=skip_interest),
+        "gross_margin_avg": _chk("④长期毛利率", gm_avg, 0.15),
+        "ocf_ni_5y_avg": _chk("⑤OCF/NI 5年均值", ocf_ni_avg, 0.7),
+        "net_margin_avg": _chk("⑥长期净利率", nm_avg, 0.05),
+        "share_dilution_5y": _chk("⑦5年股本膨胀", dilution_pct, 20.0, op="lte"),
+    }
+    fail_count = sum(1 for c in checks.values() if c.get("pass_") is False)
+    missing = sum(1 for c in checks.values() if c.get("status") == "missing")
+    return {
+        "summary": {
+            "roe_10y_avg": roe_avg,
+            "fcf_5y_cumulative": fcf_5y_sum,
+            "interest_coverage": interest_cov,
+            "gross_margin_avg": gm_avg,
+            "ocf_ni_5y_avg": ocf_ni_avg,
+            "net_margin_avg": nm_avg,
+            "share_dilution_5y_pct": dilution_pct,
+            "annual_years_used": len(annual),
+            "fcf_method": "sum(ncffoa + ncffia) 近5年年报；ncffia 为投资活动现金流净额",
+        },
+        "checks": checks,
+        "result": "fail" if fail_count else ("incomplete" if missing else "pass"),
+        "fail_count": fail_count,
+        "missing_count": missing,
+    }
 
 # ---------------------------------------------------------------------------
 # 阶段4：行业深度指标集（保险/银行/证券专属，单股≤128，自动剪枝保有效）
@@ -1287,6 +1457,33 @@ class LxrData:
         return self.call_mx("mx-xuangu", query, ttl_seconds)
 
     # ------------------------------------------------------------------
+    # /quality-screen 精确 7 指标
+    # ------------------------------------------------------------------
+
+    def get_quality_metrics(self, code: str, years: int = 10, fcf_years: int = 5) -> dict:
+        """计算去劣筛选 7 条硬指标（理杏仁财报本地精算）。"""
+        fin = self.get_financials(code, years=min(years, 10), source="lixinger")
+        if fin.get("_source") != "lixinger":
+            return {
+                "_source": "none",
+                "code": _norm_code(code, _detect_market(code)),
+                "error": fin.get("error", "financials 不可用"),
+            }
+        report_type = fin.get("report_type", "non_financial")
+        annual = _annual_fs_records(fin.get("records") or [])
+        computed = _compute_quality_checks(report_type, annual, years, fcf_years)
+        return {
+            "source_detail": "lixinger:quality-metrics",
+            "code": fin.get("code"),
+            "market": fin.get("market"),
+            "report_type": report_type,
+            "years": years,
+            "fcf_years": fcf_years,
+            **computed,
+            "_source": "lixinger",
+        }
+
+    # ------------------------------------------------------------------
     # 研究数据包（跨 Skill 共享，TTL 1h）
     # ------------------------------------------------------------------
 
@@ -1338,7 +1535,7 @@ class LxrData:
             _section("mx_quote", lambda: self.mx_data(f"{label} 最新价 涨跌幅 PE PB"))
             _section("mx_news", lambda: self.mx_search(f"{label} 最新公告 业绩"))
 
-        pack["_source"] = "lixinger+mx"
+        pack["_source"] = _datapack_source(pack, include_mx)
         self.client.cache.set("datapack/research", cache_key, pack)
         return pack
 
@@ -1495,6 +1692,12 @@ def _cli():
     p_dp.add_argument("--no-mx", action="store_true", help="跳过妙想 tick/资讯（节省日限额）")
     p_dp.add_argument("--quiet", action="store_true")
 
+    p_qm = sub.add_parser("quality-metrics", help="/quality-screen 精确 7 指标（理杏仁本地计算）")
+    p_qm.add_argument("code", help="股票代码")
+    p_qm.add_argument("--years", type=int, default=10, help="ROE/净利率均值窗口（年）")
+    p_qm.add_argument("--fcf-years", type=int, default=5, help="FCF 累计窗口（年）")
+    p_qm.add_argument("--quiet", action="store_true")
+
     for skill in _MX_SKILLS:
         p_mx = sub.add_parser(skill, help=f"调用妙想 {skill}（1h 缓存，自动 Windows 输出目录）")
         p_mx.add_argument("query", help="自然语言查询")
@@ -1562,6 +1765,10 @@ def _cli():
     elif args.command == "industry-compare":
         data = LxrData(verbose=not args.quiet).compare_industry_valuation(
             args.code, source=args.source, level=args.level,
+        )
+    elif args.command == "quality-metrics":
+        data = LxrData(verbose=not args.quiet).get_quality_metrics(
+            args.code, years=args.years, fcf_years=args.fcf_years,
         )
     elif args.command == "datapack":
         data = LxrData(verbose=not args.quiet).get_research_datapack(

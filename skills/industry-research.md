@@ -20,8 +20,8 @@
 > python tools/lxr_data.py macro-debt && python tools/lxr_data.py macro-rates
 > python tools/lxr_data.py index-val 000300    # 大盘估值锚
 > ```
-> 行业估值水位：`python tools/lxr_data.py industry-compare {行业内代表股}`（A股申万二级）。
-> 产业动态资讯：`mx-search "{行业} 政策 最新"`（`--output-dir %TEMP%\mx_skills`）。
+> 行业估值水位：`python tools/lxr_data.py industry-compare {行业内代表股}`（A股申万二级，`_source: lixinger`）。
+> 产业动态资讯：`mx-search "{行业} 政策 最新"`（`--output-dir %TEMP%\mx_skills`，`_source: mx-search`）。
 
 ### 1.1 画出逻辑链
 用箭头链路表达从"底层趋势"到"受益标的"的因果关系，例如：

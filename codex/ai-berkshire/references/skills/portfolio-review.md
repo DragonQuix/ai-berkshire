@@ -36,6 +36,8 @@
 
 ### 第二步：获取最新数据
 
+**`_source` 标注**：组合报告中每只持仓的估值/财报/新闻须标注 `lixinger` | `mx-data` | `mx-search` | `legacy`（见 `docs/channel-capability-matrix.md`）。
+
 **理杏仁批量**（持仓均为 A股/港股时，按 `stockCodes` ≤100 批量；否则逐只）：
 
 ```bash

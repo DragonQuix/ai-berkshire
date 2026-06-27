@@ -1,6 +1,16 @@
 # 财务数据获取与交叉验证规范
 
-本规范适用于所有涉及企业财务数据的研究。**每个关键数据必须来自两个独立来源，误差>1%须标记。**
+本规范适用于所有涉及企业财务数据的研究。**每个关键数据必须来自两个独立来源；同口径结构化双源或理杏仁 vs mx-data 同指标按下方阈值标记差异。**
+
+### 交叉验证阈值（统一，2026-06 修订）
+
+| 场景 | ≤2% | 2%–5% | >5% |
+|------|-----|-------|-----|
+| **同口径结构化双源**（理杏仁 vs 东财/巨潮/aastocks/macrotrends，字段定义相同） | ✅ 一致，取主源并标注双源 | ⚠️ 标注「数据存在轻微差异」，说明可能原因（汇率/会计口径） | ❌ 标注「数据异常」，须查年报核实 |
+| **理杏仁 vs mx-data NLP 同指标**（如 TTM PE，口径已确认相同） | ✅ 静默通过，优先采纳理杏仁 | ⚠️ 注明双源轻微差异，优先理杏仁 | ❌ 标「数据异常」，建议人工核查 |
+| **不同口径**（NLP 提取 vs 结构化编码、TTM vs 静态 PE 等） | — | — | **不强行比较**，分别标注口径 |
+
+> 旧版「误差>1%须标记」已废止。`financial_rigor.py cross-validate` 默认容差 2%。
 
 ---
 
@@ -81,14 +91,10 @@ python tools/financial_rigor.py verify-market-cap --price 510 --shares 9.11e9 --
 ### 第二步：误差计算与标记
 
 ```
-误差率 = |来源1数值 - 来源2数值| / 来源1数值 × 100%
+误差率 = |来源1数值 - 来源2数值| / 参考中位数 × 100%
 ```
 
-| 误差 | 处理方式 |
-|------|---------|
-| ≤ 1% | ✅ 一致，取来源1数值，标注两个来源 |
-| 1% ~ 5% | ⚠️ 标记"数据存在差异"，注明两个数值，说明可能原因（汇率/会计口径） |
-| > 5% | ❌ 标记"数据存在重大差异"，必须查原始财报核实，不得直接使用 |
+按上文「交叉验证阈值」三档处理；**禁止**对口径不同的来源强行计算误差。
 
 ### 第三步：数据呈现格式
 
@@ -151,6 +157,7 @@ python tools/financial_rigor.py verify-market-cap --price 510 --shares 9.11e9 --
 | 指数估值(沪深300/恒生PE/PB分位) | `lxr_data.py index-val 000300 --market cn` | aastocks / mx-data |
 | 申万二级行业估值对比 | `lxr_data.py industry-compare 600519` | mx-data "白酒板块估值" |
 | **投研数据包（推荐）** | `lxr_data.py datapack 600519 --years 5`（TTL 1h） | 分拆 CLI |
+| **去劣 7 指标精算** | `lxr_data.py quality-metrics 600519 --years 10` | 手算 financials |
 | 妙想资讯搜索 | `lxr_data.py mx-search "{公司} 最新公告"` | 直调 mx_search.py |
 | 妙想智能选股 | `lxr_data.py mx-xuangu "ROE>15%的A股"` | 直调 mx_xuangu.py |
 | Nintendo | macrotrends.net/stocks/charts/NTDOY | stockanalysis.com/stocks/ntdoy |
