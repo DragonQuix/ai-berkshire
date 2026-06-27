@@ -77,6 +77,48 @@ def fetch_prices_curl(ticker, days=120):
         return None
 
 
+def fetch_prices_lixinger(ticker, days=180):
+    """用理杏仁 K线获取港股/A股日线（前复权），返回与 fetch_prices_curl 同结构。
+
+    理杏仁无美股数据，非港股/A股代码返回 None（回退由调用方处理）。
+    """
+    # 仅处理港股（.HK 或 ≤5位数字）与 A股（6位数字）
+    upper = ticker.upper()
+    digits = "".join(ch for ch in upper if ch.isdigit())
+    is_hk = upper.endswith(".HK") or (len(digits) <= 5 and len(digits) >= 1)
+    is_cn = len(digits) == 6
+    if not (is_hk or is_cn):
+        return None
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from lxr_data import LxrData
+        kl = LxrData(verbose=False).get_kline(ticker, days=days, adjust="forward")
+        records = kl.get("records", [])
+        rows = []
+        for r in records:
+            c = r.get("close")
+            h = r.get("high")
+            v = r.get("volume")
+            d = (r.get("date") or "")[:10]
+            if c is not None and h is not None and v is not None and d:
+                rows.append({"date": d, "close": c, "high": h, "volume": v})
+        rows.sort(key=lambda x: x["date"])
+        return rows if len(rows) > 60 else None
+    except Exception:
+        return None
+
+
+def fetch_prices(ticker, source="yahoo", days=180):
+    """按数据源选择取价函数；lixinger 对美股无效时自动回退 yahoo。"""
+    if source == "lixinger":
+        px = fetch_prices_lixinger(ticker, days=days)
+        if px:
+            return px
+        # 美股或理杏仁失败 → 回退 Yahoo
+        return fetch_prices_curl(ticker, days=120)
+    return fetch_prices_curl(ticker, days=120)
+
+
 # ============================================================
 # 基本面数据管理
 # ============================================================
@@ -280,9 +322,9 @@ def grade_signal(momentum, value):
 # 扫描一个标的
 # ============================================================
 
-def scan_ticker(ticker, verbose=True):
+def scan_ticker(ticker, verbose=True, source="yahoo"):
     """扫描单个标的"""
-    prices = fetch_prices_curl(ticker)
+    prices = fetch_prices(ticker, source=source)
     if not prices:
         if verbose:
             print(f"  {ticker:<8} ⚠️  无法获取价格数据")
@@ -332,6 +374,18 @@ def scan_ticker(ticker, verbose=True):
 def main():
     args = sys.argv[1:]
 
+    # --source lixinger：港股/A股改用理杏仁 K线（美股自动回退 Yahoo）
+    source = "yahoo"
+    if args and args[0] == "--source":
+        if len(args) < 2:
+            print("  用法: --source {yahoo|lixinger}")
+            return
+        source = args[1]
+        if source not in ("yahoo", "lixinger"):
+            print(f"  未知 source: {source}（支持 yahoo / lixinger）")
+            return
+        args = args[2:]
+
     # 更新模式
     if args and args[0] == "--update":
         ticker = args[1] if len(args) > 1 else input("  标的代码: ").strip().upper()
@@ -359,14 +413,14 @@ def main():
     today = datetime.now().strftime("%Y-%m-%d")
     print(f"\n{'='*70}")
     print(f"  动量发现 + 价值验证 选股筛  {today}")
-    print(f"  扫描范围：{len(tickers)} 个标的")
+    print(f"  扫描范围：{len(tickers)} 个标的  数据源：{source}")
     print(f"{'='*70}\n")
 
     buy_signals = []
     watch_signals = []
 
     for ticker in tickers:
-        result = scan_ticker(ticker)
+        result = scan_ticker(ticker, source=source)
         if result:
             if result["grade"].startswith("BUY"):
                 buy_signals.append(result)

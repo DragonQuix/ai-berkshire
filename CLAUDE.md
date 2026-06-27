@@ -75,6 +75,18 @@ reports/{公司名}/
 - 对不确定的事情诚实说"不确定"或"数据不足"，不要用推测填充确定性
 - 所有skill（investment-team、investment-research、earnings-review等）在执行时都必须遵守以上原则
 
+## 数据获取优先级（自动化三级体系）
+
+A股/港股结构化财务与估值数据采用**三级自动降级链**，详细规范见 `skills/financial-data.md`：
+
+1. **理杏仁 API（第1顺位，首选）**——`tools/lxr_data.py` 统一入口，自动判定市场(A股cn/港股hk)与报表类型(非金融/保险/银行/证券)。
+   - 财报/估值/估值分位点、K线、股东、行业深度(EV/NBV/偿付能力/资本充足率)、营收构成、公司治理、宏观(国债10y/利率)、指数估值、申万行业对比，均一站取数。
+   - token 置于 `tools/lxr_config.json`（不提交 git，example 模板提交）；缓存路径用 `tempfile.gettempdir()`。
+2. **妙想 Skills（第2顺位）**——`mx-data/mx-search/mx-xuangu` 等自然语言查询，理杏仁字段缺失或需实时资讯时降级。
+3. **免费源（第3顺位，兜底）**——东方财富/巨潮/aastocks/Yahoo/Morningstar，理杏仁+妙想均失效时使用。
+
+现有 CLI（`ashare_data.py`/`financial_rigor.py`/`stock_screener.py`）通过 `--source lixinger` 切换，默认行为不变，去掉参数即回到原模式。保险/银行/证券专属报表、估值分位点为理杏仁独有能力，免费源无法提供。
+
 ## 报告语言与风格
 
 - 所有报告使用**中文**

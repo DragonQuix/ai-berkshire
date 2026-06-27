@@ -7,8 +7,9 @@ reports/.DS_Store
 /tmp/xueqiu_state.json
 .claude/
 
-# 理杏仁：真实配置含 token，不提交；example 模板可提交
+# 理杏仁：真实配置含 token，不提交；example 模板可提交（tools/ 与 codex 副本目录均忽略）
 tools/lxr_config.json
+codex/ai-berkshire/scripts/tools/lxr_config.json
 # 理杏仁本地缓存目录（tempfile.gettempdir()/lxr_cache 一般已在 temp，此处兜底）
 lxr_cache/
 # Python 字节码缓存

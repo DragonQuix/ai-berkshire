@@ -26,7 +26,7 @@ _TIMEOUT = 15
 def _curl(url):
     """用 curl --noproxy 直连，绕过系统代理。"""
     result = subprocess.run(
-        ["/usr/bin/curl", "-s", "--noproxy", "*",
+        ["curl", "-s", "--noproxy", "*",
          "-H", "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
          url],
         capture_output=True, timeout=_TIMEOUT,
@@ -198,7 +198,6 @@ def cmd_financials(code: str):
     raw = _curl(f"https://qt.gtimg.cn/q={qq_code}")
     d = _parse_qq_quote(raw)
     name = d.get("name", code) if d else code
-
     code_clean = code.strip().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
     market = "SH" if code_clean.startswith(("6", "9", "5")) else "SZ"
 
@@ -295,6 +294,89 @@ def cmd_search(keyword: str):
 
 
 # ---------------------------------------------------------------------------
+# 理杏仁数据源路径（--source lixinger）
+# ---------------------------------------------------------------------------
+
+def _lxr_data():
+    """惰性导入 LxrData，避免在纯免费源模式下引入依赖。"""
+    from lxr_data import LxrData
+    return LxrData(verbose=False)
+
+
+def _extract_metric(record: dict, *paths: str):
+    """从 fs 记录的 q 嵌套结构中按优先级取第一个非空值。paths 如 'ps.toi.t'。"""
+    q = record.get("q") if isinstance(record, dict) else None
+    if not isinstance(q, dict):
+        return None
+    for path in paths:
+        node = q
+        ok = True
+        for seg in path.split("."):
+            if isinstance(node, dict) and seg in node:
+                node = node[seg]
+            else:
+                ok = False
+                break
+        if ok and node is not None:
+            return node
+    return None
+
+
+def cmd_financials_lixinger(code: str):
+    """理杏仁财务数据：近5年年报核心指标，输出格式与 cmd_financials 可比。"""
+    data = _lxr_data().get_financials(code, years=5, source="lixinger")
+    if data.get("_source") != "lixinger":
+        print(f"❌ 理杏仁取数失败: {data.get('error')}")
+        return
+    records = data.get("records", [])
+    annual = [r for r in records if str(r.get("date", "")[:10]).endswith("-12-31")]
+    annual.sort(key=lambda r: r.get("date", ""), reverse=True)
+
+    print("=" * 60)
+    print(f"核心财务数据(理杏仁): {code} [{data.get('report_type')}]")
+    print("=" * 60)
+    for r in annual[:5]:
+        date = str(r.get("date", ""))[:10]
+        revenue = _extract_metric(r, "ps.toi.t", "ps.oi.t", "ps.ep.t")
+        net_profit = _extract_metric(r, "ps.npatoshopc.t", "ps.np.t")
+        eps = _extract_metric(r, "ps.beps.t")
+        print(f"\n  --- {date} 年报 ---")
+        if revenue is not None:
+            print(f"  营业总收入:   {_fmt_yi(revenue)}")
+        if net_profit is not None:
+            print(f"  归母净利润:   {_fmt_yi(net_profit)}")
+        if eps is not None:
+            print(f"  基本每股收益: {eps}")
+    print(f"\n  (数据来源: 理杏仁 {data.get('source_detail')}, 指标数 {data.get('metric_count')})")
+
+
+def cmd_valuation_lixinger(code: str):
+    """理杏仁估值数据：当前估值 + 历史分位点。"""
+    data = _lxr_data().get_valuation(code, source="lixinger")
+    if data.get("_source") != "lixinger":
+        print(f"❌ 理杏仁取数失败: {data.get('error')}")
+        return
+    latest = data.get("latest", {})
+    print("=" * 60)
+    print(f"估值指标(理杏仁): {code} [{data.get('report_type')}]")
+    print("=" * 60)
+    print(f"  股价:        {latest.get('sp')}")
+    print(f"  总市值:      {_fmt_yi(latest.get('mc')) if latest.get('mc') is not None else '-'}")
+    print(f"  流通市值:    {_fmt_yi(latest.get('cmc')) if latest.get('cmc') is not None else '-'}")
+    print(f"  PE-TTM:      {latest.get('pe_ttm')}")
+    print(f"  PE-TTM(扣非):{latest.get('d_pe_ttm')}")
+    print(f"  PB:          {latest.get('pb')}")
+    print(f"  PS-TTM:      {latest.get('ps_ttm')}")
+    print(f"  股息率:      {latest.get('dyr')}")
+    print(f"  换手率:      {latest.get('to_r')}")
+    print("\n  历史分位点 (cvpos = 当前所处分位%):")
+    for k, v in latest.items():
+        if ".cvpos" in k and v is not None:
+            print(f"    {k:28s} {v}")
+    print(f"\n  (数据来源: 理杏仁 {data.get('source_detail')})")
+
+
+# ---------------------------------------------------------------------------
 # CLI 入口
 # ---------------------------------------------------------------------------
 
@@ -310,9 +392,13 @@ def main():
 
     p_fin = sub.add_parser("financials", help="核心财务数据（近5年）")
     p_fin.add_argument("code", help="股票代码")
+    p_fin.add_argument("--source", choices=["default", "lixinger"], default="default",
+                       help="数据源；default=东方财富/腾讯，lixinger=理杏仁")
 
     p_val = sub.add_parser("valuation", help="估值指标")
     p_val.add_argument("code", help="股票代码")
+    p_val.add_argument("--source", choices=["default", "lixinger"], default="default",
+                       help="数据源；default=腾讯，lixinger=理杏仁(含历史分位点)")
 
     p_search = sub.add_parser("search", help="搜索股票代码")
     p_search.add_argument("keyword", help="公司名或关键词")
@@ -325,8 +411,10 @@ def main():
 
     cmds = {
         "quote": lambda: cmd_quote(args.code),
-        "financials": lambda: cmd_financials(args.code),
-        "valuation": lambda: cmd_valuation(args.code),
+        "financials": lambda: (cmd_financials_lixinger(args.code)
+                               if args.source == "lixinger" else cmd_financials(args.code)),
+        "valuation": lambda: (cmd_valuation_lixinger(args.code)
+                              if args.source == "lixinger" else cmd_valuation(args.code)),
         "search": lambda: cmd_search(args.keyword),
     }
     cmds[args.command]()

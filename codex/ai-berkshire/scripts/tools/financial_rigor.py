@@ -361,6 +361,27 @@ def three_scenario_valuation(current_price, current_eps, shares_billion,
 
 
 # ---------------------------------------------------------------------------
+# 理杏仁自动取数（--source lixinger）
+# ---------------------------------------------------------------------------
+
+def _lxr_verification_inputs(code):
+    """从理杏仁获取验算输入。需要在 tools/ 目录运行（同目录导入 lxr_data）。"""
+    if not code:
+        raise SystemExit("错误：--source lixinger 需要提供股票代码位置参数")
+    from lxr_data import LxrData
+    data = LxrData(verbose=False).get_verification_inputs(code)
+    if data.get("_source") != "lixinger":
+        raise SystemExit(f"理杏仁取数失败: {data.get('error') or data}")
+    missing = [k for k in ("price", "shares", "reported_market_cap") if data.get(k) is None]
+    if missing:
+        raise SystemExit(f"理杏仁缺失验算字段 {missing}：{data}")
+    print(f"[理杏仁] {code} ({data.get('report_type')}) "
+          f"price={data['price']} shares={data['shares']:.0f} "
+          f"reported_mc={data['reported_market_cap']:.0f} eps={data.get('eps')} bvps={data.get('bvps')}")
+    return data
+
+
+# ---------------------------------------------------------------------------
 # CLI Entry Point
 # ---------------------------------------------------------------------------
 
@@ -381,14 +402,20 @@ Examples:
 
     # verify-market-cap
     mc = sub.add_parser("verify-market-cap", help="验算市值 = 股价 × 总股本")
-    mc.add_argument("--price", type=float, required=True)
-    mc.add_argument("--shares", type=float, required=True, help="总股本")
-    mc.add_argument("--reported", type=float, required=True, help="报告市值")
+    mc.add_argument("code", nargs="?", default=None, help="股票代码（--source lixinger 时必填）")
+    mc.add_argument("--source", choices=["default", "lixinger"], default="default",
+                    help="lixinger=自动从理杏仁取股价/总股本/市值验算")
+    mc.add_argument("--price", type=float, default=None)
+    mc.add_argument("--shares", type=float, default=None, help="总股本")
+    mc.add_argument("--reported", type=float, default=None, help="报告市值")
     mc.add_argument("--currency", default="", help="币种")
 
     # verify-valuation
     val = sub.add_parser("verify-valuation", help="验算估值指标")
-    val.add_argument("--price", type=float, required=True)
+    val.add_argument("code", nargs="?", default=None, help="股票代码（--source lixinger 时必填）")
+    val.add_argument("--source", choices=["default", "lixinger"], default="default",
+                     help="lixinger=自动从理杏仁取股价/EPS/BVPS/股息率验算")
+    val.add_argument("--price", type=float, default=None)
     val.add_argument("--eps", type=float, default=None)
     val.add_argument("--bvps", type=float, default=None, help="每股净资产")
     val.add_argument("--fcf-per-share", type=float, default=None)
@@ -425,10 +452,28 @@ Examples:
     args = parser.parse_args()
 
     if args.command == "verify-market-cap":
-        verify_market_cap(args.price, args.shares, args.reported, args.currency)
+        if args.source == "lixinger":
+            inputs = _lxr_verification_inputs(args.code)
+            verify_market_cap(inputs["price"], inputs["shares"],
+                              inputs["reported_market_cap"], inputs.get("currency", "CNY"))
+        else:
+            if args.price is None or args.shares is None or args.reported is None:
+                mc.error("default 模式需 --price/--shares/--reported（或用 --source lixinger 自动取数）")
+            verify_market_cap(args.price, args.shares, args.reported, args.currency)
     elif args.command == "verify-valuation":
-        verify_valuation(args.price, args.eps, args.bvps, args.fcf_per_share,
-                        args.dividend, args.revenue_per_share)
+        if args.source == "lixinger":
+            inputs = _lxr_verification_inputs(args.code)
+            dividend = None
+            dyr = inputs.get("dividend_yield")
+            if dyr is not None and inputs.get("price"):
+                dividend = inputs["price"] * float(dyr) / 100.0
+            verify_valuation(inputs["price"], inputs.get("eps"), inputs.get("bvps"),
+                             None, dividend, None)
+        else:
+            if args.price is None:
+                val.error("default 模式需 --price（或用 --source lixinger 自动取数）")
+            verify_valuation(args.price, args.eps, args.bvps, args.fcf_per_share,
+                            args.dividend, args.revenue_per_share)
     elif args.command == "cross-validate":
         values = json.loads(args.values)
         cross_validate(args.field, values, args.unit, args.tolerance)
