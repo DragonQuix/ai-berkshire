@@ -101,11 +101,13 @@ Layer 4：
 
 ### 2.3 其他趋势的拆解
 
-对每个确认的超级趋势执行类似拆解。使用WebSearch搜索：
-- "{趋势} supply chain bottleneck 2026"
-- "{趋势} shortage critical component"
-- "{趋势} capacity constraint"
-- "{趋势} sole source supplier"
+对每个确认的超级趋势执行类似拆解。**供应链中断/短缺新闻优先走 `mx-search`**（金融信源智能筛选），WebSearch 作为兜底：
+- `mx-search` "{趋势} 供应链中断 / 缺货 / 涨价 2026"
+- `mx-search` "{趋势} shortage critical component"
+- WebSearch "{趋势} capacity constraint"
+- WebSearch "{趋势} sole source supplier"
+
+> **`_source` 标注规范**：凡来自 `mx-search` 的供应链中断新闻/资讯，在该条信号后标注 `_source: mx-search`；来自 WebSearch/WebFetch 的标注 `_source: web`；来自理杏仁 macro 的大宗商品价格标注 `_source: 理杏仁`。报告与瓶颈地图中每条新闻信号须保留来源渠道标注，不得遗漏。
 
 ---
 
@@ -334,7 +336,8 @@ B级瓶颈（有压力）：
    - 替代技术是否有突破？
 
 2. 扫描新出现的瓶颈
-   - 搜索最近7天的supply chain / shortage / bottleneck新闻
+   - **优先用 `mx-search` 搜索最近7天的 supply chain / shortage / bottleneck 新闻**（金融信源智能筛选），WebSearch 兜底；关键词：supply chain bottleneck, shortage, capacity constraint, allocation, lead time, sole source, 瓶颈, 缺货, 产能, 涨价
+   - 凡来自 `mx-search` 的中断新闻标注 `_source: mx-search`，来自 WebSearch 的标注 `_source: web`
    - 检查财报季中的供应链相关disclosure
 
 3. 更新瓶颈评级（升级/降级/解除）
@@ -355,9 +358,10 @@ B级瓶颈（有压力）：
 
 ### 扫描流程（每小时）
 
-1. **新闻扫描**：搜索过去1-2小时的供应链相关新闻
+1. **新闻扫描**：**优先用 `mx-search` 搜索过去1-2小时的供应链相关新闻**（金融信源智能筛选），WebSearch 兜底
    - 关键词：supply chain bottleneck, shortage, capacity constraint, allocation, lead time, sole source, 瓶颈, 缺货, 产能, 涨价
    - 覆盖：英文+中文源
+   - 凡进入报告的 `mx-search` 中断新闻标注 `_source: mx-search`，WebSearch 结果标注 `_source: web`
 2. **市场信号**：检查已跟踪公司的股价变化（特别关注异常波动>5%）
 3. **财报/公告**：检查是否有瓶颈相关公司发布财报或重大公告
 4. **估值机会**：检查watchlist中公司是否有因大盘下跌等原因进入买入区间
@@ -457,6 +461,7 @@ B级瓶颈（有压力）：
 7. **小市值≠好机会** — 小市值也可能是烂公司，必须过财务质量关
 8. **瓶颈真实≠投资机会** — 一家公司可以坐在最紧的瓶颈上，但如果PS>30x或仍在亏损，当前价格就不是买点。**估值是硬门槛，不可被瓶颈纯正度、信号强度或叙事吸引力覆盖。** 宁可错过一个涨了的瓶颈股，也不要在100倍PS买入一家亏损公司
 9. **遵循CLAUDE.md客观性原则** — 不预设看多，先数据后结论
+10. **强制 `_source` 来源标注** — 供应链中断新闻来自 `mx-search` 时标注 `_source: mx-search`，来自 WebSearch/WebFetch 时标注 `_source: web`，大宗商品价格来自理杏仁 macro 时标注 `_source: 理杏仁`。瓶颈地图与扫描报告的每条新闻信号须保留 `_source` 标注，便于读者追溯获取渠道
 
 ---
 
@@ -472,3 +477,4 @@ B级瓶颈（有压力）：
 4. **数据**：所有数据标注来源；估计值标"估计"
 5. **不预设立场**：先摆数据 → 推逻辑 → 出结论
 6. **正反两面**：每个核心判断附反面论据
+7. **`_source` 来源标注**：供应链中断新闻来自 `mx-search` 标注 `_source: mx-search`，来自 WebSearch 标注 `_source: web`，大宗商品价格来自理杏仁 macro 标注 `_source: 理杏仁`；信号扫描表与瓶颈地图的每条新闻信号须保留 `_source` 列或内联标注
