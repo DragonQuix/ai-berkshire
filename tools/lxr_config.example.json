@@ -1,0 +1,29 @@
+{
+  "_readme": "理杏仁 API 客户端配置模板。复制为 lxr_config.json 后按需修改。token 优先取自环境变量 token_env（默认 LIXINGER_TOKEN），仅当环境变量未设置时才使用本文件中的 token 字段。请勿将真实 token 提交到 git（lxr_config.json 已在 .gitignore 中排除）。",
+  "base_url": "https://open.lixinger.com/api/",
+  "token_env": "LIXINGER_TOKEN",
+  "token": "",
+  "request": {
+    "timeout_seconds": 30,
+    "max_retries": 4,
+    "backoff_base_seconds": 1.0,
+    "backoff_max_seconds": 16.0,
+    "min_interval_seconds": 0.03
+  },
+  "cache": {
+    "enabled": true,
+    "dir": null,
+    "default_ttl_seconds": 3600
+  },
+  "data_type_ttl_seconds": {
+    "financials": 86400,
+    "valuation": 3600,
+    "candlestick": 3600,
+    "shareholders": 86400,
+    "company_list": 604800,
+    "percentile": 3600,
+    "index": 3600,
+    "macro": 86400,
+    "profile": 604800
+  }
+}
