@@ -109,7 +109,7 @@ Layer 4：
 - WebSearch "{趋势} capacity constraint"
 - WebSearch "{趋势} sole source supplier"
 
-> **`_source` 标注规范**：凡来自 `mx-search` 的供应链中断新闻/资讯，在该条信号后标注 `_source: mx-search`；来自 WebSearch/WebFetch 的标注 `_source: web`；来自理杏仁 macro 的大宗商品价格标注 `_source: 理杏仁`。报告与瓶颈地图中每条新闻信号须保留来源渠道标注，不得遗漏。
+> **`_source` 标注规范**：凡来自 `mx-search` 的供应链中断新闻/资讯，在该条信号后标注 `_source: mx-search`；来自 WebSearch/WebFetch 的标注 `_source: web`；来自理杏仁 macro 的大宗商品价格标注 `_source: lixinger`。报告与瓶颈地图中每条新闻信号须保留来源渠道标注，不得遗漏。
 
 ---
 
@@ -463,7 +463,7 @@ B级瓶颈（有压力）：
 7. **小市值≠好机会** — 小市值也可能是烂公司，必须过财务质量关
 8. **瓶颈真实≠投资机会** — 一家公司可以坐在最紧的瓶颈上，但如果PS>30x或仍在亏损，当前价格就不是买点。**估值是硬门槛，不可被瓶颈纯正度、信号强度或叙事吸引力覆盖。** 宁可错过一个涨了的瓶颈股，也不要在100倍PS买入一家亏损公司
 9. **遵循CLAUDE.md客观性原则** — 不预设看多，先数据后结论
-10. **强制 `_source` 来源标注** — 供应链中断新闻来自 `mx-search` 时标注 `_source: mx-search`，来自 WebSearch/WebFetch 时标注 `_source: web`，大宗商品价格来自理杏仁 macro 时标注 `_source: 理杏仁`。瓶颈地图与扫描报告的每条新闻信号须保留 `_source` 标注，便于读者追溯获取渠道
+10. **强制 `_source` 来源标注** — 供应链中断新闻来自 `mx-search` 时标注 `_source: mx-search`，来自 WebSearch/WebFetch 时标注 `_source: web`，大宗商品价格来自理杏仁 macro 时标注 `_source: lixinger`。瓶颈地图与扫描报告的每条新闻信号须保留 `_source` 标注，便于读者追溯获取渠道
 
 ---
 
@@ -479,4 +479,4 @@ B级瓶颈（有压力）：
 4. **数据**：所有数据标注来源；估计值标"估计"
 5. **不预设立场**：先摆数据 → 推逻辑 → 出结论
 6. **正反两面**：每个核心判断附反面论据
-7. **`_source` 来源标注**：供应链中断新闻来自 `mx-search` 标注 `_source: mx-search`，来自 WebSearch 标注 `_source: web`，大宗商品价格来自理杏仁 macro 标注 `_source: 理杏仁`；信号扫描表与瓶颈地图的每条新闻信号须保留 `_source` 列或内联标注
+7. **`_source` 来源标注**：供应链中断新闻来自 `mx-search` 标注 `_source: mx-search`，来自 WebSearch 标注 `_source: web`，大宗商品价格来自理杏仁 macro 标注 `_source: lixinger`；信号扫描表与瓶颈地图的每条新闻信号须保留 `_source` 列或内联标注

@@ -56,7 +56,7 @@ python tools/lxr_data.py verify-inputs {code}
 
 如果无法获取完整原文，按 `skills/financial-data.md` 规范使用标准数据源拼凑，但必须标注"非原始财报，来自第三方汇总"，且关键数据按交叉验证阈值（同口径 ≤2%）核验。
 
-> **`_source` 标注规范**：本 Skill 涉及多渠道数据，报告正文每个关键数据/资讯点须以 `_source: xxx` 标注来源渠道——`mx-search`（业绩会纪要/券商点评/资讯）、`mx-data`（市场反应实时快照）、`理杏仁`（结构化财报/估值）、`web`（WebSearch/WebFetch 一手原文）。来源渠道不可省略，便于读者追溯。
+> **`_source` 标注规范**：本 Skill 涉及多渠道数据，报告正文每个关键数据/资讯点须以 `_source: xxx` 标注来源渠道——`mx-search`（业绩会纪要/券商点评/资讯）、`mx-data`（市场反应实时快照）、`lixinger`（结构化财报/估值）、`web`（WebSearch/WebFetch 一手原文）。来源渠道不可省略，便于读者追溯。
 
 ### 第二步：核心财务数据提取与验证
 
@@ -198,7 +198,7 @@ python3 tools/financial_rigor.py verify-valuation \
 八、结论：这份财报改变了什么？
 ```
 
-> 报告中每个关键数据/资讯点须保留 `_source` 标注：`mx-search`（业绩会纪要/券商点评）、`mx-data`（市场反应快照）、`理杏仁`（结构化财报/估值）、`web`（一手原文）。
+> 报告中每个关键数据/资讯点须保留 `_source` 标注：`mx-search`（业绩会纪要/券商点评）、`mx-data`（市场反应快照）、`lixinger`（结构化财报/估值）、`web`（一手原文）。
 
 #### 结论必须明确回答
 
@@ -237,4 +237,4 @@ python tools/report_audit.py verdict \
 - **听语气，不只听内容**：管理层怎么说和说了什么一样重要
 - **查附注，不只看正文**：魔鬼藏在细节里
 - **给结论，不做汇总**：精读的目的是形成判断，不是复述财报
-- **强制 `_source` 来源标注**：业绩会纪要/券商点评来自 `mx-search` 时标注 `_source: mx-search`；市场反应（当日涨跌幅/资金流向）来自 `mx-data` 时标注 `_source: mx-data`；结构化财报/估值来自理杏仁时标注 `_source: 理杏仁`；一手原文来自 WebSearch/WebFetch 时标注 `_source: web`。来源渠道不可省略
+- **强制 `_source` 来源标注**：业绩会纪要/券商点评来自 `mx-search` 时标注 `_source: mx-search`；市场反应（当日涨跌幅/资金流向）来自 `mx-data` 时标注 `_source: mx-data`；结构化财报/估值来自理杏仁时使用 `_source: lixinger`；一手原文来自 WebSearch/WebFetch 时标注 `_source: web`。来源渠道不可省略

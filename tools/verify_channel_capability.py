@@ -65,6 +65,21 @@ TARGETS: list[tuple[str, str, list[str]]] = [
     ),
 ]
 
+BAD_SOURCE_MARKERS = [
+    "_source: 理杏仁",
+    "`理杏仁`（结构化",
+    "标注 `_source: 理杏仁`",
+]
+
+WINDOWS_BLOCKERS = [
+    "~/ai-berkshire",
+    "/tmp",
+    "/usr/bin",
+    "wsl.exe",
+    "/mnt/c",
+    "/home/dragonquix",
+]
+
 _MISSING_TOKENS = (None, "missing", "MISSING", "N/A", "n/a", "null", "")
 
 
@@ -220,6 +235,27 @@ def check_skills_source_and_sync() -> int:
     return rc
 
 
+def check_global_static_markers() -> int:
+    print("\n-- C) 全量静态规范检查 --")
+    rc = 0
+    roots = [REPO / "skills", REPO / "codex" / "ai-berkshire" / "references" / "skills"]
+    for root in roots:
+        for path in sorted(root.glob("*.md")):
+            text = path.read_text(encoding="utf-8")
+            rel = path.relative_to(REPO).as_posix()
+            for marker in BAD_SOURCE_MARKERS:
+                if marker in text:
+                    _fail(f"{rel} 含非规范 _source 标记: {marker}")
+                    rc |= 1
+            for marker in WINDOWS_BLOCKERS:
+                if marker in text:
+                    _fail(f"{rel} 含 Windows 阻塞路径: {marker}")
+                    rc |= 1
+    if rc == 0:
+        _pass("全量 skill 静态规范检查通过")
+    return rc
+
+
 # ---------------------------------------------------------------------------
 # entrypoint
 # ---------------------------------------------------------------------------
@@ -234,6 +270,7 @@ def main() -> int:
     print(f"== verify_channel_capability.py ({mode}, repo={REPO}) ==")
     rc = 0
     rc |= check_skills_source_and_sync()
+    rc |= check_global_static_markers()
     if not args.quick:
         rc |= check_quality_metrics_json()
 
