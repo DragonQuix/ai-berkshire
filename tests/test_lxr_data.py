@@ -411,5 +411,93 @@ class TestQualityMetrics(unittest.TestCase):
         self.assertEqual(lxd._datapack_source(pack, True), "lixinger+mx")
 
 
+def test_datapack_does_not_cache_failed_sections(monkeypatch):
+    from lxr_data import LxrData
+
+    class FakeCache:
+        def __init__(self):
+            self.saved = None
+
+        def get(self, endpoint, payload, ttl_seconds):
+            return (self.saved is not None), self.saved
+
+        def set(self, endpoint, payload, value):
+            self.saved = value
+
+    class FakeClient:
+        def __init__(self):
+            self.config = {"data_type_ttl_seconds": {}}
+            self.cache = FakeCache()
+
+    calls = {"mx_news": 0}
+    d = LxrData(client=FakeClient(), verbose=False)
+
+    monkeypatch.setattr("lxr_data._detect_market", lambda code: "cn")
+    monkeypatch.setattr("lxr_data._norm_code", lambda code, market=None: "600519")
+    monkeypatch.setattr(d, "detect_fs_type", lambda code: "non_financial")
+    monkeypatch.setattr(d, "get_financials", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_valuation", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_verification_inputs", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_valuation_percentiles", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_governance", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_majority_shareholders", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_revenue_constitution", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "compare_industry_valuation", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "mx_data", lambda *a, **k: {"_source": "mx-data", "raw": {"ok": True}})
+
+    def flaky_mx_news(*args, **kwargs):
+        calls["mx_news"] += 1
+        if calls["mx_news"] == 1:
+            raise RuntimeError("temporary timeout")
+        return {"_source": "mx-search", "raw": {"ok": True}}
+
+    monkeypatch.setattr(d, "mx_search", flaky_mx_news)
+
+    first = d.get_research_datapack("600519", include_mx=True, ttl_seconds=3600)
+    assert first["_source"] == "lixinger+partial-mx"
+    assert first["sections"]["mx_news"]["_source"] == "none"
+    assert d.client.cache.saved is None
+
+    second = d.get_research_datapack("600519", include_mx=True, ttl_seconds=3600)
+    assert second["_source"] == "lixinger+mx"
+    assert second["sections"]["mx_news"]["_source"] == "mx-search"
+    assert d.client.cache.saved is second
+    assert calls["mx_news"] == 2
+
+
+def test_mx_script_constructor_override_is_used_for_mx_data(tmp_path, monkeypatch):
+    from lxr_data import LxrData
+
+    script = tmp_path / "mx_data_fake.py"
+    script.write_text(
+        "import json, pathlib, sys\n"
+        "query = sys.argv[1]\n"
+        "out_dir = pathlib.Path(sys.argv[2])\n"
+        "out_dir.mkdir(parents=True, exist_ok=True)\n"
+        "(out_dir / 'mx_data_fake_raw.json').write_text(json.dumps({'query': query, 'ok': True}), encoding='utf-8')\n",
+        encoding="utf-8",
+    )
+
+    class FakeCache:
+        dir = str(tmp_path / "cache")
+
+        def get(self, endpoint, payload, ttl_seconds):
+            return False, None
+
+        def set(self, endpoint, payload, value):
+            pass
+
+    class FakeClient:
+        config = {"data_type_ttl_seconds": {}}
+        cache = FakeCache()
+
+    d = LxrData(client=FakeClient(), mx_script=str(script), verbose=False)
+    result = d.call_mx("mx-data", "贵州茅台 最新价", ttl_seconds=0)
+
+    assert result["_source"] == "mx-data"
+    assert result["raw"]["ok"] is True
+    assert result["raw"]["query"] == "贵州茅台 最新价"
+
+
 if __name__ == "__main__":
     unittest.main()

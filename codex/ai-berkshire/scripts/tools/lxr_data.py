@@ -1419,7 +1419,7 @@ class LxrData:
         if cached is not None:
             return {**cached, "_cache": "hit"}
 
-        script = _resolve_mx_script(skill)
+        script = self.mx_script if skill == "mx-data" else _resolve_mx_script(skill)
         if not os.path.isfile(script):
             raise MXError(f"{skill} 脚本不存在: {script}")
         out_dir = _mx_output_dir(self.client.cache.dir)
@@ -1545,7 +1545,13 @@ class LxrData:
             _section("mx_news", lambda: self.mx_search(f"{label} 最新公告 业绩"))
 
         pack["_source"] = _datapack_source(pack, include_mx)
-        self.client.cache.set("datapack/research", cache_key, pack)
+        has_failed_section = any(
+            isinstance(section, dict)
+            and (section.get("_source") in (None, "", "none") or section.get("error"))
+            for section in pack.get("sections", {}).values()
+        )
+        if not has_failed_section:
+            self.client.cache.set("datapack/research", cache_key, pack)
         return pack
 
     # ------------------------------------------------------------------
