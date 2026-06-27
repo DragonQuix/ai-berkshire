@@ -1,0 +1,8 @@
+# AI Berkshire — Python 工具依赖
+# =============================================================================
+# 核心工具 (financial_rigor.py, report_audit.py, stock_screener.py 等)
+# 全部使用 Python 标准库 (decimal, json, argparse, math 等)，零外部依赖。
+#
+# 可选依赖（非核心功能）:
+# playwright  # 仅 xueqiu_scraper.py（雪球数据爬虫）需要
+#             # 安装: pip install playwright && playwright install chromium

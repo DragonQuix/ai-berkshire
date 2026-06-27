@@ -221,16 +221,44 @@ AI Berkshire 确保：**同样的输入 → 结构一致、深度一致的输出
 npm install -g @anthropic-ai/claude-code
 ```
 
-### 2. 安装 Skills
+### 2. 安装 AI Berkshire
 
-将 `skills/` 目录下的 `.md` 文件复制到你的 Claude Code commands 目录：
+**macOS / Linux：**
 
 ```bash
-# 克隆仓库
-git clone https://github.com/xbtlin/ai-berkshire.git
+git clone https://github.com/xbtlin/ai-berkshire.git ~/ai-berkshire
+cd ~/ai-berkshire && bash install.sh
+```
 
-# 复制 skills 到 Claude Code 全局 commands 目录
-cp ai-berkshire/skills/*.md ~/.claude/commands/
+**Windows (PowerShell)：**
+
+```powershell
+git clone https://github.com/xbtlin/ai-berkshire.git $HOME\ai-berkshire
+cd $HOME\ai-berkshire; pwsh install.ps1
+```
+
+> **安装脚本做了什么？**
+> 1. 检查前置条件（git, python, claude）
+> 2. Clone/更新仓库到 `~/ai-berkshire/`
+> 3. 将 18 个 Skill 安装到 `~/.claude/commands/`
+> 4. 检查 Python 工具依赖
+>
+> macOS/Linux 默认使用**符号链接**（`git pull` 后自动更新），Windows 使用文件拷贝。
+> 也支持手动安装：直接将 `skills/*.md` 复制到 `~/.claude/commands/` 即可。
+
+#### 更新
+
+```bash
+cd ~/ai-berkshire && git pull
+# macOS/Linux（符号链接）：自动生效
+# Windows（拷贝）：重新运行 install.ps1
+```
+
+#### 卸载
+
+```bash
+cd ~/ai-berkshire && bash install.sh --uninstall   # macOS/Linux
+cd $HOME\ai-berkshire; pwsh install.ps1 -Uninstall  # Windows
 ```
 
 ### 3. 使用
