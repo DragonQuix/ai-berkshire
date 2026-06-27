@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Financial Rigor Toolkit for AI Berkshire.
 
 Command-line tool for verifying financial data accuracy during investment research.

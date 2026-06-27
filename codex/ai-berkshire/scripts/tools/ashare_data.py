@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """A股数据工具 — 腾讯行情 + 东方财富搜索/财务，零外部依赖（仅 stdlib）。
 
 为 Claude Code Skills 提供 A 股实时行情、财务数据等数据。

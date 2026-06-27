@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 stock_screener.py — 动量发现 + 价值验证 选股筛
 用法：

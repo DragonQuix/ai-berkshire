@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """verify_channel_capability.py
 渠道能力与 `_source` 规范校验。

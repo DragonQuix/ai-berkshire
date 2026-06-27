@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Report Audit Tool for AI Berkshire.
 
 数据抽检工具：从研究报告中抽取15%的财务数据点，与可靠信源比对，
@@ -381,7 +380,7 @@ def render_verdict(results: list, report_name: str = "") -> dict:
         verdict = 'FAIL'
 
     if warn_count > 0:
-        print(f'{YELLOW}注意：{warn_count} 个数据点两来源结果不一致（超过1%），可能是口径差异（GAAP/Non-GAAP或汇率），请人工复核。{RESET}')
+        print(f'{YELLOW}注意：{warn_count} 个数据点两来源结果不一致（超过2%），可能是口径差异（GAAP/Non-GAAP或汇率），请人工复核。{RESET}')
         for wi in warn_items:
             print(f'  ⚠️  {wi["label"]}  报告:{wi["reported"]} {wi["unit"]}  偏差: {wi["diff1_pct"]}% / {wi["diff2_pct"]}%')
 

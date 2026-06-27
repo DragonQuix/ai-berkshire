@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 从 Morningstar 筛选器 API 抓取所有有公允价值估计的股票，
 计算潜在涨幅，输出 Top 100。

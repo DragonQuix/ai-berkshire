@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Report Audit Tool for AI Berkshire.
 
 数据抽检工具：从研究报告中抽取15%的财务数据点，与可靠信源比对，

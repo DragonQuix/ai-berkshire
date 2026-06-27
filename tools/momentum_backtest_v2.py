@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 动量发现 + 价值验证 回测工具 v2
 回测标的：NVDA / AMD / MU（AI芯片三巨头）
@@ -11,6 +10,7 @@ AMD/MU：从JSON文件加载真实日线数据
 import json
 import sys
 import os
+import tempfile
 from datetime import datetime
 from collections import OrderedDict
 
@@ -348,7 +348,8 @@ if __name__ == "__main__":
     nvda_manual_analysis()
 
     # AMD：真实日线回测
-    amd_file = "/tmp/AMD_prices.json"
+    temp_dir = tempfile.gettempdir()
+    amd_file = os.path.join(temp_dir, "AMD_prices.json")
     if os.path.exists(amd_file):
         amd_prices = load_prices_from_json(amd_file)
         amd_first = backtest("AMD", amd_prices)
@@ -356,7 +357,7 @@ if __name__ == "__main__":
         print("\n  [WARN] AMD价格数据不可用")
 
     # MU：真实日线回测
-    mu_file = "/tmp/MU_prices.json"
+    mu_file = os.path.join(temp_dir, "MU_prices.json")
     if os.path.exists(mu_file):
         mu_prices = load_prices_from_json(mu_file)
         mu_first = backtest("MU", mu_prices)

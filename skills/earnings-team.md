@@ -128,7 +128,7 @@ python tools/lxr_data.py industry-deep {code} --years 3
    - 关键数据至少两个来源交叉验证
 
    ```bash
-   python3 ~/ai-berkshire/tools/financial_rigor.py cross-validate \
+   python tools/financial_rigor.py cross-validate \
      --metric "revenue" --values {值1} {值2} --sources "来源1" "来源2"
    ```
 
@@ -153,11 +153,11 @@ python tools/lxr_data.py industry-deep {code} --years 3
 5. **估值与安全边际更新**
 
    ```bash
-   python3 ~/ai-berkshire/tools/financial_rigor.py verify-market-cap \
+   python tools/financial_rigor.py verify-market-cap \
      --price {价格} --shares {股本} --reported {报告市值} --currency {币种}
-   python3 ~/ai-berkshire/tools/financial_rigor.py verify-valuation \
+   python tools/financial_rigor.py verify-valuation \
      --price {价格} --eps {EPS} --bvps {每股净资产}
-   python3 ~/ai-berkshire/tools/financial_rigor.py three-scenario \
+   python tools/financial_rigor.py three-scenario \
      --price {价格} --eps {EPS} --shares {股本亿} \
      --growth {乐观} {中性} {悲观} --pe {乐观PE} {中性PE} {悲观PE}
    ```
@@ -434,10 +434,10 @@ reports/{公司名}/
 对最终文章执行抽检：
 
 ```bash
-python3 ~/ai-berkshire/tools/report_audit.py extract \
+python tools/report_audit.py extract \
   --report reports/{公司名}/{公司名}-earnings-{期间}.md
 
-python3 ~/ai-berkshire/tools/report_audit.py verdict \
+python tools/report_audit.py verdict \
   --results '<填好的JSON>' \
   --report {报告文件名}
 ```

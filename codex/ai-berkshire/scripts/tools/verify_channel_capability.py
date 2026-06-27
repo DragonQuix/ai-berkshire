@@ -1,122 +1,245 @@
-#!/usr/bin/env python3
-"""E0 渠道能力最小复验脚本（Windows / PowerShell 友好）。
+# -*- coding: utf-8 -*-
+"""verify_channel_capability.py
+渠道能力与 `_source` 规范校验。
+
+校验两类不变式：
+
+A) `/quality-screen` 精确复核层（full 模式，需理杏仁 token / 网络）
+   运行 `python tools/lxr_data.py quality-metrics 600132 --years 5 --quiet`，
+   解析其 JSON 输出并做**有效值断言**（非仅 key 存在）：
+     - 顶层 `_source` 存在且为 `lixinger`
+     - `checks` 含 7 项 key（见 EXPECTED_CHECK_KEYS）
+     - `share_dilution_5y` 非 missing 且 `value` 为有效数值（int/float，非 None/非字符串 "missing"）
+     - 顶层 `result` 与 `status` 为 `pass`
+
+B) 增强 Skill 的 `_source` 标注覆盖 + 根/Codex reference 同步（`--quick` 即执行，纯静态）
+     - skills/news-pulse.md | earnings-review.md | bottleneck-hunter.md
+     - 必含 `_source: mx-search`（三者均要求）；news-pulse / earnings-review 另要求 `_source: mx-data`
+     - 根副本与 codex/ai-berkshire/references/skills/*.md 副本 SHA256 一致
 
 用法:
-    python tools/verify_channel_capability.py
-    python tools/verify_channel_capability.py --quick
-"""
+    python tools/verify_channel_capability.py --quick     # 仅 B 类静态校验，不联网
+    python tools/verify_channel_capability.py             # A + B 全部校验（需 quality-metrics 子命令与网络）
 
+退出码: 0 = 全部通过；非 0 = 有失败项。
+"""
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-PY = sys.executable
-LXR = ROOT / "tools" / "lxr_data.py"
-RIGOR = ROOT / "tools" / "financial_rigor.py"
+REPO = Path(__file__).resolve().parent.parent
+LXR = REPO / "tools" / "lxr_data.py"
+
+# /quality-screen 的 7 条去劣指标（与 skills/quality-screen.md 一致）
+EXPECTED_CHECK_KEYS = [
+    "roe_10y_avg",        # 1. 10年平均ROE
+    "fcf_5y_cumulative",  # 2. 5年累计自由现金流
+    "interest_coverage",  # 3. 利息覆盖倍数
+    "gross_margin_avg",   # 4. 长期毛利率
+    "ocf_ni_5y_avg",      # 5. 经营现金流/净利润 5年均值
+    "net_margin_avg",     # 6. 长期净利率
+    "share_dilution_5y",  # 7. 5年总股本膨胀
+]
+
+# (root 相对路径, codex reference 相对路径, 必需的 _source / 渠道标记)
+TARGETS: list[tuple[str, str, list[str]]] = [
+    (
+        "skills/news-pulse.md",
+        "codex/ai-berkshire/references/skills/news-pulse.md",
+        ["_source: mx-search", "_source: mx-data", "mx-search", "mx-data"],
+    ),
+    (
+        "skills/earnings-review.md",
+        "codex/ai-berkshire/references/skills/earnings-review.md",
+        ["_source: mx-search", "_source: mx-data", "mx-search", "mx-data"],
+    ),
+    (
+        "skills/bottleneck-hunter.md",
+        "codex/ai-berkshire/references/skills/bottleneck-hunter.md",
+        ["_source: mx-search", "mx-search"],
+    ),
+]
+
+_MISSING_TOKENS = (None, "missing", "MISSING", "N/A", "n/a", "null", "")
 
 
-def _run(cmd: list[str]) -> tuple[int, str]:
+def _pass(msg: str) -> None:
+    print(f"PASS: {msg}")
+
+
+def _fail(msg: str) -> None:
+    print(f"FAIL: {msg}")
+
+
+# ---------------------------------------------------------------------------
+# A) quality-metrics JSON 有效值断言
+# ---------------------------------------------------------------------------
+
+def _is_valid_number(v) -> bool:
+    """有效数值：int/float 且非 bool、非 None。"""
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def _run_quality_metrics(code: str = "600132", years: int = 5) -> dict:
+    cmd = [sys.executable, str(LXR), "quality-metrics", code,
+           "--years", str(years), "--quiet"]
     proc = subprocess.run(
         cmd,
-        cwd=str(ROOT),
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
+        cwd=str(REPO),
     )
-    out = (proc.stdout or "") + (proc.stderr or "")
-    return proc.returncode, out
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"quality-metrics 子命令执行失败 (exit={proc.returncode})\n"
+            f"stderr: {proc.stderr.strip()[:400]}\n"
+            f"hint: 确认 lxr_data.py 已含 quality-metrics 子命令且理杏仁 token 可用"
+        )
+    # lxr_data.py 末尾 print(json.dumps(...))，取 stdout 末段首个 JSON 对象
+    out = proc.stdout.strip()
+    start = out.find("{")
+    if start < 0:
+        raise RuntimeError(f"quality-metrics stdout 未找到 JSON: {out[:200]}")
+    return json.loads(out[start:])
 
 
-def _check(name: str, cmd: list[str], predicate) -> bool:
-    code, out = _run(cmd)
-    ok = code == 0 and predicate(out)
-    status = "PASS" if ok else "FAIL"
-    print(f"[{status}] {name}")
-    if not ok:
-        print(out[:800])
-    return ok
-
-
-def _quality_metrics_ok(out: str) -> bool:
-    """quality-metrics 须含 7 项 checks，且 share_dilution_5y 有有效数值（非 missing）。"""
+def check_quality_metrics_json() -> int:
+    """解析 quality-metrics JSON 并做有效值断言。"""
+    print("\n-- A) quality-metrics JSON 有效值断言 --")
     try:
-        data = json.loads(out)
-    except json.JSONDecodeError:
-        return False
-    if data.get("_source") != "lixinger":
-        return False
-    checks = data.get("checks") or {}
-    required = (
-        "roe_10y_avg", "fcf_5y_cumulative", "interest_coverage",
-        "gross_margin_avg", "ocf_ni_5y_avg", "net_margin_avg", "share_dilution_5y",
-    )
-    if not all(k in checks for k in required):
-        return False
-    dil = checks["share_dilution_5y"]
-    if dil.get("status") == "missing" or dil.get("value") is None:
-        return False
-    if dil.get("status") not in ("pass", "fail"):
-        return False
-    summary = data.get("summary") or {}
-    return summary.get("share_dilution_5y_pct") is not None
+        data = _run_quality_metrics()
+    except Exception as e:
+        _fail(f"无法获取 quality-metrics JSON: {e}")
+        return 1
+
+    rc = 0
+
+    # 1. 顶层 _source
+    src = data.get("_source")
+    if src == "lixinger":
+        _pass(f"顶层 _source = {src!r}")
+    else:
+        _fail(f"顶层 _source 期望 'lixinger'，实际 {src!r}")
+        rc |= 1
+
+    # 2. 7 项 checks key
+    checks = data.get("checks")
+    if not isinstance(checks, dict):
+        _fail(f"checks 不是 dict: {type(checks).__name__}")
+        return rc | 1
+    present = set(checks.keys())
+    expected = set(EXPECTED_CHECK_KEYS)
+    missing = expected - present
+    if missing:
+        _fail(f"checks 缺少 key: {sorted(missing)} (实际 keys: {sorted(present)})")
+        rc |= 1
+    else:
+        _pass(f"checks 7 项 key 齐全: {sorted(expected)}")
+    # 额外断言：checks 至少 7 项（防止退化为只查 key 存在而内容空）
+    if len(checks) < 7:
+        _fail(f"checks 项数 {len(checks)} < 7")
+        rc |= 1
+
+    # 3. share_dilution_5y 非 missing 且 value 为有效数值（核心有效值断言）
+    sd = checks.get("share_dilution_5y")
+    if not isinstance(sd, dict):
+        _fail(f"share_dilution_5y 不是 dict: {sd!r}")
+        rc |= 1
+    else:
+        sd_status = sd.get("status")
+        sd_value = sd.get("value")
+        if sd_status in _MISSING_TOKENS or str(sd_status).lower() == "missing":
+            _fail(f"share_dilution_5y status=missing (status={sd_status!r})")
+            rc |= 1
+        elif not _is_valid_number(sd_value):
+            _fail(f"share_dilution_5y.value 非有效数值: {sd_value!r}")
+            rc |= 1
+        else:
+            _pass(f"share_dilution_5y 有效: value={sd_value!r}, status={sd_status!r}")
+
+    # 4. 顶层 result / status
+    result = data.get("result")
+    status = data.get("status", result)
+    if result == "pass" and status == "pass":
+        _pass(f"顶层 result={result!r}, status={status!r}")
+    else:
+        _fail(f"顶层 result={result!r}, status={status!r} (期望均 'pass')")
+        rc |= 1
+
+    return rc
 
 
-def main():
-    parser = argparse.ArgumentParser(description="复验 E0 关键渠道能力")
-    parser.add_argument("--quick", action="store_true", help="跳过 mx-xuangu（省日限额）")
-    args = parser.parse_args()
+# ---------------------------------------------------------------------------
+# B) Skill _source 覆盖 + 根/Codex 同步
+# ---------------------------------------------------------------------------
 
-    results = []
+def check_source_coverage(rel: str, markers: list[str]) -> int:
+    p = REPO / rel
+    if not p.exists():
+        _fail(f"{rel} 不存在")
+        return 1
+    text = p.read_text(encoding="utf-8")
+    missing = [m for m in markers if m not in text]
+    if missing:
+        _fail(f"{rel} 缺少标记: {missing}")
+        return 1
+    _pass(f"{rel} _source 渠道标注覆盖完整 ({len(markers)} markers)")
+    return 0
 
-    results.append(_check(
-        "insurance EV/NBV industry-deep 601336",
-        [PY, str(LXR), "industry-deep", "601336", "--years", "3", "--quiet"],
-        lambda o: "ev" in o and "nbv" in o and '"_source": "lixinger"' in o,
-    ))
 
-    results.append(_check(
-        "datapack --no-mx _source=lixinger",
-        [PY, str(LXR), "datapack", "600519", "--years", "5", "--no-mx", "--quiet"],
-        lambda o: '"_source": "lixinger"' in o and "mx_quote" not in o,
-    ))
+def check_sync(root_rel: str, codex_rel: str) -> int:
+    a = REPO / root_rel
+    b = REPO / codex_rel
+    if not a.exists() or not b.exists():
+        _fail(f"同步校验跳过：{root_rel} 或 {codex_rel} 不存在")
+        return 1
+    ha = hashlib.sha256(a.read_bytes()).hexdigest()
+    hb = hashlib.sha256(b.read_bytes()).hexdigest()
+    if ha == hb:
+        _pass(f"{root_rel} ↔ {codex_rel} 同步一致 (sha256={ha[:16]})")
+        return 0
+    _fail(f"{root_rel} ↔ {codex_rel} 不一致 (root={ha[:16]} codex={hb[:16]})")
+    return 1
 
-    results.append(_check(
-        "quality-metrics 7 indicators + share_dilution_5y",
-        [PY, str(LXR), "quality-metrics", "600132", "--years", "5", "--fcf-years", "5", "--quiet"],
-        _quality_metrics_ok,
-    ))
 
-    results.append(_check(
-        "verify-valuation dividend yield ~4%",
-        [PY, str(RIGOR), "verify-valuation", "600519", "--source", "lixinger"],
-        lambda o: "股息率" in o and ("4.0" in o or "4.1" in o) and "0.04%" not in o,
-    ))
+def check_skills_source_and_sync() -> int:
+    print("\n-- B) 增强 Skill _source 覆盖 + 根/Codex 同步 --")
+    rc = 0
+    for root_rel, codex_rel, markers in TARGETS:
+        print(f"\n>> {root_rel}")
+        rc |= check_source_coverage(root_rel, markers)
+        rc |= check_source_coverage(codex_rel, markers)
+        rc |= check_sync(root_rel, codex_rel)
+    return rc
 
-    results.append(_check(
-        "HK governance 00700",
-        [PY, str(LXR), "governance", "00700", "--years", "2", "--quiet"],
-        lambda o: '"_source": "lixinger"' in o,
-    ))
 
+# ---------------------------------------------------------------------------
+# entrypoint
+# ---------------------------------------------------------------------------
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="渠道能力与 _source 规范校验")
+    ap.add_argument("--quick", action="store_true",
+                    help="仅静态校验 Skill _source 覆盖与根/Codex 同步，不联网、不调用 quality-metrics")
+    args = ap.parse_args()
+
+    mode = "quick (offline)" if args.quick else "full (A+B)"
+    print(f"== verify_channel_capability.py ({mode}, repo={REPO}) ==")
+    rc = 0
+    rc |= check_skills_source_and_sync()
     if not args.quick:
-        results.append(_check(
-            "mx-xuangu screen",
-            [PY, str(LXR), "mx-xuangu",
-             "ROE大于15%，市盈率小于30的消费股，返回前10只", "--quiet"],
-            lambda o: '"_source": "mx-xuangu"' in o or "raw" in o,
-        ))
+        rc |= check_quality_metrics_json()
 
-    passed = sum(results)
-    total = len(results)
-    print(f"\n合计: {passed}/{total} PASS")
-    sys.exit(0 if passed == total else 1)
+    print(f"\n== 结果: {'全部通过' if rc == 0 else '存在失败'} (exit={rc}) ==")
+    return rc
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

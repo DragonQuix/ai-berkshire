@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
 """理杏仁本地磁盘缓存层 — 降低 API 调用频率，零外部依赖（仅 stdlib）。
 
 设计要点：
-- 缓存目录：``tempfile.gettempdir() / "lxr_cache"``（跨平台，Windows 兼容；不硬编码 /tmp）。
+- 缓存目录：``tempfile.gettempdir() / "lxr_cache"``（跨平台，Windows 兼容；不硬编码 POSIX 临时目录）。
 - 存储格式：JSON 文件，文件名 = 请求指纹的 SHA1（endpoint + payload，**去除 token** 后排序）。
 - TTL 过期视为 miss；TTL 为 None 或 <=0 表示不缓存。
 - 缓存值原样为已解析的 Python 对象（dict/list），序列化为 JSON 存储。

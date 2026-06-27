@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 动量发现 + 价值验证 回测工具
 回测标的：NVDA / AMD / MU（AI芯片三巨头）

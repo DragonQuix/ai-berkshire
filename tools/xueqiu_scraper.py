@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 雪球通用爬虫：遍历指定用户的完整时间线，按关键词筛选本人原发言。
@@ -17,15 +16,15 @@
 
 用法示例：
   # 段永平关于拼多多
-  python3 xueqiu_scraper.py \\
+  python tools/xueqiu_scraper.py \\
       --user-id 1247347556 \\
       --keywords 拼多多,PDD,Temu,黄峥 \\
       --output ../reports/拼多多/段永平雪球发言-PDD相关.md
 
   # 其他用户 + 其他关键词
-  python3 xueqiu_scraper.py --user-id 6784593966 --keywords 茅台 --output /tmp/out.md
+  python tools/xueqiu_scraper.py --user-id 6784593966 --keywords 茅台 --output "$env:TEMP\xueqiu-out.md"
 
-登录态缓存默认 /tmp/xueqiu_state.json，可用 --state-path 覆盖。
+登录态缓存默认使用系统临时目录，可用 --state-path 覆盖。
 """
 
 import argparse
@@ -34,6 +33,7 @@ import json
 import os
 import random
 import re
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from playwright.async_api import async_playwright
@@ -349,6 +349,14 @@ def format_md(collected, user_id, keywords):
     return '\n'.join(lines)
 
 
+def default_state_path() -> str:
+    return str(Path(tempfile.gettempdir()) / "xueqiu_state.json")
+
+
+def default_raw_json_path(user_id: str) -> str:
+    return str(Path(tempfile.gettempdir()) / f"xueqiu_{user_id}_raw.json")
+
+
 def parse_args():
     ap = argparse.ArgumentParser(description="雪球用户时间线爬虫（按关键词筛选本人原发言）")
     ap.add_argument('--user-id', type=int, help='雪球用户ID（主页URL数字段）')
@@ -356,8 +364,8 @@ def parse_args():
                     help='关键词列表，逗号分隔。例：拼多多,PDD,黄峥,Temu')
     ap.add_argument('--output', type=str, default='', help='markdown 输出路径')
     ap.add_argument('--raw-json', type=str, default='', help='（可选）命中条目原始 JSON 输出路径')
-    ap.add_argument('--state-path', type=str, default='/tmp/xueqiu_state.json',
-                    help='登录态缓存文件（默认 /tmp/xueqiu_state.json）')
+    ap.add_argument('--state-path', type=str, default=default_state_path(),
+                    help='登录态缓存文件（默认使用系统临时目录）')
     ap.add_argument('--dump-all', type=str, default='',
                     help='全量缓存路径：爬取时同时把该用户所有原发言写到这里，用于后续离线多主题分析')
     ap.add_argument('--from-cache', type=str, default='',
@@ -399,7 +407,7 @@ async def main():
         return
 
     progress_path = args.state_path + f'.progress.{args.user_id}'
-    raw_json = args.raw_json or f'/tmp/xueqiu_{args.user_id}_raw.json'
+    raw_json = args.raw_json or default_raw_json_path(args.user_id)
 
     print("=" * 60)
     print(f"雪球爬虫 | user_id={args.user_id} | keywords={keywords} | dump_all={args.dump_all}")

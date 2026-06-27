@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """理杏仁 Open API 客户端 — 纯 stdlib（urllib），处理 token/限流/重试/错误/gzip。
 
 技术约束（来自理杏仁 API 注意事项）：
