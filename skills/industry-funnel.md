@@ -94,6 +94,15 @@ python tools/lxr_data.py financials {code} --years 3 --source lixinger  # 逐家
 
 ## 第二步：价值投资 5 条硬指标粗筛 → ≤ 10 家
 
+**估值四维坐标**（粗筛后、精细分析前，对每只候选填写；命令同 `/investment-research` 第七步）：
+
+| 维度 | 命令要点 |
+|------|----------|
+| D1 自身 | `lxr_data.py percentiles {code}` |
+| D2 行业 | `lxr_data.py industry-compare {code}` |
+| D3 全市场 | mx-xuangu「同行业 PE 低于该股市盈率且 ROE 更高」 |
+| D4 利率 | `lxr_data.py macro-debt` |
+
 对第一步的 30-60 家公司，逐家应用 5 条硬指标。
 
 ### 2.1 5 条硬指标

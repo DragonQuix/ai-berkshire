@@ -221,6 +221,17 @@ python3 ~/ai-berkshire/tools/financial_rigor.py verify-valuation \
 
 ### 第七步：估值与安全边际 — 巴菲特"内在价值" + 段永平"对的价格"
 
+#### 估值四维坐标（必须填写）
+
+| 维度 | 问题 | 取数 | `_source` |
+|------|------|------|-----------|
+| D1 自身水位 | PE 处于自身历史什么分位？ | `percentiles` + `valuation` 的 PE-TTM 分位点 | lixinger |
+| D2 行业水位 | PE 处于申万同业什么位置？ | `industry-compare` 对比表中位数/分位 | lixinger |
+| D3 全市场位置 | 全市场多少家更便宜且质量不输？ | mx-xuangu「PE低于{本公司PE}且ROE大于{本公司ROE}%的A股」 | mx-xuangu |
+| D4 利率环境 | 10Y 国债收益率下当前 PE 合理吗？ | `macro-debt` 最新 10Y + 与历史 ERP 直觉对照 | lixinger |
+
+写入报告估值节前的「四维坐标表」，四维度结论综合后再做三情景 DCF/PE 估值。
+
 - 当前市场定价（关键估值指标表格）—— **必须通过工具验算**
 - 反向DCF：当前股价隐含了什么增长预期？
 - 三情景估值 —— **必须通过工具精确计算，禁止心算**：

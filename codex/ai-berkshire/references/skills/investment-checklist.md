@@ -28,16 +28,24 @@
 
 ### 第二步：并行数据收集
 
-使用 Task 工具为**每家公司**启动独立的后台 Agent 进行数据收集（所有公司同时并行启动），每个Agent负责收集：
+A股/港股先走理杏仁数据包（见 `/investment-research` 第〇步），再启动 Agent 补竞争/护城河定性：
 
-1. **盈利能力**：ROE（5-10年趋势）、毛利率、净利率、自由现金流
-2. **估值数据**：当前股价、市值、PE(TTM)、前瞻PE、PB、股息率
-3. **增长趋势**：近3年收入/利润增速
-4. **财务健康**：负债水平、资本开支需求、现金储备、净现金/净负债
-5. **竞争格局**：市场份额、主要竞争对手、份额变化趋势
-6. **护城河证据**：品牌/转换成本/网络效应/规模效应/技术壁垒的具体证据
-7. **管理层记录**：CEO履历、关键决策、持股、资本配置记录
-8. **最新动态**：近6个月重大事件（业绩、并购、监管、管理层变动等）
+```bash
+python tools/lxr_data.py financials {code} --years 10 --source lixinger
+python tools/lxr_data.py valuation {code} --source lixinger
+python tools/lxr_data.py percentiles {code}
+python tools/lxr_data.py governance {code} --years 2
+```
+
+**可自动判断的检查项**（从理杏仁取值后直接填表）：
+| Checklist 项 | 理杏仁依据 |
+|-------------|-----------|
+| PE 是否低于历史中位数 | `percentiles` / `valuation` 分位点 |
+| 管理层是否在增持 | `governance` 高管/大股东增减持 |
+| FCF 是否持续为正 | `financials` 现金流量表 |
+| ROE 趋势 | `financials` 逐年 ROE |
+
+使用 Task 工具为**每家公司**启动独立后台 Agent 收集**无法编码**的维度（护城河证据、竞争格局、最新定性事件）。美股保持 WebSearch + macrotrends。
 
 ### 第三步：逐公司执行六关 Checklist
 

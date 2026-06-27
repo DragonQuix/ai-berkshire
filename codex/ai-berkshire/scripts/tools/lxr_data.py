@@ -233,6 +233,14 @@ KLINE_ADJUST = {
     "backward": "bc_rights",     # 后复权
 }
 
+# 港股董事权益变动（hot 端点：stockCodes + metricsList，无日期区间）
+HK_DIRECTOR_EQUITY_METRICS = [
+    "dec_a_last", "dec_cap_rc_last",
+    "dec_a_m1", "dec_a_m3", "dec_a_m6", "dec_a_y1", "dec_a_y2", "dec_a_y3",
+    "dec_cap_rc_m1", "dec_cap_rc_m3", "dec_cap_rc_m6",
+    "dec_cap_rc_y1", "dec_cap_rc_y2", "dec_cap_rc_y3",
+]
+
 
 class MXError(Exception):
     """妙想 skill 调用失败。"""
@@ -897,10 +905,16 @@ class LxrData:
         start = end - _dt.timedelta(days=365 * years + 10)
         date_range = {"startDate": start.strftime("%Y-%m-%d"), "endDate": end.strftime("%Y-%m-%d")}
         if market == "hk":
-            payload = {"stockCode": norm, **date_range}
-            data = self.client.post("hk/company/hot/director_equity_change", payload,
-                                    ttl_seconds=self._ttl("governance", 86400))
-            records = data if isinstance(data, list) else []
+            payload = {
+                "stockCodes": [norm],
+                "metricsList": HK_DIRECTOR_EQUITY_METRICS,
+            }
+            data = self.client.post(
+                "hk/company/hot/director_equity_change",
+                payload,
+                ttl_seconds=self._ttl("governance", 86400),
+            )
+            records = data if isinstance(data, list) else ([data] if isinstance(data, dict) else [])
             return {
                 "source_detail": "lixinger:hk/company/hot/director_equity_change",
                 "code": norm, "market": "hk",

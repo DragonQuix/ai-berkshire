@@ -38,6 +38,23 @@
 
 ## 第一步：全市场扫描入口
 
+> **增强路径**（A股主题/行业）：优先 mx-xuangu 初筛 + 理杏仁行业成分，WebSearch 仅作未上市/美股补全。参见 `docs/channel-capability-matrix.md`。
+
+### 1.0 双渠道初筛（A股，推荐）
+
+```powershell
+$env:PYTHONIOENCODING='utf-8'
+python C:/Users/admin/.claude/skills/mx-xuangu/mx_xuangu.py `
+  "{行业/主题}板块市值前30，返回股票列表" --output-dir $env:TEMP\mx_skills
+```
+
+候选池确定后，理杏仁批量拉估值/财报：
+
+```bash
+python tools/lxr_data.py industry-compare {代表股代码}   # 行业估值水位
+python tools/lxr_data.py financials {code} --years 3 --source lixinger  # 逐家或 batch stockCodes
+```
+
 ### 1.1 活跃股票定义（三类并集）
 
 **A 类 - 成交活跃度**：
@@ -76,6 +93,15 @@
 ---
 
 ## 第二步：价值投资 5 条硬指标粗筛 → ≤ 10 家
+
+**估值四维坐标**（粗筛后、精细分析前，对每只候选填写；命令同 `/investment-research` 第七步）：
+
+| 维度 | 命令要点 |
+|------|----------|
+| D1 自身 | `lxr_data.py percentiles {code}` |
+| D2 行业 | `lxr_data.py industry-compare {code}` |
+| D3 全市场 | mx-xuangu「同行业 PE 低于该股市盈率且 ROE 更高」 |
+| D4 利率 | `lxr_data.py macro-debt` |
 
 对第一步的 30-60 家公司，逐家应用 5 条硬指标。
 

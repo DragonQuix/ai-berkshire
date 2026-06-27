@@ -29,6 +29,20 @@
 | B级 | 仅获取到部分原文或第三方汇总 | 标注"非原始来源"，降低附注分析权重 |
 | C级 | 仅有新闻报道和数据网站摘要 | 聚焦核心财务数据变化，跳过附注挖掘，标注"一手资料不足" |
 
+### 前置步骤：结构化财报预填充（A股/港股）
+
+在获取 PDF 原文之前，先用理杏仁注入精确数字（`_source: lixinger`），避免从网页手抄：
+
+```bash
+python tools/lxr_data.py financials {code} --years 5 --source lixinger
+python tools/lxr_data.py industry-deep {code} --years 3   # 金融股专属科目
+python tools/lxr_data.py verify-inputs {code}
+```
+
+业绩会/券商点评（1 次 MX）：`mx-search "{公司} {季度} 业绩会 研报"`（`--output-dir %TEMP%\mx_skills`）。
+
+市场反应：`mx-data "{公司} 财报发布日 涨跌幅"`。
+
 ### 第一步：获取一手资料
 
 使用 Task 工具启动多个后台 Agent **并行**获取以下原始材料：

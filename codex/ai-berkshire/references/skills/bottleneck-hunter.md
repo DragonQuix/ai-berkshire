@@ -14,6 +14,8 @@
 
 ## 第一步：超级趋势确认
 
+> **宏观数据**（能源/大宗/利率）：`python tools/lxr_data.py macro-debt` / `macro-rates`（理杏仁，`_source: lixinger`）。供应链中断新闻：`mx-search "{材料} 短缺 供应"`（`--output-dir %TEMP%\mx_skills`）。
+
 ### 1.1 趋势筛选标准
 
 不在小风口里找幻觉，只追符合以下全部条件的超级趋势：

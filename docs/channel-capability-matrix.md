@@ -60,7 +60,7 @@ python tools/lxr_data.py financials 601336 --years 5 --source lixinger
 | `shareholders --kind majority` | ✅ | ✅ | ✅ | ✅ | ✅ latest-shareholders |
 | `shareholders --kind num` 股东人数 | ✅ | ✅ | ✅ | ✅ | ❌ `_source=none` |
 | `percentiles` 估值分位矩阵 | ✅ 6×8 | ✅ | ✅ | ✅ | ✅ |
-| `governance` 增减持 | ✅ | ✅ | ✅ | ✅ | ⚠️ API 需 `sortName`/`sortOrder`，当前 `lxr_data.py` 未传参 |
+| `governance` 增减持 | ✅ | ✅ | ✅ | ✅ | ✅ 董事权益变动 hot 端点 |
 | `revenue` 营收构成 | ✅ | ✅ | ✅ | ✅ | — |
 | `industry-deep` 行业深度 | ✅ | ✅ **含 EV/NBV** | ✅ 资本充足率等 | ✅ | — |
 | `industry-compare` 行业估值对比 | ✅ | ✅ 保险申万二级 | ✅ | ✅ | — |
@@ -158,11 +158,12 @@ python tools/lxr_data.py financials 601336 --years 5 --source lixinger
 
 ## 待修复项（不阻塞 E1，但需在后续阶段处理）
 
-| 问题 | 影响技能 | 建议 |
-|------|----------|------|
-| `get_governance` 港股缺 `sortName`/`sortOrder` | management-deep-dive, news-pulse | E2 前修复 `lxr_data.py` |
-| mx 脚本 Windows 默认输出路径 | 全部 MX 技能 | Skill 文档统一写 `--output-dir %TEMP%\mx_skills` |
-| `client.post` vs `post_raw`  batch 测试误判 | 无用户影响 | 内部测试用 `post_raw` + 正确 date |
+| 问题 | 影响技能 | 建议 | 状态 |
+|------|----------|------|------|
+| ~~`get_governance` 港股缺 `sortName`/`sortOrder`~~ | management-deep-dive, news-pulse | 改用 `hk/company/hot/director_equity_change` 正确 payload（`stockCodes`+`metricsList`） | ✅ 已修复 `lxr_data.py` |
+| mx 脚本 Windows 默认输出路径 | 全部 MX 技能 | Skill 文档统一写 `--output-dir %TEMP%\mx_skills` | ✅ 已在技能中注明 |
+| `client.post` vs `post_raw` batch 测试误判 | 无用户影响 | 内部测试用 `post_raw` + 正确 date | 文档已说明 |
+| 港股股东人数趋势 | shareholders-num | 理杏仁无端点，标注降级 | 已知限制 |
 
 ---
 

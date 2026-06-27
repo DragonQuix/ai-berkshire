@@ -93,6 +93,22 @@ python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{公司} 负面 监
 
 ### A4：估值锚点
 
+**估值四维坐标**（建立论文时记录基准，追踪时对比变化）：
+
+```bash
+python tools/lxr_data.py percentiles {code}
+python tools/lxr_data.py industry-compare {code}
+python tools/lxr_data.py macro-debt --area cn
+# D3: mx-xuangu「PE低于{当前PE}且ROE大于{当前ROE}%」
+```
+
+| 维度 | 买入时记录 | 追踪时检查 |
+|------|-----------|-----------|
+| D1 自身 PE 分位 | % | 是否突破论文中的高估红线 |
+| D2 行业相对位置 | vs 行业中位数 | 是否脱离合理区间 |
+| D3 全市场替代标的 | 数量/排名 | 是否有更优替代 |
+| D4 10Y 国债 + PE | 利差直觉 | 利率上行是否压缩估值空间 |
+
 | 指标 | 买入时 | 乐观目标 | 中性目标 | 悲观情景 |
 |------|-------|---------|---------|---------|
 | 股价 | | | | |
