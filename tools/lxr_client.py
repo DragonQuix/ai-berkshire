@@ -143,7 +143,7 @@ class LixingerClient:
             method="POST",
             headers={
                 "Content-Type": "application/json",
-                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Encoding": "gzip, deflate",
             },
         )
 

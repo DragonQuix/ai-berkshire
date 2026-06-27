@@ -111,6 +111,14 @@ class TestLixingerClient(unittest.TestCase):
             with self.assertRaises(LixingerAuthError):
                 self._client()
 
+    def test_accept_encoding_only_advertises_supported_codecs(self):
+        c = self._client(token="tok")
+        req = c._build_request("cn/company", {"token": "tok"})
+        enc = req.headers.get("Accept-encoding") or req.headers.get("Accept-Encoding")
+        self.assertIn("gzip", enc)
+        self.assertIn("deflate", enc)
+        self.assertNotIn("br", enc)
+
     def test_429_retry_then_success(self):
         calls = {"n": 0}
         real = lxc.urllib.request.urlopen
