@@ -89,7 +89,14 @@ def _is_valid_number(v) -> bool:
 def _run_quality_metrics(code: str = "600132", years: int = 5) -> dict:
     cmd = [sys.executable, str(LXR), "quality-metrics", code,
            "--years", str(years), "--quiet"]
-    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(REPO))
+    proc = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        cwd=str(REPO),
+    )
     if proc.returncode != 0:
         raise RuntimeError(
             f"quality-metrics 子命令执行失败 (exit={proc.returncode})\n"
