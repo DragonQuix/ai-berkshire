@@ -33,17 +33,13 @@
 
 ### 第一步又四分之一：共享数据包（Team 启动前必须执行）
 
-对 A股/港股目标公司，Team Lead **先**拉取一次数据包（各 Agent 共享，禁止重复取数）：
+对 A股/港股目标公司，Team Lead **先**拉取一次数据包：
 
 ```bash
-python tools/lxr_data.py financials {code} --years 5 --source lixinger
-python tools/lxr_data.py valuation {code} --source lixinger
-python tools/lxr_data.py industry-deep {code} --years 5    # 保险/银行/证券自动路由
-python tools/lxr_data.py revenue {code} --years 3
-python tools/lxr_data.py governance {code} --years 2
-python tools/lxr_data.py shareholders {code} --kind majority
-python tools/lxr_data.py industry-compare {code}
+python tools/lxr_data.py datapack {code} --years 5
 ```
+
+或分拆拉取（与 `/investment-research` 第〇步相同）：
 
 将 JSON 摘要写入 `reports/{公司名}/data-pack.json`（或团队共享目录），并在创建 Task 时**注入各 Agent description**：
 

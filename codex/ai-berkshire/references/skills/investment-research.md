@@ -38,7 +38,14 @@
 
 **0.1 解析目标**：从 `$ARGUMENTS` 提取公司名与股票代码（A股6位 / 港股5位）。无法确定代码时，先用 `python tools/lxr_data.py` 配合公司搜索或 mx-data 问句解析，再进入批量拉取。
 
-**0.2 一次性拉取数据包**（理杏仁为主，妙想补 tick/资讯；单次研究约 5–8 次理杏仁 + 2 次 MX，见日限额策略）：
+**0.2 一次性拉取数据包**（推荐单命令，TTL 1h 跨模块共享）：
+
+```bash
+python tools/lxr_data.py datapack {code} --years 5
+# 跳过妙想（省日限额）：python tools/lxr_data.py datapack {code} --no-mx
+```
+
+或按维度分拆（理杏仁为主，妙想补 tick/资讯；单次研究约 5–8 次理杏仁 + 2 次 MX）：
 
 | 维度 | 命令 / 渠道 | `_source` 标注 |
 |------|------------|----------------|
@@ -50,8 +57,8 @@
 | 股东 + 治理 | `shareholders --kind majority/num` + `governance --years 2` | lixinger |
 | 行业估值对比 | `python tools/lxr_data.py industry-compare {code}`（A股） | lixinger |
 | 宏观利率 | `python tools/lxr_data.py macro-debt` + `macro-rates` | lixinger |
-| 实时快照 | `python C:/Users/admin/.claude/skills/mx-data/mx_data.py "{公司}最新价 涨跌幅 PE PB" %TEMP%\mx_skills` | mx-data |
-| 重要资讯 | `python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{公司}最新公告 业绩" --output-dir %TEMP%\mx_skills` | mx-search |
+| 实时快照 | `python tools/lxr_data.py mx-data "{公司}最新价 涨跌幅 PE PB"` | mx-data |
+| 重要资讯 | `python tools/lxr_data.py mx-search "{公司}最新公告 业绩"` | mx-search |
 
 Windows 终端：`$env:PYTHONIOENCODING='utf-8'`；MX 脚本**必须**传 `--output-dir` 或输出目录参数（默认 `/root/.openclaw/...` 在 Windows 不可用）。
 

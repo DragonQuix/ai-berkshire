@@ -150,5 +150,8 @@ python tools/financial_rigor.py verify-market-cap --price 510 --shares 9.11e9 --
 | LPR/Shibor/MLF利率 | `lxr_data.py macro-rates --area cn` | 人民银行 |
 | 指数估值(沪深300/恒生PE/PB分位) | `lxr_data.py index-val 000300 --market cn` | aastocks / mx-data |
 | 申万二级行业估值对比 | `lxr_data.py industry-compare 600519` | mx-data "白酒板块估值" |
+| **投研数据包（推荐）** | `lxr_data.py datapack 600519 --years 5`（TTL 1h） | 分拆 CLI |
+| 妙想资讯搜索 | `lxr_data.py mx-search "{公司} 最新公告"` | 直调 mx_search.py |
+| 妙想智能选股 | `lxr_data.py mx-xuangu "ROE>15%的A股"` | 直调 mx_xuangu.py |
 | Nintendo | macrotrends.net/stocks/charts/NTDOY | stockanalysis.com/stocks/ntdoy |
 | Capcom | macrotrends（CCOEY） | stockanalysis（CCOEY） |

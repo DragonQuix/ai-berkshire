@@ -47,6 +47,9 @@ CLI：
     python tools/lxr_data.py macro-rates --area cn
     python tools/lxr_data.py index-val 000300 --market cn
     python tools/lxr_data.py industry-compare 600519
+    python tools/lxr_data.py datapack 601336 --years 5
+    python tools/lxr_data.py mx-search "新华保险最新公告"
+    python tools/lxr_data.py mx-xuangu "ROE大于15%的A股，返回前10只"
 """
 
 from __future__ import annotations
@@ -58,6 +61,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from typing import Any, Optional
 
 from lxr_client import LixingerAuthError, LixingerClient, LixingerError, LixingerValidationError
@@ -251,19 +255,42 @@ class LegacyError(Exception):
 
 
 def _default_mx_script() -> str:
-    """妙想 mx_data.py 默认路径：优先环境变量，再按 claude→codex 顺序查找。"""
-    env = os.environ.get("MX_DATA_SCRIPT", "").strip()
-    if env and os.path.isfile(env):
-        return env
+    """妙想 mx_data.py 默认路径（兼容旧接口）。"""
+    return _resolve_mx_script("mx-data")
+
+
+_MX_SKILLS = ("mx-data", "mx-search", "mx-xuangu")
+_MX_TTL_DEFAULT = 3600  # 妙想日限额敏感，默认 1h 磁盘缓存
+
+
+def _resolve_mx_script(skill: str) -> str:
+    """解析妙想 skill 脚本路径：环境变量 > ~/.claude > ~/.codex。"""
+    skill = skill.strip().lower()
+    if skill not in _MX_SKILLS:
+        raise MXError(f"未知妙想 skill: {skill}（支持 {_MX_SKILLS}）")
+    env_keys = {
+        "mx-data": "MX_DATA_SCRIPT",
+        "mx-search": "MX_SEARCH_SCRIPT",
+        "mx-xuangu": "MX_XUANGU_SCRIPT",
+    }
+    env_val = os.environ.get(env_keys[skill], "").strip()
+    if env_val and os.path.isfile(env_val):
+        return env_val
+    script_name = skill.replace("-", "_") + ".py"
     home = os.path.expanduser("~")
-    candidates = [
-        os.path.join(home, ".claude", "skills", "mx-data", "mx_data.py"),
-        os.path.join(home, ".codex", "skills", "mx-data", "mx_data.py"),
-    ]
-    for p in candidates:
-        if os.path.isfile(p):
-            return p
-    return candidates[0]
+    for base in (".claude", ".codex"):
+        path = os.path.join(home, base, "skills", skill, script_name)
+        if os.path.isfile(path):
+            return path
+    return os.path.join(home, ".claude", "skills", skill, script_name)
+
+
+def _mx_output_dir(cache_root: Optional[str] = None) -> str:
+    """妙想输出目录（Windows 兼容，默认 %TEMP%/mx_skills）。"""
+    root = cache_root or tempfile.gettempdir()
+    out = os.path.join(root, "mx_skills")
+    os.makedirs(out, exist_ok=True)
+    return out
 
 
 def _default_legacy_script() -> str:
@@ -1199,29 +1226,132 @@ class LxrData:
         return result
 
     # ------------------------------------------------------------------
-    # 子进程调用妙想 mx-data
+    # 妙想 Skills 统一封装（mx-data / mx-search / mx-xuangu）
     # ------------------------------------------------------------------
 
-    def _call_mx_skill(self, query: str) -> dict:
-        if not os.path.isfile(self.mx_script):
-            raise MXError(f"mx_data 脚本不存在: {self.mx_script}")
-        out_dir = os.path.join(self.client.cache.dir, "mx_out")
-        os.makedirs(out_dir, exist_ok=True)
+    def _mx_cache_get(self, skill: str, query: str, ttl_seconds: int) -> Optional[dict]:
+        hit, val = self.client.cache.get(f"mx/{skill}", {"query": query}, ttl_seconds)
+        return val if hit else None
+
+    def _mx_cache_set(self, skill: str, query: str, value: dict) -> None:
+        self.client.cache.set(f"mx/{skill}", {"query": query}, value)
+
+    def call_mx(self, skill: str, query: str, ttl_seconds: int = _MX_TTL_DEFAULT) -> dict:
+        """调用妙想 skill 子进程，返回 raw JSON + 路径；带 1h 默认磁盘缓存。"""
+        skill = skill.strip().lower()
+        cached = self._mx_cache_get(skill, query, ttl_seconds) if ttl_seconds > 0 else None
+        if cached is not None:
+            return {**cached, "_cache": "hit"}
+
+        script = _resolve_mx_script(skill)
+        if not os.path.isfile(script):
+            raise MXError(f"{skill} 脚本不存在: {script}")
+        out_dir = _mx_output_dir(self.client.cache.dir)
         env = dict(os.environ)
         env["PYTHONIOENCODING"] = "utf-8"
+        if skill == "mx-xuangu":
+            cmd = [sys.executable, script, query, "--output-dir", out_dir]
+        else:
+            cmd = [sys.executable, script, query, out_dir]
         proc = subprocess.run(
-            [sys.executable, self.mx_script, query, out_dir],
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
             env=env, timeout=120,
         )
         if proc.returncode != 0:
             tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-5:]
-            raise MXError("mx_data 退出码 %d: %s" % (proc.returncode, " | ".join(tail)))
-        raw_path = _latest_raw_json(out_dir)
-        if not raw_path:
+            raise MXError(f"{skill} 退出码 {proc.returncode}: {' | '.join(tail)}")
+        raw_path = _latest_mx_artifact(out_dir, skill)
+        raw: Any = None
+        if raw_path:
+            with open(raw_path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+        result = {
+            "_source": skill,
+            "query": query,
+            "raw": raw,
+            "raw_path": raw_path,
+            "output_dir": out_dir,
+            "stdout_preview": (proc.stdout or "")[:2000],
+        }
+        if ttl_seconds > 0:
+            self._mx_cache_set(skill, query, result)
+        return result
+
+    def mx_data(self, query: str, ttl_seconds: int = _MX_TTL_DEFAULT) -> dict:
+        return self.call_mx("mx-data", query, ttl_seconds)
+
+    def mx_search(self, query: str, ttl_seconds: int = _MX_TTL_DEFAULT) -> dict:
+        return self.call_mx("mx-search", query, ttl_seconds)
+
+    def mx_xuangu(self, query: str, ttl_seconds: int = _MX_TTL_DEFAULT) -> dict:
+        return self.call_mx("mx-xuangu", query, ttl_seconds)
+
+    # ------------------------------------------------------------------
+    # 研究数据包（跨 Skill 共享，TTL 1h）
+    # ------------------------------------------------------------------
+
+    def get_research_datapack(
+        self,
+        code: str,
+        years: int = 5,
+        name: Optional[str] = None,
+        include_mx: bool = True,
+        ttl_seconds: int = 3600,
+    ) -> dict:
+        """一次性拉取投研常用数据包，缓存 1 小时供多 Skill/多模块共享。"""
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        cache_key = {"code": norm, "market": market, "years": years, "include_mx": include_mx}
+        hit, cached = self.client.cache.get("datapack/research", cache_key, ttl_seconds)
+        if hit and isinstance(cached, dict):
+            return {**cached, "_cache": "hit"}
+
+        pack: dict[str, Any] = {
+            "code": norm,
+            "market": market,
+            "years": years,
+            "fetched_at": _dt.datetime.now().isoformat(),
+            "sections": {},
+        }
+
+        def _section(key: str, fn) -> None:
+            try:
+                data = fn()
+                pack["sections"][key] = data
+            except Exception as exc:
+                pack["sections"][key] = {"_source": "none", "error": str(exc)}
+
+        _section("financials", lambda: self.get_financials(norm, years=years, source="lixinger"))
+        _section("valuation", lambda: self.get_valuation(norm, source="lixinger"))
+        _section("verify_inputs", lambda: self.get_verification_inputs(norm))
+        _section("percentiles", lambda: self.get_valuation_percentiles(norm))
+        _section("governance", lambda: self.get_governance(norm, years=2))
+        _section("shareholders", lambda: self.get_majority_shareholders(norm, years=2))
+        if market == "cn":
+            _section("revenue", lambda: self.get_revenue_constitution(norm, years=3))
+            _section("industry_compare", lambda: self.compare_industry_valuation(norm))
+        fs_type = self.detect_fs_type(norm)
+        if fs_type in ("insurance", "bank", "security"):
+            _section("industry_deep", lambda: self.get_industry_deep(norm, years=years))
+        if include_mx:
+            label = name or norm
+            _section("mx_quote", lambda: self.mx_data(f"{label} 最新价 涨跌幅 PE PB"))
+            _section("mx_news", lambda: self.mx_search(f"{label} 最新公告 业绩"))
+
+        pack["_source"] = "lixinger+mx"
+        self.client.cache.set("datapack/research", cache_key, pack)
+        return pack
+
+    # ------------------------------------------------------------------
+    # 子进程调用妙想 mx-data（兼容旧路径）
+    # ------------------------------------------------------------------
+
+    def _call_mx_skill(self, query: str) -> dict:
+        result = self.call_mx("mx-data", query, ttl_seconds=_MX_TTL_DEFAULT)
+        raw = result.get("raw")
+        if raw is None:
             raise MXError("mx_data 成功但未生成 raw.json")
-        with open(raw_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        return raw if isinstance(raw, dict) else {}
 
     # ------------------------------------------------------------------
     # 子进程调用免费源 ashare_data
@@ -1244,18 +1374,30 @@ class LxrData:
 
 
 def _latest_raw_json(dir_path: str) -> Optional[str]:
-    latest = None
+    return _latest_mx_artifact(dir_path, "mx-data")
+
+
+def _latest_mx_artifact(dir_path: str, skill: str) -> Optional[str]:
+    """查找妙想 skill 最近一次输出的 JSON 文件。"""
+    prefix = skill.replace("-", "_") + "_"
+    latest: Optional[str] = None
     latest_mtime = -1.0
     for name in os.listdir(dir_path):
-        if name.endswith("_raw.json"):
-            path = os.path.join(dir_path, name)
-            try:
-                m = os.path.getmtime(path)
-            except OSError:
+        if not name.startswith(prefix):
+            continue
+        if skill == "mx-search":
+            if not name.endswith(".json"):
                 continue
-            if m > latest_mtime:
-                latest_mtime = m
-                latest = path
+        elif not name.endswith("_raw.json"):
+            continue
+        path = os.path.join(dir_path, name)
+        try:
+            m = os.path.getmtime(path)
+        except OSError:
+            continue
+        if m > latest_mtime:
+            latest_mtime = m
+            latest = path
     return latest
 
 
@@ -1346,6 +1488,19 @@ def _cli():
     p_ic.add_argument("--level", default="two", choices=["one", "two", "three"])
     p_ic.add_argument("--quiet", action="store_true")
 
+    p_dp = sub.add_parser("datapack", help="投研数据包（理杏仁批量+妙想，TTL 1h 缓存）")
+    p_dp.add_argument("code", help="股票代码")
+    p_dp.add_argument("--years", type=int, default=5)
+    p_dp.add_argument("--name", default=None, help="公司中文名（妙想查询用）")
+    p_dp.add_argument("--no-mx", action="store_true", help="跳过妙想 tick/资讯（节省日限额）")
+    p_dp.add_argument("--quiet", action="store_true")
+
+    for skill in _MX_SKILLS:
+        p_mx = sub.add_parser(skill, help=f"调用妙想 {skill}（1h 缓存，自动 Windows 输出目录）")
+        p_mx.add_argument("query", help="自然语言查询")
+        p_mx.add_argument("--ttl", type=int, default=_MX_TTL_DEFAULT, help="缓存秒数，0=不缓存")
+        p_mx.add_argument("--quiet", action="store_true")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -1408,6 +1563,13 @@ def _cli():
         data = LxrData(verbose=not args.quiet).compare_industry_valuation(
             args.code, source=args.source, level=args.level,
         )
+    elif args.command == "datapack":
+        data = LxrData(verbose=not args.quiet).get_research_datapack(
+            args.code, years=args.years, name=args.name, include_mx=not args.no_mx,
+        )
+    elif args.command in _MX_SKILLS:
+        d = LxrData(verbose=not args.quiet)
+        data = d.call_mx(args.command, args.query, ttl_seconds=args.ttl)
     else:
         parser.print_help()
         sys.exit(1)
