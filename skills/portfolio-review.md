@@ -36,13 +36,23 @@
 
 ### 第二步：获取最新数据
 
-使用 Task 工具启动后台 Agent，通过 WebSearch 为每个持仓并行获取：
-1. 当前股价和估值指标（PE、PB、股息率）
-2. 最近一个季度的关键财务变化
-3. 近期重大事件
-4. 分析师一致预期（前瞻PE、目标价）
+**理杏仁批量**（持仓均为 A股/港股时，按 `stockCodes` ≤100 批量；否则逐只）：
 
-对每个持仓使用 `tools/financial_rigor.py verify-valuation` 校验估值数据。对每只持仓标注信息丰富度（A/B/C级），C级持仓的分析结论标注低置信度。
+```bash
+python tools/lxr_data.py valuation {code} --source lixinger
+python tools/lxr_data.py percentiles {code}
+python tools/lxr_data.py financials {code} --years 2 --source lixinger
+```
+
+**妙想**（每持仓 1 次 mx-search，注意日限额 150）：
+
+```bash
+python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{持仓公司} 最新 公告 业绩" --output-dir %TEMP%\mx_skills
+```
+
+模拟调仓验证（可选）：`mx-moni` 模拟买卖逻辑，非实盘。
+
+对每个持仓使用 `tools/financial_rigor.py verify-valuation` 校验估值。C级持仓标注低置信度。美股持仓仍用 WebSearch/Yahoo。
 
 ### 第三步：单仓位体检
 
