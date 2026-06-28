@@ -903,11 +903,19 @@ def _summarize_lhb_compare_alias_strengths(payloads: list[dict]) -> list[dict]:
     out = []
     for alias, items in alias_rows.items():
         items = sorted(items, key=lambda item: (-item["abs_net_amount"], item["code"]))
+        directions = {item["net_direction"] for item in items}
+        if len(items) == 1:
+            direction_consistency = "single_code"
+        elif len(directions) == 1:
+            direction_consistency = f"same_{next(iter(directions))}"
+        else:
+            direction_consistency = "mixed"
         out.append({
             "alias": alias,
             "code_count": len(items),
             "total_net_amount": sum(item["net_amount"] for item in items),
             "total_abs_net_amount": sum(item["abs_net_amount"] for item in items),
+            "direction_consistency": direction_consistency,
             "codes": items,
         })
     return sorted(out, key=lambda item: (-item["total_abs_net_amount"], item["alias"]))
@@ -931,6 +939,19 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         alias_frequency,
         key=lambda item: (-item["code_count"], item["alias"]),
     )
+    alias_strengths = _summarize_lhb_compare_alias_strengths(payloads)
+    same_direction_aliases = [
+        {
+            "alias": item["alias"],
+            "net_direction": item["direction_consistency"].replace("same_", ""),
+        }
+        for item in alias_strengths
+        if item["code_count"] >= 2 and item["direction_consistency"].startswith("same_")
+    ]
+    mixed_direction_aliases = [
+        item["alias"] for item in alias_strengths
+        if item["code_count"] >= 2 and item["direction_consistency"] == "mixed"
+    ]
     return {
         "code_count": len(codes),
         "matched_code_count": sum(1 for row in rows if row.get("filtered_count", 0)),
@@ -944,8 +965,10 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
             item["alias"] for item in alias_frequency
             if item["code_count"] >= 2
         ],
+        "same_direction_youzi_aliases": same_direction_aliases,
+        "mixed_direction_youzi_aliases": mixed_direction_aliases,
         "youzi_alias_frequency": alias_frequency,
-        "youzi_alias_cross_code_strengths": _summarize_lhb_compare_alias_strengths(payloads),
+        "youzi_alias_cross_code_strengths": alias_strengths,
     }
 
 

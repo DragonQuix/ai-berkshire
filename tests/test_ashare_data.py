@@ -1213,6 +1213,8 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
             "top_code_by_profiled_abs_net": "000005",
             "top_code_by_profiled_abs_net_ratio": "000005",
             "shared_youzi_aliases": ["章盟主"],
+            "same_direction_youzi_aliases": [{"alias": "章盟主", "net_direction": "net_sell"}],
+            "mixed_direction_youzi_aliases": [],
             "youzi_alias_frequency": [
                 {"alias": "章盟主", "code_count": 2, "codes": ["000004", "000005"]},
                 {"alias": "拉萨天团", "code_count": 1, "codes": ["000004"]},
@@ -1223,6 +1225,7 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                     "code_count": 2,
                     "total_net_amount": -820000,
                     "total_abs_net_amount": 820000,
+                    "direction_consistency": "same_net_sell",
                     "codes": [
                         {
                             "code": "000005",
@@ -1243,6 +1246,7 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                     "code_count": 1,
                     "total_net_amount": 300000,
                     "total_abs_net_amount": 300000,
+                    "direction_consistency": "single_code",
                     "codes": [{
                         "code": "000004",
                         "net_amount": 300000,
