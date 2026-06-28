@@ -623,6 +623,9 @@ def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):
                 "profiled_abs_net_ratio": 0.7497,
                 "youzi_abs_net_amount": 656231,
                 "youzi_abs_net_ratio": 0.5145,
+                "dominant_profiled_type": "youzi",
+                "dominant_profiled_direction": "net_buy",
+                "dominant_profiled_net_amount": 656231,
                 "youzi_alias_count": 1,
                 "youzi_aliases": ["拉萨天团"],
                 "top_youzi_seats": [{
@@ -876,6 +879,9 @@ def test_lhb_range_seat_profile_summary_reports_recognition_signals():
         "profiled_abs_net_ratio": 0.8135,
         "youzi_abs_net_amount": 656231,
         "youzi_abs_net_ratio": 0.5583,
+        "dominant_profiled_type": "youzi",
+        "dominant_profiled_direction": "net_buy",
+        "dominant_profiled_net_amount": 656231,
         "youzi_alias_count": 1,
         "youzi_aliases": ["拉萨天团"],
         "top_youzi_seats": [{

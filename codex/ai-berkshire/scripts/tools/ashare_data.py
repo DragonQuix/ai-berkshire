@@ -661,6 +661,10 @@ def _summarize_lhb_recognition(top_keys: list[str], buckets: dict[str, dict]) ->
     profiled_abs_net = sum(abs(buckets[key]["net_amount"]) for key in profiled_keys)
     youzi_abs_net = sum(abs(buckets[key]["net_amount"]) for key in youzi_keys)
     total_abs_net = sum(abs(bucket["net_amount"]) for bucket in buckets.values())
+    dominant_key = profiled_keys[0] if profiled_keys else None
+    dominant_net = buckets[dominant_key]["net_amount"] if dominant_key else 0
+    dominant_type = buckets[dominant_key]["type"] if dominant_net else None
+    dominant_direction = "net_buy" if dominant_net > 0 else ("net_sell" if dominant_net < 0 else "flat")
     return {
         "profiled_seat_count": len(profiled_keys),
         "brokerage_or_unknown_seat_count": len(buckets) - len(profiled_keys),
@@ -669,6 +673,9 @@ def _summarize_lhb_recognition(top_keys: list[str], buckets: dict[str, dict]) ->
         "profiled_abs_net_ratio": round(profiled_abs_net / total_abs_net, 4) if total_abs_net else 0,
         "youzi_abs_net_amount": youzi_abs_net,
         "youzi_abs_net_ratio": round(youzi_abs_net / total_abs_net, 4) if total_abs_net else 0,
+        "dominant_profiled_type": dominant_type,
+        "dominant_profiled_direction": dominant_direction,
+        "dominant_profiled_net_amount": dominant_net,
         "youzi_alias_count": len(youzi_aliases),
         "youzi_aliases": youzi_aliases,
         "top_youzi_seats": [
