@@ -130,9 +130,9 @@ AI Berkshire ensures: **Same input → structurally consistent, equally deep out
 
 ### 6. Multi-Agent Parallelism = Multiplied Research Depth
 
-`/investment-team` launches 4 independent Agents to research a company **simultaneously**. Each Agent conducts its own web searches, cross-validates data, and reaches independent conclusions. This isn't splitting one prompt into four sections — it's 4 "analysts" each doing complete research, with a Team Lead synthesizing the final call.
+`/investment-team` now uses a "Team Lead evidence pack + 4 independent role analyses" model. The Team Lead first gathers filings, valuation data, news, industry materials, and deterministic calculation outputs into a shared source pack; four roles then analyze the same evidence from business model, financial valuation, industry competition, and risk/management perspectives before the Team Lead synthesizes conflicts and overlaps.
 
-Ask AI directly, and you have one context window. Four parallel Agents means 4× the search volume, 4× the information sources, and 4 independent perspectives.
+Ask AI directly, and you have one context window. The team model improves depth through independent perspectives, disconfirming evidence, and a synthesis layer. It no longer depends on background Agents performing their own privileged web or shell work, which avoids permission deadlocks in Claude Code environments where background Agents cannot inherit the main Agent's approvals.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -144,7 +144,7 @@ Ask AI directly, and you have one context window. Four parallel Agents means 4×
 │ Duan Yongping  │ Buffett        │ Competition          │ Management            │
 │                │                │ Munger               │ Li Lu                 │
 └──────────┴──────────┴──────────────┴───────────────┘
-         ↓ Parallel research, real-time progress ↓
+        ↓ Shared source pack · read-only analysis · synthesis ↓
                   Final Synthesized Report
 ```
 
@@ -164,7 +164,7 @@ Ask AI directly, and you have one context window. Four parallel Agents means 4×
 
 **Three-Layer Design Philosophy**:
 - **Skill Layer**: Abstracts "what you want to do" into 16 clear entry points — deep research, earnings analysis, industry screening, portfolio management, and thinking tools. Pick by scenario.
-- **Agent Layer**: Each skill runs 4 Agents in parallel — they search independently, judge independently, challenge each other, and the Team Lead synthesizes.
+- **Agent Layer**: The Team Lead owns evidence gathering and writes; role Agents perform read-only analysis over the shared source pack, challenge each other through independent judgments, and the Team Lead synthesizes.
 - **Tool Layer**: Exact-precision calculations, real-time web search, report auditing — ensures every report's data is rigorous and verifiable.
 
 ---
@@ -306,7 +306,7 @@ Data Collection → Business Essence (Duan Yongping) → Moat (Buffett) → Inve
 
 ### 2. `/investment-team` — Multi-Agent Research Team
 
-Launches 4 AI Agents in parallel, simulating a real investment research team. Each Agent searches independently, analyzes independently, and delivers independent ratings. The Team Lead synthesizes the final judgment.
+Launches 4 research roles, simulating a real investment research team. The Team Lead prepares the source pack and evidence index; each role analyzes independently and delivers independent ratings. If background Agent permissions are blocked, the Team Lead can simulate the four roles sequentially without stopping the workflow.
 
 **Sample Output Excerpt**:
 

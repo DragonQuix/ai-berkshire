@@ -6,6 +6,10 @@
 
 ## 执行流程
 
+### 权限安全 Checklist 模式
+
+多公司 Checklist 可以并行分析，但不得让后台 Agent 自行取数。Team Lead 统一拉取理杏仁、妙想、Web 数据和 financial_rigor.py 验算结果；公司级 Agent 只基于共享数据包补充护城河、竞争格局、管理层等定性判断。若后台 Agent 权限受限，Team Lead 按公司顺序模拟，不阻塞流程。
+
 ### 第一步：解析输入，识别所有待分析公司
 
 从 $ARGUMENTS 中解析出所有公司名称/代码。对每家公司确定：
@@ -26,9 +30,9 @@
 
 段永平说过："看不懂"有两种——一种是生意太复杂真的看不懂，一种是你还没花时间去看。AI研究的局限是容易把"资料少"和"看不懂"混为一谈。
 
-### 第二步：并行数据收集
+### 第二步：批量数据包准备
 
-A股/港股先走理杏仁数据包（见 `/investment-research` 第〇步），再启动 Agent 补竞争/护城河定性：
+A股/港股先由 Team Lead 走理杏仁数据包（见 `/investment-research` 第〇步），再按公司补竞争/护城河定性：
 
 ```bash
 python tools/lxr_data.py financials {code} --years 10 --source lixinger
@@ -47,7 +51,7 @@ python tools/lxr_data.py governance {code} --years 2
 | FCF 是否持续为正 | `financials` 现金流量表 |
 | ROE 趋势 | `financials` 逐年 ROE |
 
-使用 Task 工具为**每家公司**启动独立后台 Agent 收集**无法编码**的维度（护城河证据、竞争格局、最新定性事件）。美股保持 WebSearch + macrotrends。
+对**每家公司**可启动只读 Agent 分析**无法编码**的维度（护城河证据、竞争格局、最新定性事件），但资料必须来自 Team Lead 注入的数据包和来源索引。美股数据由 Team Lead 统一通过 WebSearch/WebFetch、macrotrends、stockanalysis 等来源准备。只读 Agent 不调用 WebSearch/WebFetch/Bash/Write/Edit；缺资料时输出补数请求。
 
 ### 第三步：逐公司执行六关 Checklist
 

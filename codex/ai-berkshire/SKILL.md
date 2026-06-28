@@ -48,7 +48,7 @@ Read only the selected reference file first. Read `references/skills/financial-d
 The reference files were originally written as Claude Code slash commands. Apply these translations in Codex:
 
 - Treat `$ARGUMENTS` as the user's company, ticker, industry, period, portfolio, or question.
-- Treat Claude Code `Task` / `Team` instructions as a role decomposition pattern. Use Codex subagents only when available and useful; otherwise perform the roles sequentially and label each role's findings.
+- Treat Claude Code `Task` / `Team` instructions as a role decomposition pattern, not as a requirement to delegate privileged work. The main Codex agent must own web access, shell commands, deterministic tools, file writes, report saves, and audit steps. Use subagents only for read-only analysis over a main-agent-provided source pack; otherwise perform the roles sequentially and label each role's findings.
 - Treat Bash snippets as examples. On Windows, prefer `python`; on macOS/Linux, prefer `python3` when available.
 - Replace `~/ai-berkshire/tools/...` with the bundled tools under `scripts/tools/...` or with the repository's `tools/...` when working inside an AI Berkshire checkout.
 - Preserve report naming and directory rules from the repository `AGENTS.md` when the current workspace is AI Berkshire.

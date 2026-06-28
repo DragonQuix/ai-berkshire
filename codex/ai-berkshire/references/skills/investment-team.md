@@ -1,12 +1,12 @@
 # 投研团队：四角色并行分析框架
 
-对 $ARGUMENTS 进行团队化投资研究分析。使用 Team 工具创建真正的多Agent并行研究团队。
+对 $ARGUMENTS 进行团队化投资研究分析。采用权限安全团队模式：Team Lead 统一取数、搜索、验算和写文件；角色 Agent 只基于共享资料包做独立分析。若后台 Agent 因 Claude Code 权限限制无法执行，则由 Team Lead 在同一会话中按角色顺序模拟，流程不得卡死。
 
 ## 执行流程
 
 ### 第一步：展示团队框架
 
-向用户展示以下团队结构，确认后启动：
+向用户展示以下团队结构，然后进入数据包准备：
 
 | 角色 | 职责 | 分析框架 |
 |------|------|----------|
@@ -15,6 +15,16 @@
 | **financial-analyst** | 财务报表 & 估值分析 | 巴菲特视角 |
 | **industry-researcher** | 行业格局 & 竞争态势 | 芒格视角 |
 | **risk-assessor** | 风险评估 & 管理层研判 | 李录视角 |
+
+### 第一步零五：权限安全团队模式（硬约束）
+
+本 Skill 的深度来自**独立视角与互相否证**，不是让后台 Agent 重复搜索。为避免 Claude Code 后台 Agent 无法继承主 Agent 权限导致流程中断，统一采用以下架构：
+
+1. **Team Lead 是唯一有权限执行者**：联网搜索、WebFetch、Bash/Python、理杏仁、妙想、文件写入、报告保存、数据抽检都由 Team Lead 执行。
+2. **角色 Agent 只读分析**：后台 Agent 只能读取 Team Lead 注入的 `data-pack`、资料索引、摘录和工具输出；不得自行调用 WebSearch/WebFetch/Bash/Write/Edit。
+3. **缺资料不阻塞**：角色 Agent 发现证据不足时，输出「补数请求」而不是自行取数。Team Lead 汇总补数请求后统一补充资料，必要时发起第二轮只读分析。
+4. **工具不可用时降级**：如果 Team/Task/后台 Agent 不可用或权限被拒，Team Lead 直接在同一上下文按四个角色逐一产出独立分析，并明确标注为「顺序角色模拟」。
+5. **文件协作禁写**：角色 Agent 不写文件、不改报告、不更新任务状态；最终报告、数据包、抽检记录只由 Team Lead 写入。
 
 ### 第一步半：AI研究偏见评估
 
@@ -41,7 +51,7 @@ python tools/lxr_data.py datapack {code} --years 5
 
 或分拆拉取（与 `/investment-research` 第〇步相同）：
 
-将 JSON 摘要写入 `reports/{公司名}/data-pack.json`（或团队共享目录），并在创建 Task 时**注入各 Agent description**。
+将 JSON 摘要写入 `reports/{公司名}/data-pack.json`（或团队共享目录），并在创建 Task 时**注入各 Agent description**。美股、未覆盖市场或字段缺失时，由 Team Lead 统一用 WebSearch/WebFetch、SEC/HKEX/巨潮、macrotrends/stockanalysis、mx-search 等补齐，形成 `source-index` 后再分派分析。
 
 **`_source` 标注**（数据包与各 Agent 输出须一致，见 `docs/channel-capability-matrix.md`）：
 
@@ -58,11 +68,13 @@ python tools/lxr_data.py datapack {code} --years 5
 | industry-researcher | `industry-compare` + mx-search 竞对资讯 | 竞争格局、行业趋势 |
 | risk-assessor | `governance` + `industry-deep` 风险字段 | 风险、管理层诚信 |
 
-### 第二步：创建团队
+### 第二步：准备角色任务（不强依赖 TeamCreate）
 
-使用 TeamCreate 创建团队：
+优先使用 TeamCreate 创建团队，但不得依赖其权限继承能力：
 - team_name: `{公司名}-research`（英文小写，如 `meituan-research`）
 - agent_type: `team-lead`
+
+若 TeamCreate / TaskCreate 不可用，跳过团队对象，直接按第三步任务定义进行顺序角色模拟。
 
 ### 第三步：创建4个任务
 
@@ -77,7 +89,7 @@ python tools/lxr_data.py datapack {code} --years 5
   4. 用户/客户价值：为各方创造了什么独特价值
   5. 业务矩阵与协同效应
   6. 段永平"好生意"标准评估：差异化、定价权、可持续竞争优势
-  7. 要求搜索最新财报、行业报告等公开信息
+  7. 仅使用 Team Lead 注入的财报、行业报告、访谈、新闻摘录；缺资料时列出补数请求
 
 #### 任务2：财务与估值分析
 - subject: `分析{公司名}财务数据、盈利能力与估值`
@@ -88,7 +100,7 @@ python tools/lxr_data.py datapack {code} --years 5
   4. 资产负债表健康度：现金储备、负债率、流动性
   5. 估值分析：PE/PS/PB/EV等，与历史及同业对比
   6. 安全边际评估：内在价值 vs 当前股价
-  7. **金融严谨性验证（必须使用Bash调用工具，禁止心算）**：
+  7. **金融严谨性验证（禁止心算）**：Team Lead 必须在分派前或汇总时调用工具；financial-analyst 只解读工具输出，缺输出则提出补算请求
      - 市值验算：`python tools/financial_rigor.py verify-market-cap --price {价格} --shares {股本} --reported {报告市值} --currency {币种}`
      - 估值验算：`python tools/financial_rigor.py verify-valuation --price {价格} --eps {EPS} --bvps {每股净资产}`
      - 关键数据交叉验证：`python tools/financial_rigor.py cross-validate --field {字段} --values '{JSON}' --unit {单位}`
@@ -104,7 +116,7 @@ python tools/lxr_data.py datapack {code} --years 5
   4. 各细分赛道格局
   5. 行业趋势：技术变革、政策影响、新进入者
   6. 产业链分析：上中下游价值分配
-  7. 要求搜索最新行业数据和竞争动态
+  7. 仅使用 Team Lead 注入的行业数据和竞争动态；缺资料时列出补数请求
 
 #### 任务4：风险与管理层评估
 - subject: `评估{公司名}投资风险与管理层质量`
@@ -116,11 +128,11 @@ python tools/lxr_data.py datapack {code} --years 5
   5. 宏观风险：经济周期、行业周期影响
   6. 治理结构：股权结构、关联交易、股东回报政策
   7. 长期确定性：10年后公司会怎样？什么可能颠覆其商业模式？
-  8. 要求搜索最新监管动态、管理层言论等
+  8. 仅使用 Team Lead 注入的监管动态、管理层言论和治理数据；缺资料时列出补数请求
 
-### 第四步：启动4个并行Agent
+### 第四步：启动4个只读分析 Agent
 
-使用 Task 工具同时启动4个Agent（**必须在同一条消息中并行调用**）：
+如果当前平台允许后台 Agent 正常运行，使用 Task 工具启动4个只读分析 Agent；能并行就并行，不能并行就顺序执行。不要为了并行牺牲权限稳定性。
 
 每个Agent的配置：
 - `subagent_type`: `general-purpose`
@@ -139,30 +151,30 @@ python tools/lxr_data.py datapack {code} --years 5
 {任务description的内容}
 
 **研究方法**：
-- 使用 WebSearch 搜索最新公开信息（财报、行业报告、新闻）
-- **财务数据必须来自两个独立来源**，按 `skills/financial-data.md` 交叉验证阈值（同口径 ≤2% / 2–5% 标注差异 / >5% 异常）执行
-- 确保数据准确，关键数据标注来源
+- 只使用 Team Lead 提供的共享资料包、资料索引和工具输出，不调用 WebSearch/WebFetch/Bash/Write/Edit
+- **财务数据必须来自 Team Lead 提供的两个独立来源或交叉验证结果**，按 `skills/financial-data.md` 交叉验证阈值（同口径 ≤2% / 2–5% 标注差异 / >5% 异常）解读
+- 确保数据准确，关键数据标注来源；如果资料不足，明确列出「补数请求」
 - 分析要深入，不流于表面
 
 **输出要求**：
 - 报告要详尽，使用Markdown表格呈现关键数据
 - 每个分析维度要有明确结论和评分
 - 报告末尾要有该维度的总体结论
+- 单独列出：`使用的证据`、`反面证据`、`不确定性`、`补数请求`
 
 **完成后**：
-1. 使用 TaskUpdate 将任务 #{任务编号} 标记为 completed
-2. 通过 SendMessage 把完整分析报告发送给 team-lead（type: "message", recipient: "team-lead"）
+直接把完整分析报告返回给 Team Lead；不要写文件，不要调用平台任务状态或跨 Agent 消息工具，除非当前平台明确支持且不触发权限问题。
 ```
 
 ### 第五步：接收报告并跟踪进度
 
-- 向用户实时展示进度表（哪些Agent已完成、哪些仍在研究中）
+- 向用户展示进度表（哪些角色已完成、哪些仍在研究中）
 - 每收到一份报告，更新进度并展示该报告的核心要点（3-5条）
-- 等待全部4份报告到齐
+- 等待全部4份报告到齐；如有补数请求，Team Lead 统一补数后再补一轮只读分析
 
 ### 第六步：关闭团队成员
 
-全部报告收到后，向4个Agent发送 shutdown_request（使用 SendMessage，type: "shutdown_request"）。
+仅当实际创建了持久团队对象时，清理或关闭团队成员；普通 Task/顺序角色模拟无需发送关闭消息。
 
 ### 第七步：汇总最终报告
 
@@ -205,7 +217,7 @@ python tools/lxr_data.py datapack {code} --years 5
 
 ### 第八步：保存报告
 
-将完整最终报告写入 `~/{公司名}投资研究报告_{日期}.md`（日期格式 YYYYMMDD）。
+将完整最终报告写入 `reports/{公司名}/{公司名}-research-{YYYYMMDD}.md`；若使用 `/investment-team` 的目录化输出，也可保存为 `reports/{公司名}/最终报告.md`。
 
 ### 第九步：数据抽检（准出流程）
 
@@ -226,15 +238,15 @@ python tools/report_audit.py verdict \
 
 ### 第十步：清理团队
 
-使用 TeamDelete 清理团队资源。
+如果创建了平台团队对象，使用对应清理工具释放团队资源；否则跳过。
 
 ## 重要注意事项
 
-1. **4个Agent必须并行启动**——在同一条消息中调用4次Task工具
-2. **Agent通过SendMessage汇报**——不是文件协作，是消息通信
-3. **数据准确性**——要求Agent使用WebSearch搜索最新数据，关键数据交叉验证
+1. **优先权限安全，再追求并行速度**——Agent 可并行只读分析，但取数、搜索、写文件必须由 Team Lead 统一执行
+2. **Agent 的价值是独立视角**——不是重复搜索，而是基于同一证据包给出不同框架下的判断、反证和不确定性
+3. **数据准确性**——Team Lead 负责最新数据和关键数据交叉验证，Agent 负责指出证据缺口
 4. **结论要明确**——不回避给出买入/观望/回避建议和具体价格区间
 5. **所有分析必须有数据支撑**——附数据来源
-6. **耐心等待**——4个Agent研究需要几分钟，实时向用户更新进度
+6. **允许顺序角色模拟**——后台权限受限时，不要阻塞流程；按四个角色顺序完成同等分析
 7. **反偏见意识**——team-lead在汇总时必须评估：各Agent的分析是否受限于资料充裕度？是否与市场共识过度趋同？最终报告需包含"信息丰富度评级"和"AI研究局限性声明"
 8. **信息稀缺时的诚实原则**——宁可在报告中留白标注"数据不足"，也不要用推测填满框架伪装确定性
