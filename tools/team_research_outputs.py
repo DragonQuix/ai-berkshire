@@ -32,6 +32,7 @@ REQUIRED_ROOT_FILES = (
 )
 
 SOURCE_REF_RE = re.compile(r"\b[SEPA]\d+\b")
+REPORT_REF_CUE_RE = re.compile(r"(引用|source-index|source_refs?)", re.IGNORECASE)
 
 
 def build_data_pack(company: str, ticker: str, market: str, generated_at: str) -> dict[str, Any]:
@@ -255,7 +256,30 @@ def extract_source_index_refs(text: str) -> set[str]:
 
 
 def extract_report_refs(text: str) -> set[str]:
-    return set(SOURCE_REF_RE.findall(text))
+    refs: set[str] = set()
+    ref_columns: set[int] = set()
+    for line in text.splitlines():
+        if line.startswith("|"):
+            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+            if cells and all(set(cell) <= {"-", ":"} for cell in cells):
+                continue
+            header_columns = {
+                idx for idx, cell in enumerate(cells)
+                if "来源" in cell or "ref" in cell.lower()
+            }
+            if header_columns:
+                ref_columns = header_columns
+                continue
+            if ref_columns:
+                for idx in ref_columns:
+                    if idx < len(cells):
+                        refs.update(SOURCE_REF_RE.findall(cells[idx]))
+                continue
+        else:
+            ref_columns = set()
+        if REPORT_REF_CUE_RE.search(line):
+            refs.update(SOURCE_REF_RE.findall(line))
+    return refs
 
 
 def extract_json_source_refs(value: Any) -> set[str]:
