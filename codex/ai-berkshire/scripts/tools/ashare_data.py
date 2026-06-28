@@ -657,10 +657,14 @@ def _summarize_lhb_recognition(top_keys: list[str], buckets: dict[str, dict]) ->
         for key in profiled_keys
         if buckets[key]["type"] == "youzi" and buckets[key]["alias"]
     })
+    profiled_abs_net = sum(abs(buckets[key]["net_amount"]) for key in profiled_keys)
+    total_abs_net = sum(abs(bucket["net_amount"]) for bucket in buckets.values())
     return {
         "profiled_seat_count": len(profiled_keys),
         "brokerage_or_unknown_seat_count": len(buckets) - len(profiled_keys),
-        "profiled_abs_net_amount": sum(abs(buckets[key]["net_amount"]) for key in profiled_keys),
+        "profiled_abs_net_amount": profiled_abs_net,
+        "profiled_seat_ratio": round(len(profiled_keys) / len(buckets), 4) if buckets else 0,
+        "profiled_abs_net_ratio": round(profiled_abs_net / total_abs_net, 4) if total_abs_net else 0,
         "youzi_alias_count": len(youzi_aliases),
         "youzi_aliases": youzi_aliases,
         "top_profiled_seats": [

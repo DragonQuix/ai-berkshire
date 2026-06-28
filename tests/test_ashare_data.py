@@ -619,6 +619,8 @@ def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):
                 "profiled_seat_count": 2,
                 "brokerage_or_unknown_seat_count": 2,
                 "profiled_abs_net_amount": 956231,
+                "profiled_seat_ratio": 0.5,
+                "profiled_abs_net_ratio": 0.7497,
                 "youzi_alias_count": 1,
                 "youzi_aliases": ["拉萨天团"],
                 "top_profiled_seats": [
@@ -856,6 +858,8 @@ def test_lhb_range_seat_profile_summary_reports_recognition_signals():
         "profiled_seat_count": 2,
         "brokerage_or_unknown_seat_count": 1,
         "profiled_abs_net_amount": 956231,
+        "profiled_seat_ratio": 0.6667,
+        "profiled_abs_net_ratio": 0.8135,
         "youzi_alias_count": 1,
         "youzi_aliases": ["拉萨天团"],
         "top_profiled_seats": [
