@@ -1282,6 +1282,65 @@ def _summarize_lhb_compare_recognition_leaderboard(
     ]
 
 
+def _summarize_lhb_compare_top_alias_comparison(
+    rows: list[dict],
+    alias_strengths: list[dict],
+    recognition_leaderboard: list[dict],
+) -> list[dict]:
+    alias_by_name = {
+        item["alias"]: item
+        for item in alias_strengths
+        if item.get("alias")
+    }
+    score_by_code = {
+        item["code"]: item.get("recognition_score", 0)
+        for item in recognition_leaderboard
+        if item.get("code")
+    }
+    out = []
+    for row in rows:
+        code = row.get("code")
+        alias = row.get("top_youzi_alias")
+        if not code or not alias:
+            continue
+        alias_item = alias_by_name.get(alias) or {}
+        code_count = alias_item.get("code_count", 0)
+        out.append({
+            "code": code,
+            "top_youzi_alias": alias,
+            "top_youzi_alias_abs_net_amount": _lhb_numeric_amount(
+                row.get("top_youzi_alias_abs_net_amount"),
+            ),
+            "top_youzi_alias_direction": row.get("top_youzi_alias_direction"),
+            "alias_scope": "shared" if code_count >= 2 else "unique",
+            "alias_direction_consistency": alias_item.get("direction_consistency"),
+            "youzi_recognition_score": score_by_code.get(code, 0),
+        })
+
+    out = sorted(
+        out,
+        key=lambda item: (
+            -_lhb_numeric_amount(item["top_youzi_alias_abs_net_amount"]),
+            item["code"],
+        ),
+    )
+    for idx, item in enumerate(out, start=1):
+        item["rank"] = idx
+    return [
+        {
+            "rank": item["rank"],
+            "code": item["code"],
+            "top_youzi_alias": item["top_youzi_alias"],
+            "top_youzi_alias_abs_net_amount": item["top_youzi_alias_abs_net_amount"],
+            "top_youzi_alias_direction": item["top_youzi_alias_direction"],
+            "alias_scope": item["alias_scope"],
+            "alias_direction_consistency": item["alias_direction_consistency"],
+            "youzi_recognition_score": item["youzi_recognition_score"],
+        }
+        for item in out
+    ]
+
+
 def _apply_lhb_compare_identity_tags_to_rows(rows: list[dict], comparison_summary: dict) -> None:
     tags_by_code = {
         item["code"]: item
@@ -1355,6 +1414,11 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         identity_tags,
         same_direction_aliases,
     )
+    top_alias_comparison = _summarize_lhb_compare_top_alias_comparison(
+        rows,
+        alias_strengths,
+        recognition_leaderboard,
+    )
     return {
         "code_count": len(codes),
         "matched_code_count": sum(1 for row in rows if row.get("filtered_count", 0)),
@@ -1377,6 +1441,7 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         "youzi_code_identity_tags": identity_tags,
         "youzi_code_identity_summary": _summarize_lhb_compare_code_identity_summary(identity_tags),
         "youzi_recognition_leaderboard": recognition_leaderboard,
+        "top_youzi_alias_comparison": top_alias_comparison,
         "same_direction_youzi_aliases": same_direction_aliases,
         "mixed_direction_youzi_aliases": mixed_direction_aliases,
         "youzi_direction_consistency_summary": direction_summary,

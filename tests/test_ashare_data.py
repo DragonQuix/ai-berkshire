@@ -1327,6 +1327,28 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                     "rank_reason": "游资净额占比0.3；可识别净额占比0.5；独有游资主导；Top游资拉萨天团",
                 },
             ],
+            "top_youzi_alias_comparison": [
+                {
+                    "rank": 1,
+                    "code": "000005",
+                    "top_youzi_alias": "章盟主",
+                    "top_youzi_alias_abs_net_amount": 700000,
+                    "top_youzi_alias_direction": "net_sell",
+                    "alias_scope": "shared",
+                    "alias_direction_consistency": "same_net_sell",
+                    "youzi_recognition_score": 73.0,
+                },
+                {
+                    "rank": 2,
+                    "code": "000004",
+                    "top_youzi_alias": "拉萨天团",
+                    "top_youzi_alias_abs_net_amount": 300000,
+                    "top_youzi_alias_direction": "net_buy",
+                    "alias_scope": "unique",
+                    "alias_direction_consistency": "single_code",
+                    "youzi_recognition_score": 35.93,
+                },
+            ],
             "same_direction_youzi_aliases": [{"alias": "章盟主", "net_direction": "net_sell"}],
             "mixed_direction_youzi_aliases": [],
             "youzi_direction_consistency_summary": {
@@ -1519,6 +1541,90 @@ def test_fetch_lhb_compare_summarizes_recognition_leaderboard(monkeypatch):
     assert out["rows"][0]["youzi_recognition_rank_reason"] == (
         "游资净额占比0.7；可识别净额占比0.8；共同游资主导；同向共同游资章盟主"
     )
+
+
+def test_fetch_lhb_compare_summarizes_top_alias_comparison(monkeypatch):
+    def fake_fetch_range(
+        code,
+        start_date,
+        end_date,
+        list_limit=20,
+        page=1,
+        detail_limit=10,
+        dominant_type=None,
+        dominant_direction=None,
+        youzi_alias=None,
+        min_dominant_net=None,
+    ):
+        if code == "000004":
+            return _lhb_compare_payload(
+                code="000004",
+                filtered_count=2,
+                trade_dates=["2026-06-26"],
+                profiled_abs_net_amount=500000,
+                profiled_abs_net_ratio=0.5,
+                youzi_abs_net_amount=300000,
+                youzi_abs_net_ratio=0.3,
+                top_alias="拉萨天团",
+                top_alias_net=300000,
+                youzi_aliases=["拉萨天团", "章盟主"],
+                youzi_alias_strengths=[
+                    {
+                        "alias": "拉萨天团",
+                        "net_amount": 300000,
+                        "abs_net_amount": 300000,
+                        "net_direction": "net_buy",
+                    },
+                    {
+                        "alias": "章盟主",
+                        "net_amount": -120000,
+                        "abs_net_amount": 120000,
+                        "net_direction": "net_sell",
+                    },
+                ],
+            )
+        return _lhb_compare_payload(
+            code="000005",
+            filtered_count=1,
+            trade_dates=["2026-06-25"],
+            profiled_abs_net_amount=800000,
+            profiled_abs_net_ratio=0.8,
+            youzi_abs_net_amount=700000,
+            youzi_abs_net_ratio=0.7,
+            top_alias="章盟主",
+            top_alias_net=-700000,
+        )
+
+    monkeypatch.setattr(ad, "_fetch_lhb_detail_range", fake_fetch_range)
+
+    out = ad._fetch_lhb_compare(
+        codes=["000004", "000005"],
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+    )
+
+    assert out["comparison_summary"]["top_youzi_alias_comparison"] == [
+        {
+            "rank": 1,
+            "code": "000005",
+            "top_youzi_alias": "章盟主",
+            "top_youzi_alias_abs_net_amount": 700000,
+            "top_youzi_alias_direction": "net_sell",
+            "alias_scope": "shared",
+            "alias_direction_consistency": "same_net_sell",
+            "youzi_recognition_score": 73.0,
+        },
+        {
+            "rank": 2,
+            "code": "000004",
+            "top_youzi_alias": "拉萨天团",
+            "top_youzi_alias_abs_net_amount": 300000,
+            "top_youzi_alias_direction": "net_buy",
+            "alias_scope": "unique",
+            "alias_direction_consistency": "single_code",
+            "youzi_recognition_score": 35.93,
+        },
+    ]
 
 
 def _lhb_compare_payload(
