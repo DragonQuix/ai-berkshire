@@ -408,6 +408,91 @@ class TestMacroAndIndexValuation(unittest.TestCase):
         self.assertEqual(out["industry"]["industry_name"], "白酒")
         self.assertEqual(out["compare"]["rows"][0]["code"], "000568")
 
+    def test_format_lhb_industry_compare_text_shows_roadmap_summary(self):
+        payload = {
+            "anchor_code": "600519",
+            "industry": {
+                "industry_name": "白酒",
+                "industry_code": "340500",
+                "codes": ["600519", "000568"],
+                "constituent_count": 2,
+            },
+            "compare": {
+                "start_date": "2026-06-01",
+                "end_date": "2026-06-26",
+                "comparison_summary": {
+                    "compare_readiness_summary": {
+                        "readiness_level": "actionable",
+                        "primary_reason": "strong_leadership",
+                        "interpretation": "样本全命中且领先差距明确",
+                    },
+                    "code_coverage_summary": {
+                        "matched_code_count": 2,
+                        "code_count": 2,
+                        "coverage_level": "full",
+                    },
+                    "youzi_recognition_gap_summary": {
+                        "leader_code": "600519",
+                        "runner_up_code": "000568",
+                        "score_gap": 18.2,
+                        "leadership_level": "moderate",
+                    },
+                    "youzi_composite_signal_summary": {
+                        "signal_tag": "shared_youzi_present",
+                        "leading_code": "600519",
+                        "interpretation": "存在共同游资",
+                    },
+                    "top_youzi_alias_comparison": [{
+                        "code": "600519",
+                        "top_youzi_alias": "章盟主",
+                        "top_youzi_alias_abs_net_amount": 120000000,
+                        "alias_scope": "shared",
+                        "youzi_recognition_score": 73.0,
+                    }],
+                    "youzi_direction_consistency_summary": {
+                        "dominant_shared_direction_consistency": "same_direction",
+                        "same_direction_shared_alias_count": 1,
+                        "shared_alias_count": 1,
+                        "mixed_direction_shared_alias_count": 0,
+                    },
+                    "shared_youzi_code_strengths": [{
+                        "code": "600519",
+                        "top_shared_alias": "章盟主",
+                        "shared_abs_net_amount": 120000000,
+                        "shared_abs_net_ratio": 0.6,
+                    }],
+                    "unique_youzi_code_strengths": [{
+                        "code": "000568",
+                        "top_unique_alias": "拉萨天团",
+                        "unique_abs_net_amount": 50000000,
+                        "unique_abs_net_ratio": 0.4,
+                    }],
+                },
+                "rows": [{
+                    "rank": 1,
+                    "code": "600519",
+                    "youzi_abs_net_amount": 150000000,
+                    "profiled_abs_net_amount": 180000000,
+                    "top_youzi_alias": "章盟主",
+                    "youzi_recognition_score": 73.0,
+                    "youzi_identity_tag": "shared_dominant",
+                }],
+            },
+        }
+
+        text = lxd.format_lhb_industry_compare_text(payload)
+
+        self.assertIn("同申万行业龙虎榜辨识度对比", text)
+        self.assertIn("对比可用性: actionable", text)
+        self.assertIn("命中覆盖: 2/2 full", text)
+        self.assertIn("领先差距: 600519 领先 000568 18.2分", text)
+        self.assertIn("组合信号: shared_youzi_present", text)
+        self.assertIn("Top游资横向: 600519 章盟主", text)
+        self.assertIn("方向一致性: same_direction", text)
+        self.assertIn("共同游资贡献Top: 600519 章盟主", text)
+        self.assertIn("独有游资贡献Top: 000568 拉萨天团", text)
+        self.assertIn("1. 600519", text)
+
 
 class TestQualityMetrics(unittest.TestCase):
     def test_compute_quality_checks_pass(self):
@@ -812,6 +897,54 @@ def test_get_lhb_compare_passes_codes_and_filters_to_legacy_ashare(monkeypatch):
     assert out["_source"] == "legacy"
     assert out["source_detail"] == "legacy:ashare_data/lhb-compare"
     assert out["rows"][0]["code"] == "000005"
+
+
+def test_lhb_industry_compare_cli_prints_text_by_default(monkeypatch, capsys):
+    payload = {
+        "anchor_code": "600519",
+        "industry": {"industry_name": "白酒", "industry_code": "340500", "codes": ["600519"]},
+        "compare": {
+            "start_date": "2026-06-01",
+            "end_date": "2026-06-26",
+            "comparison_summary": {
+                "compare_readiness_summary": {
+                    "readiness_level": "reference_only",
+                    "primary_reason": "weak_leadership",
+                },
+                "code_coverage_summary": {
+                    "matched_code_count": 1,
+                    "code_count": 1,
+                    "coverage_level": "full",
+                },
+            },
+            "rows": [],
+        },
+    }
+
+    class FakeLxrData:
+        def __init__(self, verbose=True):
+            self.verbose = verbose
+
+        def get_lhb_industry_compare(self, *args, **kwargs):
+            return payload
+
+    monkeypatch.setattr(lxd, "LxrData", FakeLxrData)
+    monkeypatch.setattr(sys, "argv", [
+        "lxr_data.py",
+        "lhb-industry-compare",
+        "600519",
+        "--start-date",
+        "2026-06-01",
+        "--end-date",
+        "2026-06-26",
+    ])
+
+    lxd._cli()
+
+    out = capsys.readouterr().out
+    assert "同申万行业龙虎榜辨识度对比" in out
+    assert "对比可用性: reference_only" in out
+    assert not out.lstrip().startswith("{")
 
 
 if __name__ == "__main__":

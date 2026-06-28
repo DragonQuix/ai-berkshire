@@ -1932,6 +1932,113 @@ def _latest_mx_artifact(dir_path: str, skill: str) -> Optional[str]:
     return latest
 
 
+def _format_amount_yi(value: Any) -> str:
+    try:
+        amount = float(value)
+    except (TypeError, ValueError):
+        return "-"
+    return f"{amount / 100000000:.2f}亿"
+
+
+def format_lhb_industry_compare_text(payload: dict) -> str:
+    """Render lhb-industry-compare as a human-readable roadmap summary."""
+    industry = payload.get("industry") or {}
+    compare = payload.get("compare") or {}
+    summary = compare.get("comparison_summary") or {}
+    readiness = summary.get("compare_readiness_summary") or {}
+    coverage = summary.get("code_coverage_summary") or {}
+    gap = summary.get("youzi_recognition_gap_summary") or {}
+    composite = summary.get("youzi_composite_signal_summary") or {}
+    lines = [
+        "=" * 60,
+        "同申万行业龙虎榜辨识度对比",
+        "=" * 60,
+        (
+            f"锚定代码: {payload.get('anchor_code') or '-'} | "
+            f"行业: {industry.get('industry_name') or '-'} "
+            f"({industry.get('industry_code') or '-'})"
+        ),
+        (
+            f"对比区间: {compare.get('start_date') or '-'}~"
+            f"{compare.get('end_date') or '-'} | "
+            f"候选代码: {','.join(industry.get('codes') or []) or '-'}"
+        ),
+    ]
+    if payload.get("error"):
+        lines.append(f"错误: {payload['error']}")
+        return "\n".join(lines)
+    if readiness:
+        lines.append(
+            f"对比可用性: {readiness.get('readiness_level') or '-'} "
+            f"({readiness.get('primary_reason') or '-'})"
+        )
+        if readiness.get("interpretation"):
+            lines.append(f"  {readiness['interpretation']}")
+    if coverage:
+        lines.append(
+            f"命中覆盖: {coverage.get('matched_code_count', 0)}/"
+            f"{coverage.get('code_count', 0)} {coverage.get('coverage_level') or '-'}"
+        )
+    if gap:
+        lines.append(
+            f"领先差距: {gap.get('leader_code') or '-'} 领先 "
+            f"{gap.get('runner_up_code') or '-'} {gap.get('score_gap', 0)}分 "
+            f"({gap.get('leadership_level') or '-'})"
+        )
+    if composite:
+        lines.append(
+            f"组合信号: {composite.get('signal_tag') or '-'}，"
+            f"领先代码={composite.get('leading_code') or '-'}"
+        )
+        if composite.get("interpretation"):
+            lines.append(f"  {composite['interpretation']}")
+    for item in (summary.get("top_youzi_alias_comparison") or [])[:3]:
+        lines.append(
+            f"Top游资横向: {item.get('code') or '-'} "
+            f"{item.get('top_youzi_alias') or '-'} "
+            f"{_format_amount_yi(item.get('top_youzi_alias_abs_net_amount'))} "
+            f"scope={item.get('alias_scope') or '-'} "
+            f"辨识分={item.get('youzi_recognition_score', '-')}"
+        )
+    direction = summary.get("youzi_direction_consistency_summary") or {}
+    if direction:
+        shared_count = direction.get("shared_alias_count", 0)
+        same_count = direction.get("same_direction_shared_alias_count", 0)
+        mixed_count = direction.get("mixed_direction_shared_alias_count", 0)
+        lines.append(
+            f"方向一致性: {direction.get('dominant_shared_direction_consistency') or '-'}，"
+            f"同向={same_count}/{shared_count}，分歧={mixed_count}/{shared_count}"
+        )
+    shared_strengths = summary.get("shared_youzi_code_strengths") or []
+    if shared_strengths:
+        item = shared_strengths[0]
+        lines.append(
+            f"共同游资贡献Top: {item.get('code') or '-'} "
+            f"{item.get('top_shared_alias') or '-'} "
+            f"{_format_amount_yi(item.get('shared_abs_net_amount'))} "
+            f"占比={item.get('shared_abs_net_ratio', '-')}"
+        )
+    unique_strengths = summary.get("unique_youzi_code_strengths") or []
+    if unique_strengths:
+        item = unique_strengths[0]
+        lines.append(
+            f"独有游资贡献Top: {item.get('code') or '-'} "
+            f"{item.get('top_unique_alias') or '-'} "
+            f"{_format_amount_yi(item.get('unique_abs_net_amount'))} "
+            f"占比={item.get('unique_abs_net_ratio', '-')}"
+        )
+    for row in compare.get("rows") or []:
+        lines.append(
+            f"{row.get('rank', '-')}. {row.get('code') or '-'} "
+            f"游资净额绝对值={_format_amount_yi(row.get('youzi_abs_net_amount'))} "
+            f"可识别净额绝对值={_format_amount_yi(row.get('profiled_abs_net_amount'))} "
+            f"Top游资={row.get('top_youzi_alias') or '-'} "
+            f"辨识分={row.get('youzi_recognition_score', '-')} "
+            f"标签={row.get('youzi_identity_tag') or '-'}"
+        )
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -2140,6 +2247,7 @@ def _cli():
         ],
         default="youzi_recognition_score",
     )
+    p_lhb_industry.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
     p_lhb_industry.add_argument("--quiet", action="store_true")
 
     for skill in _MX_SKILLS:
@@ -2268,6 +2376,9 @@ def _cli():
             min_recognition_score=args.min_recognition_score,
             sort_by=args.sort_by,
         )
+        if not args.json:
+            print(format_lhb_industry_compare_text(data))
+            return
     elif args.command == "datapack":
         data = LxrData(verbose=not args.quiet).get_research_datapack(
             args.code, years=args.years, name=args.name, include_mx=not args.no_mx,
