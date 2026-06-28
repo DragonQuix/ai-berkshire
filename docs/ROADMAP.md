@@ -40,6 +40,8 @@
 - 输出对比矩阵和择优建议
 
 ### 团队研究产物结构升级
+> 2026-06-28 已启动第一切片：新增 `docs/team-research-output-contract.md`，将团队研究必需产物、关键数据溯源、角色冲突仲裁与准出规则固化为可测试 contract，并要求 `/investment-team` 遵循。
+
 - 默认生成 `data-pack.json`、`source-index.md`、`role-briefs/`、`audit-results.json` 与最终报告
 - 最终报告中的关键数据能追溯到资料包或来源索引
 - 角色结论与最终结论冲突时，必须写明 Team Lead 的仲裁理由

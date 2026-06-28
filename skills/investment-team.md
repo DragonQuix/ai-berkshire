@@ -68,6 +68,27 @@ python tools/lxr_data.py datapack {code} --years 5
 | industry-researcher | `industry-compare` + mx-search 竞对资讯 | 竞争格局、行业趋势 |
 | risk-assessor | `governance` + `industry-deep` 风险字段 | 风险、管理层诚信 |
 
+### 第一步又二分之一：结构化产物 Contract（P1 准出要求）
+
+本 Skill 必须遵循 `docs/team-research-output-contract.md`。Team Lead 在启动角色分析前先建立或规划以下产物：
+
+- `reports/{公司名}/data-pack.json`
+- `reports/{公司名}/source-index.md`
+- `reports/{公司名}/role-briefs/`
+- `reports/{公司名}/audit-results.json`
+- `reports/{公司名}/最终报告.md` 或 `reports/{公司名}/{公司名}-research-{YYYYMMDD}.md`
+
+最终报告中的关键数据必须能追溯到 `data-pack.json` 或 `source-index.md`；角色结论与最终结论冲突时，必须写明 Team Lead 的仲裁理由。
+
+`role-briefs/` 至少包含：
+
+- `business-analyst.md`
+- `financial-analyst.md`
+- `industry-researcher.md`
+- `risk-assessor.md`
+
+每份角色简报必须包含：角色输入范围、核心结论与评分、使用的证据、反面证据、不确定性、补数请求、与其他角色可能冲突的判断。
+
 ### 第二步：准备角色任务（不强依赖 TeamCreate）
 
 优先使用 TeamCreate 创建团队，但不得依赖其权限继承能力：
@@ -213,11 +234,17 @@ python tools/lxr_data.py datapack {code} --years 5
 #### 8. 总结段落
 100-200字的最终总结
 
+#### 9. 关键数据溯源
+列出最终报告关键财务、估值、行业、治理和风险数据对应的 `data-pack.json` 字段或 `source-index.md` ref。
+
+#### 10. 角色冲突与 Team Lead 仲裁
+列出四个角色之间或角色结论与最终结论之间的关键冲突；如存在冲突，写明 Team Lead 的仲裁理由、采纳依据和残余不确定性；如无实质冲突，明确写“未发现影响最终结论的角色冲突”。
+
 ---
 
 ### 第八步：保存报告
 
-将完整最终报告写入 `reports/{公司名}/{公司名}-research-{YYYYMMDD}.md`；若使用 `/investment-team` 的目录化输出，也可保存为 `reports/{公司名}/最终报告.md`。
+将完整最终报告写入 `reports/{公司名}/{公司名}-research-{YYYYMMDD}.md`；若使用 `/investment-team` 的目录化输出，也可保存为 `reports/{公司名}/最终报告.md`。同时保存或更新 `data-pack.json`、`source-index.md`、`role-briefs/` 和 `audit-results.json`。
 
 ### 第九步：数据抽检（准出流程）
 
