@@ -449,3 +449,129 @@ def test_validate_team_research_outputs_passes_all_pass_items_with_verdict_pass(
 
     assert result["status"] == "pass"
     assert result["invalid_files"] == []
+
+
+FINAL_REPORT_WITH_DATA = """# 腾讯 投资研究最终报告
+
+## 核心数据速览
+
+| 指标 | 2024 | 2023 |
+|---|---:|---:|
+| 营业收入 | 6600 | 5900 |
+| 毛利率 | 55 | 53 |
+
+市值：5800亿
+
+## 关键数据溯源
+
+- 收入引用 S1。
+
+## 角色冲突与 Team Lead 仲裁
+
+- 未发现影响最终结论的角色冲突。
+"""
+
+
+def _seed_final_report_with_data(company_dir: Path) -> None:
+    (company_dir / "最终报告.md").write_text(FINAL_REPORT_WITH_DATA, encoding="utf-8")
+
+
+def test_audit_extract_writes_contract_format_items(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _seed_final_report_with_data(company_dir)
+    _seed_source_index(company_dir)
+
+    summary = tro.audit_extract(company_dir, ratio=1.0)
+    assert summary["sampled"] >= 3
+    assert summary["sample_ratio"] == 1.0
+    assert summary["report"] == str(company_dir / "最终报告.md")
+
+    audit = json.loads((company_dir / "audit-results.json").read_text(encoding="utf-8"))
+    assert audit["verdict"] == "reject"
+    assert audit["sample_ratio"] == 1.0
+    assert isinstance(audit["items"], list) and audit["items"]
+
+    for item in audit["items"]:
+        assert set(item.keys()) == {
+            "claim", "report_location", "source_ref",
+            "expected_value", "verified_value", "status", "note",
+        }
+        assert item["status"] == "pending"
+        assert item["source_ref"] == ""
+        assert item["verified_value"] == ""
+        assert item["claim"]
+        assert item["report_location"]
+        assert item["expected_value"]
+        assert "原文摘录" in item["note"]
+
+    # 草稿抽检清单（verdict=reject + pending items）必须能通过结构校验
+    result = tro.validate_team_research_outputs(company_dir)
+    assert result["status"] == "pass"
+    assert result["invalid_files"] == []
+
+
+def test_audit_extract_is_idempotent_and_resets_verdict(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _seed_final_report_with_data(company_dir)
+
+    # 先伪造一份已通过的抽检结果
+    _seed_source_index(company_dir)
+    _write_audit(company_dir, [_audit_item()], verdict="pass")
+    assert json.loads((company_dir / "audit-results.json").read_text(encoding="utf-8"))["verdict"] == "pass"
+
+    # 重新抽取应重置 verdict 并覆盖 items（固定种子保证顺序确定性）
+    tro.audit_extract(company_dir, ratio=1.0, seed=7)
+    audit = json.loads((company_dir / "audit-results.json").read_text(encoding="utf-8"))
+    assert audit["verdict"] == "reject"
+    assert all(item["status"] == "pending" for item in audit["items"])
+
+    # 再次抽取，结果一致（idempotent）
+    first = audit["items"]
+    tro.audit_extract(company_dir, ratio=1.0, seed=7)
+    second = json.loads((company_dir / "audit-results.json").read_text(encoding="utf-8"))["items"]
+    assert [i["claim"] for i in first] == [i["claim"] for i in second]
+
+
+def test_audit_extract_errors_when_final_report_missing(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    (company_dir / "最终报告.md").unlink()
+
+    import pytest
+    with pytest.raises(FileNotFoundError):
+        tro.audit_extract(company_dir, ratio=1.0)
+
+
+def test_audit_extract_respects_ratio_and_seed(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _seed_final_report_with_data(company_dir)
+
+    full = tro.audit_extract(company_dir, ratio=1.0)
+    assert full["sampled"] == full["extracted"]
+
+    # 同一种子两次抽取应得到完全一致的 claim 序列
+    tro.audit_extract(company_dir, ratio=0.6, seed=42)
+    items_first = json.loads(
+        (company_dir / "audit-results.json").read_text(encoding="utf-8")
+    )["items"]
+    second = tro.audit_extract(company_dir, ratio=0.6, seed=42)
+    items_second = json.loads(
+        (company_dir / "audit-results.json").read_text(encoding="utf-8")
+    )["items"]
+    assert [i["claim"] for i in items_first] == [i["claim"] for i in items_second]
+    assert second["seed"] == 42

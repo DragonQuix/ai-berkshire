@@ -16,6 +16,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from report_audit import extract_data_points, sample_points
+
 
 ROLE_FILES = {
     "business-analyst.md": "business-analyst",
@@ -368,6 +370,82 @@ def _validate_audit_items(audit: dict[str, Any], invalid_files: list[dict[str, s
             })
 
 
+def _format_expected_value(value: Any, unit: str) -> str:
+    """把抽检数据点的数值+单位格式化为 contract 中的 expected_value 字符串。"""
+    if isinstance(value, (int, float)) and isinstance(value, float) and value.is_integer():
+        num = str(int(value))
+    elif isinstance(value, (int, float)):
+        num = f"{value:.4f}".rstrip("0").rstrip(".")
+    else:
+        num = str(value)
+    return f"{num} {unit}".strip() if unit else num
+
+
+def audit_extract(
+    company_dir: str | Path,
+    ratio: float = 0.15,
+    seed: int | None = None,
+) -> dict[str, Any]:
+    """从最终报告采样生成 contract 格式的抽检清单，写回 audit-results.json。
+
+    复用 tools/report_audit.py 的数据点抽取与采样逻辑，把每个采样点映射为
+    `audit-results.json.items[*]` 的 contract 结构（status=pending，verdict 强制
+    重置为 reject）。Team Lead 随后逐项补 source_ref / verified_value / status，
+    再交给 validate 把关。
+
+    最终报告不存在时抛 FileNotFoundError。
+    """
+    root = Path(company_dir)
+    report_path = root / "最终报告.md"
+    if not report_path.exists():
+        raise FileNotFoundError(f"最终报告不存在: {report_path}")
+
+    points = extract_data_points(report_path.read_text(encoding="utf-8"))
+    sampled = sample_points(points, ratio=ratio, seed=seed)
+    items = [
+        {
+            "claim": point["label"],
+            "report_location": f"第{point['line_number']}行",
+            "source_ref": "",
+            "expected_value": _format_expected_value(point["reported_value"], point["unit"]),
+            "verified_value": "",
+            "status": "pending",
+            "note": f"原文摘录: {point['raw_text']}",
+        }
+        for point in sampled
+    ]
+
+    audit_path = root / "audit-results.json"
+    if audit_path.exists():
+        audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    else:
+        audit = {
+            "report": str(report_path),
+            "generated_at": date.today().isoformat(),
+            "sample_ratio": ratio,
+            "items": [],
+            "verdict": "reject",
+        }
+    audit["items"] = items
+    audit["sample_ratio"] = ratio
+    # 重新抽取抽检清单意味着前一次的 pass 判决失效，必须重新核验后再改回 pass
+    audit["verdict"] = "reject"
+    audit_path.write_text(
+        json.dumps(audit, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    return {
+        "company_dir": str(root),
+        "report": str(report_path),
+        "extracted": len(points),
+        "sampled": len(sampled),
+        "sample_ratio": ratio,
+        "seed": seed,
+    }
+
+
 def validate_team_research_outputs(company_dir: str | Path) -> dict[str, Any]:
     root = Path(company_dir)
     missing_files: list[str] = []
@@ -434,7 +512,7 @@ def validate_team_research_outputs(company_dir: str | Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    if len(sys.argv) > 1 and sys.argv[1] not in {"init", "validate", "-h", "--help"}:
+    if len(sys.argv) > 1 and sys.argv[1] not in {"init", "validate", "audit-extract", "-h", "--help"}:
         sys.argv.insert(1, "init")
 
     parser = argparse.ArgumentParser(description="初始化或校验 /investment-team 结构化产物目录")
@@ -452,6 +530,15 @@ def main() -> int:
     validate_parser = subparsers.add_parser("validate", help="校验结构化产物目录")
     validate_parser.add_argument("company_dir", help="公司报告目录，例如 reports/腾讯")
     validate_parser.add_argument("--json", action="store_true", help="输出 JSON")
+
+    audit_parser = subparsers.add_parser(
+        "audit-extract",
+        help="从最终报告采样生成 contract 格式抽检清单",
+    )
+    audit_parser.add_argument("company_dir", help="公司报告目录，例如 reports/腾讯")
+    audit_parser.add_argument("--ratio", type=float, default=0.15, help="抽样比例，默认 0.15")
+    audit_parser.add_argument("--seed", type=int, default=None, help="随机种子（可选，用于复现）")
+    audit_parser.add_argument("--json", action="store_true", help="输出 JSON")
     args = parser.parse_args()
 
     if args.command in {None, "init"}:
@@ -469,6 +556,24 @@ def main() -> int:
             print(f"company_dir: {result['company_dir']}")
             print(f"created: {len(result['created_files'])}")
             print(f"skipped: {len(result['skipped_files'])}")
+        return 0
+
+    if args.command == "audit-extract":
+        try:
+            result = audit_extract(args.company_dir, ratio=args.ratio, seed=args.seed)
+        except FileNotFoundError as exc:
+            print(f"错误: {exc}", file=sys.stderr)
+            return 1
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        else:
+            print(f"company_dir: {result['company_dir']}")
+            print(f"report: {result['report']}")
+            print(f"extracted: {result['extracted']}")
+            print(f"sampled: {result['sampled']}")
+            print(f"sample_ratio: {result['sample_ratio']}")
+            if result["seed"] is not None:
+                print(f"seed: {result['seed']}")
         return 0
 
     result = validate_team_research_outputs(args.company_dir)
