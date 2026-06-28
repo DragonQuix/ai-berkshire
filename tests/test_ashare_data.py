@@ -1280,6 +1280,22 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                     "top_scope_alias": "拉萨天团",
                 },
             ],
+            "youzi_code_identity_summary": {
+                "tag_counts": {
+                    "shared_dominant": 1,
+                    "unique_dominant": 1,
+                    "balanced": 0,
+                    "no_youzi": 0,
+                },
+                "top_codes_by_tag": {
+                    "shared_dominant": "000005",
+                    "unique_dominant": "000004",
+                    "balanced": None,
+                    "no_youzi": None,
+                },
+                "dominant_identity_tag": "mixed",
+                "dominant_identity_count": 1,
+            },
             "same_direction_youzi_aliases": [{"alias": "章盟主", "net_direction": "net_sell"}],
             "mixed_direction_youzi_aliases": [],
             "youzi_alias_frequency": [

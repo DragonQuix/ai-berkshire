@@ -1070,6 +1070,37 @@ def _summarize_lhb_compare_code_identity_tags(
     return sorted(out, key=lambda item: (-item["dominant_abs_net_amount"], item["code"]))
 
 
+def _summarize_lhb_compare_code_identity_summary(identity_tags: list[dict]) -> dict:
+    tag_order = ["shared_dominant", "unique_dominant", "balanced", "no_youzi"]
+    tag_counts = {tag: 0 for tag in tag_order}
+    top_codes = {tag: None for tag in tag_order}
+    for item in identity_tags:
+        tag = item.get("identity_tag")
+        if tag not in tag_counts:
+            continue
+        tag_counts[tag] += 1
+        if top_codes[tag] is None:
+            top_codes[tag] = item.get("code")
+
+    dominant_count = max(tag_counts.values()) if tag_counts else 0
+    dominant_tags = [
+        tag for tag in tag_order
+        if tag_counts[tag] == dominant_count and dominant_count > 0
+    ]
+    if not dominant_tags:
+        dominant_tag = "none"
+    elif len(dominant_tags) == 1:
+        dominant_tag = dominant_tags[0]
+    else:
+        dominant_tag = "mixed"
+    return {
+        "tag_counts": tag_counts,
+        "top_codes_by_tag": top_codes,
+        "dominant_identity_tag": dominant_tag,
+        "dominant_identity_count": dominant_count,
+    }
+
+
 def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[dict]) -> dict:
     alias_codes: dict[str, set[str]] = {}
     for row in rows:
@@ -1103,6 +1134,10 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
     ]
     shared_code_strengths = _summarize_lhb_compare_shared_code_strengths(alias_strengths)
     unique_code_strengths = _summarize_lhb_compare_unique_code_strengths(alias_strengths)
+    identity_tags = _summarize_lhb_compare_code_identity_tags(
+        shared_code_strengths,
+        unique_code_strengths,
+    )
     return {
         "code_count": len(codes),
         "matched_code_count": sum(1 for row in rows if row.get("filtered_count", 0)),
@@ -1119,10 +1154,8 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         "shared_youzi_strength_summary": _summarize_lhb_compare_shared_strength(alias_strengths),
         "shared_youzi_code_strengths": shared_code_strengths,
         "unique_youzi_code_strengths": unique_code_strengths,
-        "youzi_code_identity_tags": _summarize_lhb_compare_code_identity_tags(
-            shared_code_strengths,
-            unique_code_strengths,
-        ),
+        "youzi_code_identity_tags": identity_tags,
+        "youzi_code_identity_summary": _summarize_lhb_compare_code_identity_summary(identity_tags),
         "same_direction_youzi_aliases": same_direction_aliases,
         "mixed_direction_youzi_aliases": mixed_direction_aliases,
         "youzi_alias_frequency": alias_frequency,
