@@ -575,3 +575,48 @@ def test_audit_extract_respects_ratio_and_seed(tmp_path: Path) -> None:
     )["items"]
     assert [i["claim"] for i in items_first] == [i["claim"] for i in items_second]
     assert second["seed"] == 42
+
+
+def test_validate_rejects_non_standard_source_ref_format(tmp_path: Path) -> None:
+    """source_ref 非空但不符合 [SEPA]<digits> 格式时必须打回，避免绕过 undefined ref 检查。"""
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _seed_source_index(company_dir)
+    # "annual-report" 非 S/E/P/A+数字 格式，extract_json_source_refs 不会收集，
+    # 故 undefined 检查会漏掉它；但 _validate_audit_items 必须按格式拦截
+    _write_audit(company_dir, [_audit_item(source_ref="annual-report")], verdict="pass")
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert {
+        "file": "audit-results.json",
+        "reason": "item 0 source_ref must match [SEPA]<digits>: 'annual-report'",
+    } in result["invalid_files"]
+
+
+def test_validate_rejects_non_standard_source_ref_even_when_pending(tmp_path: Path) -> None:
+    """pending item 也要求 source_ref 一旦填写就必须符合 [SEPA]<digits> 格式。"""
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _seed_source_index(company_dir)
+    _write_audit(
+        company_dir,
+        [_audit_item(status="pending", source_ref="annual-report", verified_value="")],
+        verdict="reject",
+    )
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    reason = next(
+        (r for r in result["invalid_files"] if r["file"] == "audit-results.json"), None
+    )
+    assert reason is not None
+    assert "source_ref must match [SEPA]<digits>" in reason["reason"]

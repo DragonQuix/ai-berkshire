@@ -325,6 +325,8 @@ def _validate_audit_items(audit: dict[str, Any], invalid_files: list[dict[str, s
       - items 必须是列表。
       - 每个 item 必须是 dict，status 必须是 pass/fail/pending。
       - claim/report_location/expected_value 必须非空。
+      - source_ref 非空时必须匹配 [SEPA]<digits> 格式，否则会被
+        extract_json_source_refs 漏掉而绕过 undefined ref 检查。
       - status 为 pass/fail 时，verified_value 与 source_ref 必须非空。
       - verdict 为 pass 时，items 必须非空且全部 status == pass。
     """
@@ -350,6 +352,12 @@ def _validate_audit_items(audit: dict[str, Any], invalid_files: list[dict[str, s
             invalid_files.append({
                 "file": "audit-results.json",
                 "reason": f"item {idx} missing required fields: {', '.join(missing)}",
+            })
+        src_ref = item.get("source_ref", "")
+        if src_ref and not SOURCE_REF_RE.fullmatch(src_ref):
+            invalid_files.append({
+                "file": "audit-results.json",
+                "reason": f"item {idx} source_ref must match [SEPA]<digits>: {src_ref!r}",
             })
         if status in {"pass", "fail"} and (not item.get("verified_value") or not item.get("source_ref")):
             invalid_files.append({
