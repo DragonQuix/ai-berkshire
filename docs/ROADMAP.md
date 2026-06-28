@@ -3,6 +3,8 @@
 ## P0：近期（1-2个月）
 
 ### 权限安全多 Agent 架构后续加固
+> 2026-06-28 已落地：`docs/source-pack-templates.md` 标准化 5 类 source pack；`tools/verify_multi_agent_permissions.py` 扫描高风险后台 Agent 旧句式；`tools/verify_channel_capability.py --quick` 已覆盖 18 个 root/Codex reference SHA256 同步检查。
+
 - 将团队类 Skill 的 source pack 模板标准化，覆盖上市公司、财报、未上市公司、新闻异动和公众号文章
 - 新增静态校验脚本，扫描 `skills/*.md` 与 Codex reference 中的高风险后台 Agent 取数/写文件句式
 - 扩展同步校验，覆盖全部 18 个 Skill 的 root/codex reference SHA256 一致性

@@ -15,11 +15,15 @@ A) `/quality-screen` 精确复核层（full 模式，需理杏仁 token / 网络
 B) 增强 Skill 的 `_source` 标注覆盖 + 根/Codex reference 同步（`--quick` 即执行，纯静态）
      - skills/news-pulse.md | earnings-review.md | bottleneck-hunter.md
      - 必含 `_source: mx-search`（三者均要求）；news-pulse / earnings-review 另要求 `_source: mx-data`
-     - 根副本与 codex/ai-berkshire/references/skills/*.md 副本 SHA256 一致
+     - 18 个 root skills 与 codex/ai-berkshire/references/skills/*.md 副本 SHA256 一致
+
+C) 权限安全多 Agent 静态校验（`--quick` 即执行，纯静态）
+     - 调用 tools/verify_multi_agent_permissions.py
+     - 扫描后台 Agent 自行联网、取数、命令执行和写文件等旧句式
 
 用法:
-    python tools/verify_channel_capability.py --quick     # 仅 B 类静态校验，不联网
-    python tools/verify_channel_capability.py             # A + B 全部校验（需 quality-metrics 子命令与网络）
+    python tools/verify_channel_capability.py --quick     # 仅 B/C 类静态校验，不联网
+    python tools/verify_channel_capability.py             # A+B+C 全部校验（需 quality-metrics 子命令与网络）
 
 退出码: 0 = 全部通过；非 0 = 有失败项。
 """
@@ -32,8 +36,21 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
+
+def _find_repo_root(start: Path) -> Path:
+    current = start.resolve()
+    for candidate in (current, *current.parents):
+        if (
+            (candidate / "skills").is_dir()
+            and (candidate / "codex" / "ai-berkshire" / "references" / "skills").is_dir()
+        ):
+            return candidate
+    return Path(__file__).resolve().parent.parent
+
+
+REPO = _find_repo_root(Path(__file__).resolve())
 LXR = REPO / "tools" / "lxr_data.py"
+EXPECTED_SKILL_COUNT = 18
 
 # /quality-screen 的 7 条去劣指标（与 skills/quality-screen.md 一致）
 EXPECTED_CHECK_KEYS = [
@@ -47,7 +64,7 @@ EXPECTED_CHECK_KEYS = [
 ]
 
 # (root 相对路径, codex reference 相对路径, 必需的 _source / 渠道标记)
-TARGETS: list[tuple[str, str, list[str]]] = [
+SOURCE_MARKER_TARGETS: list[tuple[str, str, list[str]]] = [
     (
         "skills/news-pulse.md",
         "codex/ai-berkshire/references/skills/news-pulse.md",
@@ -225,14 +242,60 @@ def check_sync(root_rel: str, codex_rel: str) -> int:
 
 
 def check_skills_source_and_sync() -> int:
-    print("\n-- B) 增强 Skill _source 覆盖 + 根/Codex 同步 --")
+    print("\n-- B1) 增强 Skill _source 覆盖 --")
     rc = 0
-    for root_rel, codex_rel, markers in TARGETS:
+    for root_rel, codex_rel, markers in SOURCE_MARKER_TARGETS:
         print(f"\n>> {root_rel}")
         rc |= check_source_coverage(root_rel, markers)
         rc |= check_source_coverage(codex_rel, markers)
-        rc |= check_sync(root_rel, codex_rel)
     return rc
+
+
+def check_all_skill_sync() -> int:
+    print("\n-- B2) 18 个 Skill 根/Codex reference SHA256 同步 --")
+    rc = 0
+    root_dir = REPO / "skills"
+    codex_dir = REPO / "codex" / "ai-berkshire" / "references" / "skills"
+    root_files = {p.name: p for p in sorted(root_dir.glob("*.md"))}
+    codex_files = {p.name: p for p in sorted(codex_dir.glob("*.md"))}
+
+    if len(root_files) != EXPECTED_SKILL_COUNT:
+        _fail(f"skills/*.md 数量期望 {EXPECTED_SKILL_COUNT}，实际 {len(root_files)}")
+        rc |= 1
+    if len(codex_files) != EXPECTED_SKILL_COUNT:
+        _fail(
+            "codex/ai-berkshire/references/skills/*.md "
+            f"数量期望 {EXPECTED_SKILL_COUNT}，实际 {len(codex_files)}"
+        )
+        rc |= 1
+
+    missing_in_codex = sorted(set(root_files) - set(codex_files))
+    extra_in_codex = sorted(set(codex_files) - set(root_files))
+    if missing_in_codex:
+        _fail(f"Codex reference 缺少 skill: {missing_in_codex}")
+        rc |= 1
+    if extra_in_codex:
+        _fail(f"Codex reference 存在 root 未配对 skill: {extra_in_codex}")
+        rc |= 1
+
+    common = sorted(set(root_files) & set(codex_files))
+    for name in common:
+        root_rel = f"skills/{name}"
+        codex_rel = f"codex/ai-berkshire/references/skills/{name}"
+        rc |= check_sync(root_rel, codex_rel)
+    if rc == 0:
+        _pass(f"18 个 Skill 同步一致 ({len(common)} pairs)")
+    return rc
+
+
+def check_multi_agent_permissions() -> int:
+    print("\n-- D) 高风险后台 Agent 旧句式扫描 --")
+    try:
+        from verify_multi_agent_permissions import check_permissions
+    except Exception as e:
+        _fail(f"无法导入 verify_multi_agent_permissions.py: {e}")
+        return 1
+    return check_permissions(repo=REPO, verbose=True)
 
 
 def check_global_static_markers() -> int:
@@ -266,11 +329,13 @@ def main() -> int:
                     help="仅静态校验 Skill _source 覆盖与根/Codex 同步，不联网、不调用 quality-metrics")
     args = ap.parse_args()
 
-    mode = "quick (offline)" if args.quick else "full (A+B)"
+    mode = "quick (offline)" if args.quick else "full (A+B+C)"
     print(f"== verify_channel_capability.py ({mode}, repo={REPO}) ==")
     rc = 0
     rc |= check_skills_source_and_sync()
+    rc |= check_all_skill_sync()
     rc |= check_global_static_markers()
+    rc |= check_multi_agent_permissions()
     if not args.quick:
         rc |= check_quality_metrics_json()
 

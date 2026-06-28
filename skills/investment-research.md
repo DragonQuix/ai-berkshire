@@ -113,7 +113,7 @@ Windows 终端：`$env:PYTHONIOENCODING='utf-8'`；MX 脚本**必须**传 `--out
 > `industry-deep` 直接返回（如 601336 2025 EV=2878亿/NBV=98亿），**不再依赖 WebFetch 抓年报补漏**。
 > 仅当理杏仁字段为空（如个别公司不披露营运利润）或需历史口径核对时，再回到年报原文。
 
-数据包（第〇步）已覆盖 1、2、9 的结构化部分。使用 Task 工具补充以下**非结构化**信息（优先 mx-search，降级 WebSearch）：
+数据包（第〇步）已覆盖 1、2、9 的结构化部分。以下**非结构化**信息由主 Agent 补充进资料包（优先 mx-search，降级 WebSearch），再交给只读分析角色使用：
 
 1. 收入结构：**分产品叙事**（理杏仁 `revenue` 已有则直接引用）；缺省再搜
 2. ~~财务指标~~ → 已由 `financials` + `industry-deep` 提供
