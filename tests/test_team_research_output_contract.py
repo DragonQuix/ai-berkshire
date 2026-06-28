@@ -40,3 +40,13 @@ def test_investment_team_requires_output_contract_and_final_traceability() -> No
         assert "最终报告中的关键数据必须能追溯" in text
         assert "角色结论与最终结论冲突" in text
         assert "Team Lead 的仲裁理由" in text
+
+
+def test_investment_team_references_scaffold_tool() -> None:
+    root = read_text("skills/investment-team.md")
+    codex = read_text("codex/ai-berkshire/references/skills/investment-team.md")
+
+    for text in (root, codex):
+        assert "python tools/team_research_outputs.py" in text
+        assert "--ticker" in text
+        assert "--market" in text

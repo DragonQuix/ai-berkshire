@@ -20,6 +20,14 @@
 | 抽检结果 | `reports/{公司名}/audit-results.json` | Team Lead | 保存最终报告关键数据抽检清单、核验结果、准出/打回判决 |
 | 最终报告 | `reports/{公司名}/最终报告.md` 或 `{公司名}-research-{YYYYMMDD}.md` | Team Lead | 综合结论、四维评分、关键数据、投资建议和仲裁理由 |
 
+Team Lead 可用脚手架工具初始化上述产物：
+
+```bash
+python tools/team_research_outputs.py {公司名} --ticker {代码} --market {市场}
+```
+
+脚手架只创建空模板，不代表研究完成；`audit-results.json` 初始 `verdict` 为 `reject`，必须完成抽检后才能改为 `pass`。
+
 ## `data-pack.json` 最小结构
 
 ```json

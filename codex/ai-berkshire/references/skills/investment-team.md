@@ -72,11 +72,17 @@ python tools/lxr_data.py datapack {code} --years 5
 
 本 Skill 必须遵循 `docs/team-research-output-contract.md`。Team Lead 在启动角色分析前先建立或规划以下产物：
 
+```bash
+python tools/team_research_outputs.py {公司名} --ticker {代码} --market {市场}
+```
+
 - `reports/{公司名}/data-pack.json`
 - `reports/{公司名}/source-index.md`
 - `reports/{公司名}/role-briefs/`
 - `reports/{公司名}/audit-results.json`
 - `reports/{公司名}/最终报告.md` 或 `reports/{公司名}/{公司名}-research-{YYYYMMDD}.md`
+
+脚手架只创建空模板，不代表研究完成；`audit-results.json` 初始应保持 `reject`，直到完成数据抽检并满足准出规则。
 
 最终报告中的关键数据必须能追溯到 `data-pack.json` 或 `source-index.md`；角色结论与最终结论冲突时，必须写明 Team Lead 的仲裁理由。
 
