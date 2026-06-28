@@ -48,6 +48,7 @@ CLI：
     python tools/lxr_data.py industry-compare 600519
     python tools/lxr_data.py datapack 601336 --years 5
     python tools/lxr_data.py quality-metrics 600519 --years 10
+    python tools/lxr_data.py lhb 600519 --limit 5
     python tools/lxr_data.py mx-search "新华保险最新公告"
     python tools/lxr_data.py mx-xuangu "ROE大于15%的A股，返回前10只"
 """
@@ -1492,6 +1493,36 @@ class LxrData:
         }
 
     # ------------------------------------------------------------------
+    # A股龙虎榜（免费源）
+    # ------------------------------------------------------------------
+
+    def get_lhb(
+        self,
+        code: Optional[str] = None,
+        limit: int = 20,
+        page: int = 1,
+        source: str = "auto",
+    ) -> dict:
+        """获取 A 股龙虎榜明细。当前统一入口走东方财富免费源。"""
+        if source not in ("auto", "legacy"):
+            return {"_source": "none", "error": f"未知 source: {source}"}
+        return self._run_chain([
+            ("legacy", lambda: self._get_lhb_legacy(code, limit, page)),
+        ])
+
+    def _get_lhb_legacy(self, code: Optional[str], limit: int, page: int) -> dict:
+        args = ["lhb"]
+        if code:
+            args.append(_norm_code(code, "cn"))
+        args.extend(["--limit", str(limit), "--page", str(page), "--json"])
+        text = self._call_legacy_tool(args)
+        data = json.loads(text)
+        data["source_detail"] = "legacy:ashare_data/lhb"
+        if "_source" not in data:
+            data["_source"] = "legacy"
+        return data
+
+    # ------------------------------------------------------------------
     # 研究数据包（跨 Skill 共享，TTL 1h）
     # ------------------------------------------------------------------
 
@@ -1712,6 +1743,13 @@ def _cli():
     p_qm.add_argument("--fcf-years", type=int, default=5, help="FCF 累计窗口（年）")
     p_qm.add_argument("--quiet", action="store_true")
 
+    p_lhb = sub.add_parser("lhb", help="A股龙虎榜明细（东方财富免费源）")
+    p_lhb.add_argument("code", nargs="?", default=None, help="股票代码；省略则返回全市场最新")
+    p_lhb.add_argument("--limit", type=int, default=20)
+    p_lhb.add_argument("--page", type=int, default=1)
+    p_lhb.add_argument("--source", choices=["auto", "legacy"], default="auto")
+    p_lhb.add_argument("--quiet", action="store_true")
+
     for skill in _MX_SKILLS:
         p_mx = sub.add_parser(skill, help=f"调用妙想 {skill}（1h 缓存，自动 Windows 输出目录）")
         p_mx.add_argument("query", help="自然语言查询")
@@ -1783,6 +1821,10 @@ def _cli():
     elif args.command == "quality-metrics":
         data = LxrData(verbose=not args.quiet).get_quality_metrics(
             args.code, years=args.years, fcf_years=args.fcf_years,
+        )
+    elif args.command == "lhb":
+        data = LxrData(verbose=not args.quiet).get_lhb(
+            args.code, limit=args.limit, page=args.page, source=args.source,
         )
     elif args.command == "datapack":
         data = LxrData(verbose=not args.quiet).get_research_datapack(

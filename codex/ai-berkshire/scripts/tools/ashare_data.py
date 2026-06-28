@@ -7,6 +7,7 @@
     python3.11 tools/ashare_data.py quote 600519                    # 实时行情
     python3.11 tools/ashare_data.py financials 600519               # 核心财务数据（近5年）
     python3.11 tools/ashare_data.py valuation 600519                # 估值指标
+    python3.11 tools/ashare_data.py lhb 600519 --limit 5             # 龙虎榜
     python3.11 tools/ashare_data.py search 茅台                      # 搜索股票代码
 
 需要 Python >= 3.8，零外部依赖。
@@ -297,6 +298,93 @@ def cmd_search(keyword: str):
 
 
 # ---------------------------------------------------------------------------
+# 东方财富龙虎榜
+# ---------------------------------------------------------------------------
+
+def _clean_a_code(code: str) -> str:
+    return code.strip().upper().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
+
+
+def _eastmoney_lhb_params(code: str | None = None, limit: int = 20, page: int = 1) -> dict:
+    """东方财富龙虎榜 datacenter 参数。"""
+    params = {
+        "sortColumns": "TRADE_DATE,SECURITY_CODE",
+        "sortTypes": "-1,1",
+        "pageSize": str(max(1, min(int(limit), 100))),
+        "pageNumber": str(max(1, int(page))),
+        "reportName": "RPT_DAILYBILLBOARD_DETAILS",
+        "columns": "ALL",
+    }
+    if code:
+        params["filter"] = f'(SECURITY_CODE="{_clean_a_code(code)}")'
+    return params
+
+
+def _normalize_lhb_row(row: dict) -> dict:
+    """规范化东方财富龙虎榜行，保留投研最常用字段。"""
+    date = str(row.get("TRADE_DATE") or "")[:10]
+    return {
+        "trade_date": date,
+        "code": row.get("SECURITY_CODE"),
+        "secucode": row.get("SECUCODE"),
+        "name": row.get("SECURITY_NAME_ABBR"),
+        "reason": row.get("EXPLANATION"),
+        "close_price": row.get("CLOSE_PRICE"),
+        "change_rate": row.get("CHANGE_RATE"),
+        "turnover_rate": row.get("TURNOVERRATE"),
+        "buy_amount": row.get("BILLBOARD_BUY_AMT"),
+        "sell_amount": row.get("BILLBOARD_SELL_AMT"),
+        "net_amount": row.get("BILLBOARD_NET_AMT"),
+        "deal_amount": row.get("BILLBOARD_DEAL_AMT"),
+        "buy_seats": row.get("BUY_SEAT_NEW"),
+        "sell_seats": row.get("SELL_SEAT_NEW"),
+        "trade_market": row.get("TRADE_MARKET"),
+        "source_detail": "eastmoney:lhb",
+        "_source": "legacy",
+    }
+
+
+def _fetch_lhb_rows(code: str | None = None, limit: int = 20, page: int = 1) -> list[dict]:
+    url = "https://datacenter-web.eastmoney.com/api/data/v1/get"
+    data = _curl_json(url, _eastmoney_lhb_params(code, limit, page))
+    rows = data.get("result", {}).get("data", []) if isinstance(data, dict) else []
+    return [_normalize_lhb_row(row) for row in rows]
+
+
+def cmd_lhb(code: str | None = None, limit: int = 20, page: int = 1, json_output: bool = False):
+    """龙虎榜明细。"""
+    rows = _fetch_lhb_rows(code, limit, page)
+    payload = {
+        "_source": "legacy",
+        "source_detail": "eastmoney:lhb",
+        "code": _clean_a_code(code) if code else None,
+        "limit": limit,
+        "page": page,
+        "records": rows,
+    }
+    if json_output:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return
+
+    title = f"龙虎榜: {_clean_a_code(code)}" if code else "龙虎榜: 最新全市场"
+    print("=" * 60)
+    print(title)
+    print("=" * 60)
+    if not rows:
+        print("  ⚠️ 未找到龙虎榜记录")
+        return
+    for r in rows:
+        print(f"\n  --- {r['trade_date']} {r['name']} ({r['code']}) ---")
+        print(f"  原因:       {r['reason']}")
+        print(f"  收盘/涨跌:  {r['close_price']} / {_fmt_pct(r['change_rate'])}")
+        print(f"  买入金额:   {_fmt_yi(r['buy_amount'])}")
+        print(f"  卖出金额:   {_fmt_yi(r['sell_amount'])}")
+        print(f"  净买入:     {_fmt_yi(r['net_amount'])}")
+        print(f"  成交额:     {_fmt_yi(r['deal_amount'])}")
+        print(f"  交易市场:   {r['trade_market']}")
+
+
+# ---------------------------------------------------------------------------
 # 理杏仁数据源路径（--source lixinger）
 # ---------------------------------------------------------------------------
 
@@ -406,6 +494,12 @@ def main():
     p_search = sub.add_parser("search", help="搜索股票代码")
     p_search.add_argument("keyword", help="公司名或关键词")
 
+    p_lhb = sub.add_parser("lhb", help="龙虎榜明细（东方财富）")
+    p_lhb.add_argument("code", nargs="?", default=None, help="股票代码；省略则返回全市场最新")
+    p_lhb.add_argument("--limit", type=int, default=20, help="返回条数，1-100")
+    p_lhb.add_argument("--page", type=int, default=1, help="页码")
+    p_lhb.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -419,6 +513,7 @@ def main():
         "valuation": lambda: (cmd_valuation_lixinger(args.code)
                               if args.source == "lixinger" else cmd_valuation(args.code)),
         "search": lambda: cmd_search(args.keyword),
+        "lhb": lambda: cmd_lhb(args.code, args.limit, args.page, args.json),
     }
     cmds[args.command]()
 

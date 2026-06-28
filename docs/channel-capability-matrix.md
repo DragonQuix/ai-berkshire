@@ -195,7 +195,7 @@ python tools/lxr_data.py financials 601336 --years 5 --source lixinger
 | `_source: mx-data` | 妙想金融数据 |
 | `_source: mx-search` | 妙想资讯搜索 |
 | `_source: mx-xuangu` | 妙想智能选股 |
-| `_source: legacy` | 东方财富/腾讯/aastocks 等免费源 |
+| `_source: legacy` | 东方财富/腾讯/aastocks 等免费源；详细渠道写入 `source_detail`，如 `eastmoney:lhb` |
 | `需年报原文` | 仅作交叉验证，非主路径（保险 EV/NBV **已移出此类**） |
 
 ---

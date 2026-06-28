@@ -499,5 +499,32 @@ def test_mx_script_constructor_override_is_used_for_mx_data(tmp_path, monkeypatc
     assert result["raw"]["query"] == "贵州茅台 最新价"
 
 
+def test_get_lhb_uses_legacy_ashare_json(monkeypatch):
+    from lxr_data import LxrData
+
+    class FakeClient:
+        config = {"data_type_ttl_seconds": {}}
+        cache = _FakeCache()
+
+    d = LxrData(client=FakeClient(), verbose=False)
+    calls = []
+
+    def fake_legacy(args):
+        calls.append(args)
+        return (
+            '{"_source":"legacy","code":"600519","records":'
+            '[{"trade_date":"2013-01-28","code":"600519","net_amount":-378891552.32}]}'
+        )
+
+    monkeypatch.setattr(d, "_call_legacy_tool", fake_legacy)
+
+    out = d.get_lhb("600519", limit=3, page=2)
+
+    assert calls == [["lhb", "600519", "--limit", "3", "--page", "2", "--json"]]
+    assert out["_source"] == "legacy"
+    assert out["source_detail"] == "legacy:ashare_data/lhb"
+    assert out["records"][0]["net_amount"] == -378891552.32
+
+
 if __name__ == "__main__":
     unittest.main()
