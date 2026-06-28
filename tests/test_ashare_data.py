@@ -105,6 +105,16 @@ def test_normalize_lhb_detail_seat_row_classifies_institution():
         "seat_code": "0",
         "seat_name": "机构专用",
         "seat_category": "institution",
+        "seat_profile": {
+            "type": "institution",
+            "alias": "机构专用",
+            "tier": "institution",
+            "style": "机构资金席位",
+            "premium": "neutral",
+            "matched_keyword": "机构专用",
+            "match_type": "rule",
+            "profile_source": "rule:seat-name",
+        },
         "buy_amount": 1000000,
         "sell_amount": 250000,
         "net_amount": 750000,
@@ -114,6 +124,36 @@ def test_normalize_lhb_detail_seat_row_classifies_institution():
         "buyer_sales_times_3day": 12,
         "source_detail": "eastmoney:lhb-detail",
         "_source": "legacy",
+    }
+
+
+def test_normalize_lhb_detail_seat_row_identifies_known_youzi_profile():
+    row = {
+        "TRADE_ID": "100357777",
+        "TRADE_DATE": "2026-06-26 00:00:00",
+        "SECURITY_CODE": "000004",
+        "SECUCODE": "000004.SZ",
+        "SECURITY_NAME_ABBR": "国华退",
+        "EXPLANATION": "退市整理期",
+        "OPERATEDEPT_CODE": "10472087",
+        "OPERATEDEPT_NAME": "东方财富证券股份有限公司拉萨东环路第二证券营业部",
+        "BUY": 762307,
+        "SELL": 106076,
+        "NET": 656231,
+    }
+
+    out = ad._normalize_lhb_detail_seat(row, "buy")
+
+    assert out["seat_category"] == "brokerage"
+    assert out["seat_profile"] == {
+        "type": "youzi",
+        "alias": "拉萨天团",
+        "tier": "regional",
+        "style": "群狼一日游，反向指标",
+        "premium": "negative",
+        "matched_keyword": "东方财富证券股份有限公司拉萨",
+        "match_type": "contains",
+        "profile_source": "stock-deep-analyzer:lhb-analyzer/seat-encyclopedia",
     }
 
 
@@ -178,3 +218,21 @@ def test_fetch_lhb_detail_groups_buy_and_sell_seats(monkeypatch):
     assert out["records"][0]["trade_id"] == "100357777"
     assert out["records"][0]["buy_seats"][0]["seat_code"] == "10472087"
     assert out["records"][0]["sell_seats"][0]["seat_code"] == "10467671"
+    assert out["records"][0]["seat_profile_summary"] == {
+        "buy": {
+            "institution": 0,
+            "northbound": 0,
+            "youzi": 1,
+            "brokerage": 0,
+            "unknown": 0,
+            "aliases": ["拉萨天团"],
+        },
+        "sell": {
+            "institution": 0,
+            "northbound": 0,
+            "youzi": 0,
+            "brokerage": 1,
+            "unknown": 0,
+            "aliases": [],
+        },
+    }

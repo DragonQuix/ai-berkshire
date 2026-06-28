@@ -21,6 +21,8 @@ import subprocess
 import sys
 from decimal import Decimal, ROUND_HALF_EVEN
 
+from lhb_seat_profiles import build_lhb_seat_profile, summarize_lhb_seat_profiles
+
 _TIMEOUT = 15
 
 
@@ -432,6 +434,8 @@ def _normalize_lhb_detail_summary(row: dict) -> dict:
 
 
 def _normalize_lhb_detail_seat(row: dict, rank_type: str) -> dict:
+    seat_name = row.get("OPERATEDEPT_NAME")
+    seat_category = _classify_lhb_seat(seat_name)
     return {
         "trade_id": str(row.get("TRADE_ID") or ""),
         "trade_date": str(row.get("TRADE_DATE") or "")[:10],
@@ -441,8 +445,9 @@ def _normalize_lhb_detail_seat(row: dict, rank_type: str) -> dict:
         "reason": row.get("EXPLANATION"),
         "rank_type": rank_type,
         "seat_code": row.get("OPERATEDEPT_CODE"),
-        "seat_name": row.get("OPERATEDEPT_NAME"),
-        "seat_category": _classify_lhb_seat(row.get("OPERATEDEPT_NAME")),
+        "seat_name": seat_name,
+        "seat_category": seat_category,
+        "seat_profile": build_lhb_seat_profile(seat_name, seat_category),
         "buy_amount": row.get("BUY"),
         "sell_amount": row.get("SELL"),
         "net_amount": row.get("NET"),
@@ -482,6 +487,9 @@ def _fetch_lhb_detail(
         key = record["trade_id"] or f"{record['trade_date']}:{record['reason']}"
         record["buy_seats"] = buy_by_id.get(key, [])
         record["sell_seats"] = sell_by_id.get(key, [])
+        record["seat_profile_summary"] = summarize_lhb_seat_profiles(
+            record["buy_seats"], record["sell_seats"]
+        )
     payload_code = _clean_a_code(code) if code else (records[0].get("code") if records else None)
     payload_date = str(trade_date)[:10] if trade_date else (records[0].get("trade_date") if records else None)
     return {
