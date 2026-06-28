@@ -1195,24 +1195,121 @@ def _summarize_lhb_compare_code_identity_summary(identity_tags: list[dict]) -> d
     }
 
 
+_LHB_RECOGNITION_SCORE_WEIGHTS = {
+    "youzi_abs_net_ratio": 40,
+    "profiled_abs_net_ratio": 25,
+    "shared_abs_net_ratio": 15,
+    "unique_abs_net_ratio": 10,
+    "same_direction_top_alias": 10,
+}
+
+
+def _lhb_compare_identity_reason(identity_tag: str | None) -> str:
+    return {
+        "shared_dominant": "共同游资主导",
+        "unique_dominant": "独有游资主导",
+        "balanced": "共同/独有均衡",
+        "no_youzi": "未识别游资",
+    }.get(identity_tag or "", "游资结构不明")
+
+
+def _summarize_lhb_compare_recognition_leaderboard(
+    rows: list[dict],
+    identity_tags: list[dict],
+    same_direction_aliases: list[dict],
+) -> list[dict]:
+    identity_by_code = {
+        item["code"]: item
+        for item in identity_tags
+        if item.get("code")
+    }
+    same_direction_alias_set = {
+        item["alias"]
+        for item in same_direction_aliases
+        if item.get("alias")
+    }
+    out = []
+    for row in rows:
+        code = row.get("code")
+        if not code:
+            continue
+        identity = identity_by_code.get(code) or {}
+        top_alias = row.get("top_youzi_alias")
+        same_direction_bonus = (
+            _LHB_RECOGNITION_SCORE_WEIGHTS["same_direction_top_alias"]
+            if top_alias in same_direction_alias_set else 0
+        )
+        score = (
+            _lhb_numeric_amount(row.get("youzi_abs_net_ratio"))
+            * _LHB_RECOGNITION_SCORE_WEIGHTS["youzi_abs_net_ratio"]
+            + _lhb_numeric_amount(row.get("profiled_abs_net_ratio"))
+            * _LHB_RECOGNITION_SCORE_WEIGHTS["profiled_abs_net_ratio"]
+            + _lhb_numeric_amount(identity.get("shared_abs_net_ratio"))
+            * _LHB_RECOGNITION_SCORE_WEIGHTS["shared_abs_net_ratio"]
+            + _lhb_numeric_amount(identity.get("unique_abs_net_ratio"))
+            * _LHB_RECOGNITION_SCORE_WEIGHTS["unique_abs_net_ratio"]
+            + same_direction_bonus
+        )
+        reason_parts = [
+            f"游资净额占比{row.get('youzi_abs_net_ratio', 0)}",
+            f"可识别净额占比{row.get('profiled_abs_net_ratio', 0)}",
+            _lhb_compare_identity_reason(identity.get("identity_tag")),
+        ]
+        if same_direction_bonus:
+            reason_parts.append(f"同向共同游资{top_alias}")
+        elif top_alias:
+            reason_parts.append(f"Top游资{top_alias}")
+        out.append({
+            "code": code,
+            "recognition_score": round(score, 2),
+            "rank_reason": "；".join(reason_parts),
+        })
+
+    out = sorted(
+        out,
+        key=lambda item: (-item["recognition_score"], item["code"]),
+    )
+    for idx, item in enumerate(out, start=1):
+        item["rank"] = idx
+    return [
+        {
+            "rank": item["rank"],
+            "code": item["code"],
+            "recognition_score": item["recognition_score"],
+            "rank_reason": item["rank_reason"],
+        }
+        for item in out
+    ]
+
+
 def _apply_lhb_compare_identity_tags_to_rows(rows: list[dict], comparison_summary: dict) -> None:
     tags_by_code = {
         item["code"]: item
         for item in comparison_summary.get("youzi_code_identity_tags") or []
         if item.get("code")
     }
+    leaderboard_by_code = {
+        item["code"]: item
+        for item in comparison_summary.get("youzi_recognition_leaderboard") or []
+        if item.get("code")
+    }
     for row in rows:
         tag = tags_by_code.get(row.get("code"))
-        if not tag:
-            continue
-        row.update({
-            "youzi_identity_tag": tag.get("identity_tag"),
-            "dominant_youzi_scope": tag.get("dominant_youzi_scope"),
-            "dominant_youzi_abs_net_amount": tag.get("dominant_abs_net_amount", 0),
-            "shared_youzi_abs_net_ratio": tag.get("shared_abs_net_ratio", 0),
-            "unique_youzi_abs_net_ratio": tag.get("unique_abs_net_ratio", 0),
-            "youzi_identity_top_alias": tag.get("top_scope_alias"),
-        })
+        if tag:
+            row.update({
+                "youzi_identity_tag": tag.get("identity_tag"),
+                "dominant_youzi_scope": tag.get("dominant_youzi_scope"),
+                "dominant_youzi_abs_net_amount": tag.get("dominant_abs_net_amount", 0),
+                "shared_youzi_abs_net_ratio": tag.get("shared_abs_net_ratio", 0),
+                "unique_youzi_abs_net_ratio": tag.get("unique_abs_net_ratio", 0),
+                "youzi_identity_top_alias": tag.get("top_scope_alias"),
+            })
+        leaderboard_item = leaderboard_by_code.get(row.get("code"))
+        if leaderboard_item:
+            row.update({
+                "youzi_recognition_score": leaderboard_item.get("recognition_score", 0),
+                "youzi_recognition_rank_reason": leaderboard_item.get("rank_reason"),
+            })
 
 
 def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[dict]) -> dict:
@@ -1252,6 +1349,12 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         shared_code_strengths,
         unique_code_strengths,
     )
+    direction_summary = _summarize_lhb_compare_direction_consistency(alias_strengths)
+    recognition_leaderboard = _summarize_lhb_compare_recognition_leaderboard(
+        rows,
+        identity_tags,
+        same_direction_aliases,
+    )
     return {
         "code_count": len(codes),
         "matched_code_count": sum(1 for row in rows if row.get("filtered_count", 0)),
@@ -1273,11 +1376,10 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         "unique_youzi_code_strengths": unique_code_strengths,
         "youzi_code_identity_tags": identity_tags,
         "youzi_code_identity_summary": _summarize_lhb_compare_code_identity_summary(identity_tags),
+        "youzi_recognition_leaderboard": recognition_leaderboard,
         "same_direction_youzi_aliases": same_direction_aliases,
         "mixed_direction_youzi_aliases": mixed_direction_aliases,
-        "youzi_direction_consistency_summary": _summarize_lhb_compare_direction_consistency(
-            alias_strengths,
-        ),
+        "youzi_direction_consistency_summary": direction_summary,
         "youzi_alias_frequency": alias_frequency,
         "youzi_alias_cross_code_strengths": alias_strengths,
     }
