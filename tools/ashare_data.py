@@ -1437,6 +1437,37 @@ def _summarize_lhb_compare_recognition_gap(
     }
 
 
+def _lhb_code_coverage_level(matched_ratio: float) -> str:
+    if matched_ratio >= 1:
+        return "full"
+    if matched_ratio >= 0.5:
+        return "partial"
+    if matched_ratio > 0:
+        return "thin"
+    return "none"
+
+
+def _summarize_lhb_compare_code_coverage(rows: list[dict], codes: list[str]) -> dict:
+    matched_codes = sorted(
+        row.get("code")
+        for row in rows
+        if row.get("code") and row.get("filtered_count", 0)
+    )
+    unmatched_codes = sorted(code for code in codes if code not in matched_codes)
+    code_count = len(codes)
+    matched_count = len(matched_codes)
+    matched_ratio = round(matched_count / code_count, 4) if code_count else 0
+    return {
+        "code_count": code_count,
+        "matched_code_count": matched_count,
+        "unmatched_code_count": len(unmatched_codes),
+        "matched_code_ratio": matched_ratio,
+        "matched_codes": matched_codes,
+        "unmatched_codes": unmatched_codes,
+        "coverage_level": _lhb_code_coverage_level(matched_ratio),
+    }
+
+
 def _apply_lhb_compare_identity_tags_to_rows(rows: list[dict], comparison_summary: dict) -> None:
     tags_by_code = {
         item["code"]: item
@@ -1525,9 +1556,11 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         recognition_leaderboard,
     )
     recognition_gap = _summarize_lhb_compare_recognition_gap(recognition_leaderboard)
+    coverage_summary = _summarize_lhb_compare_code_coverage(rows, codes)
     return {
         "code_count": len(codes),
         "matched_code_count": sum(1 for row in rows if row.get("filtered_count", 0)),
+        "code_coverage_summary": coverage_summary,
         "top_code_by_youzi_abs_net": _lhb_compare_top_code(rows, "youzi_abs_net_amount"),
         "top_code_by_profiled_abs_net": _lhb_compare_top_code(rows, "profiled_abs_net_amount"),
         "top_code_by_profiled_abs_net_ratio": _lhb_compare_top_code(

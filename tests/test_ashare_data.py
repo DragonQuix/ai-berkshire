@@ -1209,6 +1209,15 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
         "comparison_summary": {
             "code_count": 2,
             "matched_code_count": 2,
+            "code_coverage_summary": {
+                "code_count": 2,
+                "matched_code_count": 2,
+                "unmatched_code_count": 0,
+                "matched_code_ratio": 1.0,
+                "matched_codes": ["000004", "000005"],
+                "unmatched_codes": [],
+                "coverage_level": "full",
+            },
             "top_code_by_youzi_abs_net": "000005",
             "top_code_by_profiled_abs_net": "000005",
             "top_code_by_profiled_abs_net_ratio": "000005",
@@ -1784,6 +1793,64 @@ def test_fetch_lhb_compare_summarizes_recognition_gap(monkeypatch):
         "score_gap": 37.07,
         "leadership_level": "strong",
         "interpretation": "000005综合辨识分领先000004 37.07分，领先强度strong",
+    }
+
+
+def test_fetch_lhb_compare_summarizes_code_coverage(monkeypatch):
+    def fake_fetch_range(
+        code,
+        start_date,
+        end_date,
+        list_limit=20,
+        page=1,
+        detail_limit=10,
+        dominant_type=None,
+        dominant_direction=None,
+        youzi_alias=None,
+        min_dominant_net=None,
+    ):
+        if code == "000006":
+            return _lhb_compare_payload(
+                code="000006",
+                filtered_count=0,
+                trade_dates=[],
+                profiled_abs_net_amount=0,
+                profiled_abs_net_ratio=0,
+                youzi_abs_net_amount=0,
+                youzi_abs_net_ratio=0,
+                top_alias=None,
+                top_alias_net=0,
+                youzi_aliases=[],
+                youzi_alias_strengths=[],
+            )
+        return _lhb_compare_payload(
+            code=code,
+            filtered_count=1,
+            trade_dates=["2026-06-25"],
+            profiled_abs_net_amount=800000,
+            profiled_abs_net_ratio=0.8,
+            youzi_abs_net_amount=700000,
+            youzi_abs_net_ratio=0.7,
+            top_alias="章盟主",
+            top_alias_net=-700000,
+        )
+
+    monkeypatch.setattr(ad, "_fetch_lhb_detail_range", fake_fetch_range)
+
+    out = ad._fetch_lhb_compare(
+        codes=["000004", "000005", "000006"],
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+    )
+
+    assert out["comparison_summary"]["code_coverage_summary"] == {
+        "code_count": 3,
+        "matched_code_count": 2,
+        "unmatched_code_count": 1,
+        "matched_code_ratio": 0.6667,
+        "matched_codes": ["000004", "000005"],
+        "unmatched_codes": ["000006"],
+        "coverage_level": "partial",
     }
 
 
