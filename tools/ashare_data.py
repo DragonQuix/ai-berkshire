@@ -30,6 +30,7 @@ from lhb_seat_profiles import (
 )
 
 _TIMEOUT = 15
+_LHB_PROFILE_TYPES = ("institution", "northbound", "youzi", "brokerage", "unknown")
 
 
 def _curl(url):
@@ -563,6 +564,124 @@ def _record_meets_min_dominant_net(record: dict, threshold: float) -> bool:
         return False
 
 
+def _lhb_numeric_amount(value) -> int | float:
+    if value in (None, ""):
+        return 0
+    if isinstance(value, (int, float)):
+        return value
+    try:
+        number = float(str(value).replace(",", ""))
+    except (TypeError, ValueError):
+        return 0
+    return int(number) if number.is_integer() else number
+
+
+def _empty_lhb_range_seat_bucket(profile_type: str, alias: str | None) -> dict:
+    return {
+        "type": profile_type,
+        "alias": alias,
+        "buy_count": 0,
+        "sell_count": 0,
+        "buy_amount": 0,
+        "sell_amount": 0,
+        "net_amount": 0,
+        "trade_dates": [],
+        "seat_names": [],
+    }
+
+
+def _empty_lhb_range_type_bucket() -> dict:
+    return {
+        "seat_count": 0,
+        "buy_count": 0,
+        "sell_count": 0,
+        "buy_amount": 0,
+        "sell_amount": 0,
+        "net_amount": 0,
+    }
+
+
+def _lhb_range_seat_key(seat: dict) -> tuple[str, str, str | None, str]:
+    profile = seat.get("seat_profile") or {}
+    profile_type = profile.get("type") or seat.get("seat_category") or "unknown"
+    if profile_type not in _LHB_PROFILE_TYPES:
+        profile_type = "brokerage"
+    alias = profile.get("alias") or None
+    seat_name = str(seat.get("seat_name") or "")
+    label = alias or seat_name or "unknown"
+    return f"{profile_type}:{label}", profile_type, alias, seat_name
+
+
+def _add_lhb_range_seat(
+    buckets: dict[str, dict],
+    seat: dict,
+    side: str,
+    trade_date: str | None,
+) -> None:
+    key, profile_type, alias, seat_name = _lhb_range_seat_key(seat)
+    bucket = buckets.setdefault(key, _empty_lhb_range_seat_bucket(profile_type, alias))
+    bucket[f"{side}_count"] += 1
+    bucket["buy_amount"] += _lhb_numeric_amount(seat.get("buy_amount"))
+    bucket["sell_amount"] += _lhb_numeric_amount(seat.get("sell_amount"))
+    bucket["net_amount"] += _lhb_numeric_amount(seat.get("net_amount"))
+    if trade_date and trade_date not in bucket["trade_dates"]:
+        bucket["trade_dates"].append(trade_date)
+    if seat_name and seat_name not in bucket["seat_names"]:
+        bucket["seat_names"].append(seat_name)
+
+
+def _public_lhb_range_seat(key: str, bucket: dict, include_key: bool) -> dict:
+    out = {
+        "type": bucket["type"],
+        "alias": bucket["alias"],
+        "buy_count": bucket["buy_count"],
+        "sell_count": bucket["sell_count"],
+        "buy_amount": bucket["buy_amount"],
+        "sell_amount": bucket["sell_amount"],
+        "net_amount": bucket["net_amount"],
+        "trade_dates": sorted(bucket["trade_dates"]),
+        "seat_names": sorted(bucket["seat_names"]),
+    }
+    if include_key:
+        return {"key": key, **out}
+    return out
+
+
+def _summarize_lhb_range_seat_profiles(records: list[dict]) -> dict:
+    buckets: dict[str, dict] = {}
+    for record in records:
+        trade_date = record.get("trade_date")
+        for seat in record.get("buy_seats") or []:
+            _add_lhb_range_seat(buckets, seat, "buy", trade_date)
+        for seat in record.get("sell_seats") or []:
+            _add_lhb_range_seat(buckets, seat, "sell", trade_date)
+
+    by_type = {key: _empty_lhb_range_type_bucket() for key in _LHB_PROFILE_TYPES}
+    youzi_aliases = []
+    for bucket in buckets.values():
+        type_bucket = by_type[bucket["type"]]
+        type_bucket["seat_count"] += 1
+        for field in ("buy_count", "sell_count", "buy_amount", "sell_amount", "net_amount"):
+            type_bucket[field] += bucket[field]
+        if bucket["type"] == "youzi" and bucket["alias"] and bucket["alias"] not in youzi_aliases:
+            youzi_aliases.append(bucket["alias"])
+
+    top_keys = sorted(buckets, key=lambda key: (-abs(buckets[key]["net_amount"]), key))
+    return {
+        "seat_count": len(buckets),
+        "by_type": by_type,
+        "youzi_aliases": sorted(youzi_aliases),
+        "seats": {
+            key: _public_lhb_range_seat(key, buckets[key], include_key=False)
+            for key in sorted(buckets)
+        },
+        "top_seats": [
+            _public_lhb_range_seat(key, buckets[key], include_key=True)
+            for key in top_keys
+        ],
+    }
+
+
 def _fetch_lhb_detail_range(
     code: str | None = None,
     start_date: str | None = None,
@@ -630,6 +749,7 @@ def _fetch_lhb_detail_range(
         "min_dominant_net": min_dominant_net,
         "records": records,
         "range_flow_summary": summarize_lhb_range_flow(records),
+        "range_seat_profile_summary": _summarize_lhb_range_seat_profiles(records),
     }
 
 

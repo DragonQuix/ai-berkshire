@@ -330,6 +330,29 @@ def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):
                 "trade_id": str(trade_id),
                 "trade_date": "2026-06-26" if trade_id == "100357777" else "2026-06-25",
                 "code": "000004",
+                "buy_seats": [{
+                    "seat_name": (
+                        "东方财富证券股份有限公司拉萨东环路第二证券营业部"
+                        if trade_id == "100357777" else "机构专用"
+                    ),
+                    "seat_profile": (
+                        {"type": "youzi", "alias": "拉萨天团"}
+                        if trade_id == "100357777" else {"type": "institution", "alias": "机构专用"}
+                    ),
+                    "buy_amount": 762307 if trade_id == "100357777" else 400000,
+                    "sell_amount": 106076 if trade_id == "100357777" else 100000,
+                    "net_amount": 656231 if trade_id == "100357777" else 300000,
+                }],
+                "sell_seats": [{
+                    "seat_name": (
+                        "国金证券股份有限公司上海奉贤区金碧路证券营业部"
+                        if trade_id == "100357777" else "中信证券股份有限公司杭州延安路证券营业部"
+                    ),
+                    "seat_profile": {"type": "brokerage", "alias": None},
+                    "buy_amount": 0,
+                    "sell_amount": 219258 if trade_id == "100357777" else 100000,
+                    "net_amount": -219258 if trade_id == "100357777" else -100000,
+                }],
                 "seat_flow_analysis": flow,
             }],
         }
@@ -370,6 +393,20 @@ def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):
                 "trade_id": "100357777",
                 "trade_date": "2026-06-26",
                 "code": "000004",
+                "buy_seats": [{
+                    "seat_name": "东方财富证券股份有限公司拉萨东环路第二证券营业部",
+                    "seat_profile": {"type": "youzi", "alias": "拉萨天团"},
+                    "buy_amount": 762307,
+                    "sell_amount": 106076,
+                    "net_amount": 656231,
+                }],
+                "sell_seats": [{
+                    "seat_name": "国金证券股份有限公司上海奉贤区金碧路证券营业部",
+                    "seat_profile": {"type": "brokerage", "alias": None},
+                    "buy_amount": 0,
+                    "sell_amount": 219258,
+                    "net_amount": -219258,
+                }],
                 "seat_flow_analysis": {
                     "institution_net_amount": 0,
                     "northbound_net_amount": 0,
@@ -386,6 +423,20 @@ def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):
                 "trade_id": "100357666",
                 "trade_date": "2026-06-25",
                 "code": "000004",
+                "buy_seats": [{
+                    "seat_name": "机构专用",
+                    "seat_profile": {"type": "institution", "alias": "机构专用"},
+                    "buy_amount": 400000,
+                    "sell_amount": 100000,
+                    "net_amount": 300000,
+                }],
+                "sell_seats": [{
+                    "seat_name": "中信证券股份有限公司杭州延安路证券营业部",
+                    "seat_profile": {"type": "brokerage", "alias": None},
+                    "buy_amount": 0,
+                    "sell_amount": 100000,
+                    "net_amount": -100000,
+                }],
                 "seat_flow_analysis": {
                     "institution_net_amount": 300000,
                     "northbound_net_amount": 0,
@@ -422,6 +473,148 @@ def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):
                 "unknown": 0,
             },
             "youzi_aliases": ["拉萨天团"],
+        },
+        "range_seat_profile_summary": {
+            "seat_count": 4,
+            "by_type": {
+                "institution": {
+                    "seat_count": 1,
+                    "buy_count": 1,
+                    "sell_count": 0,
+                    "buy_amount": 400000,
+                    "sell_amount": 100000,
+                    "net_amount": 300000,
+                },
+                "northbound": {
+                    "seat_count": 0,
+                    "buy_count": 0,
+                    "sell_count": 0,
+                    "buy_amount": 0,
+                    "sell_amount": 0,
+                    "net_amount": 0,
+                },
+                "youzi": {
+                    "seat_count": 1,
+                    "buy_count": 1,
+                    "sell_count": 0,
+                    "buy_amount": 762307,
+                    "sell_amount": 106076,
+                    "net_amount": 656231,
+                },
+                "brokerage": {
+                    "seat_count": 2,
+                    "buy_count": 0,
+                    "sell_count": 2,
+                    "buy_amount": 0,
+                    "sell_amount": 319258,
+                    "net_amount": -319258,
+                },
+                "unknown": {
+                    "seat_count": 0,
+                    "buy_count": 0,
+                    "sell_count": 0,
+                    "buy_amount": 0,
+                    "sell_amount": 0,
+                    "net_amount": 0,
+                },
+            },
+            "youzi_aliases": ["拉萨天团"],
+            "seats": {
+                "brokerage:中信证券股份有限公司杭州延安路证券营业部": {
+                    "type": "brokerage",
+                    "alias": None,
+                    "buy_count": 0,
+                    "sell_count": 1,
+                    "buy_amount": 0,
+                    "sell_amount": 100000,
+                    "net_amount": -100000,
+                    "trade_dates": ["2026-06-25"],
+                    "seat_names": ["中信证券股份有限公司杭州延安路证券营业部"],
+                },
+                "brokerage:国金证券股份有限公司上海奉贤区金碧路证券营业部": {
+                    "type": "brokerage",
+                    "alias": None,
+                    "buy_count": 0,
+                    "sell_count": 1,
+                    "buy_amount": 0,
+                    "sell_amount": 219258,
+                    "net_amount": -219258,
+                    "trade_dates": ["2026-06-26"],
+                    "seat_names": ["国金证券股份有限公司上海奉贤区金碧路证券营业部"],
+                },
+                "institution:机构专用": {
+                    "type": "institution",
+                    "alias": "机构专用",
+                    "buy_count": 1,
+                    "sell_count": 0,
+                    "buy_amount": 400000,
+                    "sell_amount": 100000,
+                    "net_amount": 300000,
+                    "trade_dates": ["2026-06-25"],
+                    "seat_names": ["机构专用"],
+                },
+                "youzi:拉萨天团": {
+                    "type": "youzi",
+                    "alias": "拉萨天团",
+                    "buy_count": 1,
+                    "sell_count": 0,
+                    "buy_amount": 762307,
+                    "sell_amount": 106076,
+                    "net_amount": 656231,
+                    "trade_dates": ["2026-06-26"],
+                    "seat_names": ["东方财富证券股份有限公司拉萨东环路第二证券营业部"],
+                },
+            },
+            "top_seats": [
+                {
+                    "key": "youzi:拉萨天团",
+                    "type": "youzi",
+                    "alias": "拉萨天团",
+                    "buy_count": 1,
+                    "sell_count": 0,
+                    "buy_amount": 762307,
+                    "sell_amount": 106076,
+                    "net_amount": 656231,
+                    "trade_dates": ["2026-06-26"],
+                    "seat_names": ["东方财富证券股份有限公司拉萨东环路第二证券营业部"],
+                },
+                {
+                    "key": "institution:机构专用",
+                    "type": "institution",
+                    "alias": "机构专用",
+                    "buy_count": 1,
+                    "sell_count": 0,
+                    "buy_amount": 400000,
+                    "sell_amount": 100000,
+                    "net_amount": 300000,
+                    "trade_dates": ["2026-06-25"],
+                    "seat_names": ["机构专用"],
+                },
+                {
+                    "key": "brokerage:国金证券股份有限公司上海奉贤区金碧路证券营业部",
+                    "type": "brokerage",
+                    "alias": None,
+                    "buy_count": 0,
+                    "sell_count": 1,
+                    "buy_amount": 0,
+                    "sell_amount": 219258,
+                    "net_amount": -219258,
+                    "trade_dates": ["2026-06-26"],
+                    "seat_names": ["国金证券股份有限公司上海奉贤区金碧路证券营业部"],
+                },
+                {
+                    "key": "brokerage:中信证券股份有限公司杭州延安路证券营业部",
+                    "type": "brokerage",
+                    "alias": None,
+                    "buy_count": 0,
+                    "sell_count": 1,
+                    "buy_amount": 0,
+                    "sell_amount": 100000,
+                    "net_amount": -100000,
+                    "trade_dates": ["2026-06-25"],
+                    "seat_names": ["中信证券股份有限公司杭州延安路证券营业部"],
+                },
+            ],
         },
     }
 
@@ -552,7 +745,13 @@ def test_fetch_lhb_detail_range_filters_by_youzi_alias(monkeypatch):
                 "trade_id": str(trade_id),
                 "trade_date": "2026-06-26" if trade_id == "100357777" else "2026-06-25",
                 "code": "000004",
-                "buy_seats": [{"seat_profile": {"type": "youzi", "alias": alias}}],
+                "buy_seats": [{
+                    "seat_name": f"{alias}常用席位",
+                    "seat_profile": {"type": "youzi", "alias": alias},
+                    "buy_amount": 100 if alias == "拉萨天团" else 300,
+                    "sell_amount": 20 if alias == "拉萨天团" else 900,
+                    "net_amount": 80 if alias == "拉萨天团" else -600,
+                }],
                 "sell_seats": [],
                 "seat_flow_analysis": flow,
             }],
@@ -574,6 +773,20 @@ def test_fetch_lhb_detail_range_filters_by_youzi_alias(monkeypatch):
     assert [record["trade_id"] for record in out["records"]] == ["100357777"]
     assert out["range_flow_summary"]["record_count"] == 1
     assert out["range_flow_summary"]["youzi_aliases"] == ["拉萨天团"]
+    assert out["range_seat_profile_summary"]["seat_count"] == 1
+    assert out["range_seat_profile_summary"]["youzi_aliases"] == ["拉萨天团"]
+    assert out["range_seat_profile_summary"]["top_seats"] == [{
+        "key": "youzi:拉萨天团",
+        "type": "youzi",
+        "alias": "拉萨天团",
+        "buy_count": 1,
+        "sell_count": 0,
+        "buy_amount": 100,
+        "sell_amount": 20,
+        "net_amount": 80,
+        "trade_dates": ["2026-06-26"],
+        "seat_names": ["拉萨天团常用席位"],
+    }]
 
 
 def test_fetch_lhb_detail_range_filters_by_min_dominant_net(monkeypatch):
