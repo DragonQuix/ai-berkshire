@@ -1797,6 +1797,32 @@ def cmd_lhb_compare(
             f"命中覆盖: {coverage.get('matched_code_count', 0)}/"
             f"{coverage.get('code_count', 0)} {coverage.get('coverage_level')}"
         )
+    gap = summary.get("youzi_recognition_gap_summary") or {}
+    if gap:
+        print(
+            f"领先差距: {gap.get('leader_code') or '-'} 领先 "
+            f"{gap.get('runner_up_code') or '-'} {gap.get('score_gap', 0)}分 "
+            f"({gap.get('leadership_level') or '-'})"
+        )
+        if gap.get("interpretation"):
+            print(f"  {gap['interpretation']}")
+    composite = summary.get("youzi_composite_signal_summary") or {}
+    if composite:
+        print(
+            f"组合信号: {composite.get('signal_tag') or '-'}，"
+            f"领先代码={composite.get('leading_code') or '-'}"
+        )
+        if composite.get("interpretation"):
+            print(f"  {composite['interpretation']}")
+    top_aliases = summary.get("top_youzi_alias_comparison") or []
+    for item in top_aliases[:3]:
+        print(
+            f"Top游资横向: {item.get('code') or '-'} "
+            f"{item.get('top_youzi_alias') or '-'} "
+            f"{_fmt_yi(item.get('top_youzi_alias_abs_net_amount'))} "
+            f"scope={item.get('alias_scope') or '-'} "
+            f"辨识分={item.get('youzi_recognition_score', '-')}"
+        )
     for row in payload["rows"]:
         print(
             f"{row['rank']:>2}. {row['code']} "
