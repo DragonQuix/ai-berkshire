@@ -1801,7 +1801,9 @@ def cmd_lhb_compare(
             f"{row['rank']:>2}. {row['code']} "
             f"游资净额绝对值={_fmt_yi(row['youzi_abs_net_amount'])} "
             f"可识别净额绝对值={_fmt_yi(row['profiled_abs_net_amount'])} "
-            f"Top游资={row['top_youzi_alias'] or '-'}"
+            f"Top游资={row['top_youzi_alias'] or '-'} "
+            f"辨识分={row.get('youzi_recognition_score', '-')} "
+            f"标签={row.get('youzi_identity_tag') or '-'}"
         )
 
 

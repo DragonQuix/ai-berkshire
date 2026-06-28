@@ -1978,6 +1978,53 @@ def test_cmd_lhb_compare_prints_readiness_summary(monkeypatch, capsys):
     assert "仅2/3个代码命中龙虎榜，排序可参考但需补齐未命中代码000006" in out
 
 
+def test_cmd_lhb_compare_prints_row_recognition_fields(monkeypatch, capsys):
+    def fake_fetch_compare(
+        codes,
+        start_date,
+        end_date,
+        list_limit=20,
+        page=1,
+        detail_limit=10,
+        dominant_type=None,
+        dominant_direction=None,
+        youzi_alias=None,
+        min_dominant_net=None,
+        sort_by="youzi_abs_net_amount",
+    ):
+        return {
+            "_source": "legacy",
+            "source_detail": "eastmoney:lhb-compare",
+            "codes": codes,
+            "start_date": start_date,
+            "end_date": end_date,
+            "comparison_summary": {},
+            "rows": [
+                {
+                    "rank": 1,
+                    "code": "000004",
+                    "youzi_abs_net_amount": 700000,
+                    "profiled_abs_net_amount": 800000,
+                    "top_youzi_alias": "章盟主",
+                    "youzi_recognition_score": 73.0,
+                    "youzi_identity_tag": "shared_dominant",
+                },
+            ],
+        }
+
+    monkeypatch.setattr(ad, "_fetch_lhb_compare", fake_fetch_compare)
+
+    ad.cmd_lhb_compare(
+        ["000004", "000005"],
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+    )
+
+    out = capsys.readouterr().out
+    assert "辨识分=73.0" in out
+    assert "标签=shared_dominant" in out
+
+
 def _lhb_compare_payload(
     code,
     filtered_count,
