@@ -1218,6 +1218,14 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                 "unmatched_codes": [],
                 "coverage_level": "full",
             },
+            "compare_readiness_summary": {
+                "readiness_level": "actionable",
+                "primary_reason": "strong_leadership",
+                "coverage_level": "full",
+                "leadership_level": "strong",
+                "signal_tag": "shared_same_direction_cluster",
+                "interpretation": "样本全命中且领先差距明确，可直接用于横向辨识排序",
+            },
             "top_code_by_youzi_abs_net": "000005",
             "top_code_by_profiled_abs_net": "000005",
             "top_code_by_profiled_abs_net_ratio": "000005",
@@ -1823,6 +1831,7 @@ def test_fetch_lhb_compare_summarizes_code_coverage(monkeypatch):
                 youzi_aliases=[],
                 youzi_alias_strengths=[],
             )
+        top_alias_net = 700000 if code == "000004" else -700000
         return _lhb_compare_payload(
             code=code,
             filtered_count=1,
@@ -1832,7 +1841,7 @@ def test_fetch_lhb_compare_summarizes_code_coverage(monkeypatch):
             youzi_abs_net_amount=700000,
             youzi_abs_net_ratio=0.7,
             top_alias="章盟主",
-            top_alias_net=-700000,
+            top_alias_net=top_alias_net,
         )
 
     monkeypatch.setattr(ad, "_fetch_lhb_detail_range", fake_fetch_range)
@@ -1851,6 +1860,64 @@ def test_fetch_lhb_compare_summarizes_code_coverage(monkeypatch):
         "matched_codes": ["000004", "000005"],
         "unmatched_codes": ["000006"],
         "coverage_level": "partial",
+    }
+
+
+def test_fetch_lhb_compare_summarizes_compare_readiness(monkeypatch):
+    def fake_fetch_range(
+        code,
+        start_date,
+        end_date,
+        list_limit=20,
+        page=1,
+        detail_limit=10,
+        dominant_type=None,
+        dominant_direction=None,
+        youzi_alias=None,
+        min_dominant_net=None,
+    ):
+        if code == "000006":
+            return _lhb_compare_payload(
+                code="000006",
+                filtered_count=0,
+                trade_dates=[],
+                profiled_abs_net_amount=0,
+                profiled_abs_net_ratio=0,
+                youzi_abs_net_amount=0,
+                youzi_abs_net_ratio=0,
+                top_alias=None,
+                top_alias_net=0,
+                youzi_aliases=[],
+                youzi_alias_strengths=[],
+            )
+        top_alias_net = 700000 if code == "000004" else -700000
+        return _lhb_compare_payload(
+            code=code,
+            filtered_count=1,
+            trade_dates=["2026-06-25"],
+            profiled_abs_net_amount=800000,
+            profiled_abs_net_ratio=0.8,
+            youzi_abs_net_amount=700000,
+            youzi_abs_net_ratio=0.7,
+            top_alias="章盟主",
+            top_alias_net=top_alias_net,
+        )
+
+    monkeypatch.setattr(ad, "_fetch_lhb_detail_range", fake_fetch_range)
+
+    out = ad._fetch_lhb_compare(
+        codes=["000004", "000005", "000006"],
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+    )
+
+    assert out["comparison_summary"]["compare_readiness_summary"] == {
+        "readiness_level": "use_with_caution",
+        "primary_reason": "partial_coverage",
+        "coverage_level": "partial",
+        "leadership_level": "none",
+        "signal_tag": "shared_mixed_direction_divergence",
+        "interpretation": "仅2/3个代码命中龙虎榜，排序可参考但需补齐未命中代码000006",
     }
 
 

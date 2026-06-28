@@ -1468,6 +1468,50 @@ def _summarize_lhb_compare_code_coverage(rows: list[dict], codes: list[str]) -> 
     }
 
 
+def _summarize_lhb_compare_readiness(
+    coverage_summary: dict,
+    recognition_gap: dict,
+    composite_signal: dict,
+) -> dict:
+    coverage_level = coverage_summary.get("coverage_level")
+    leadership_level = recognition_gap.get("leadership_level")
+    signal_tag = composite_signal.get("signal_tag")
+    unmatched_codes = coverage_summary.get("unmatched_codes") or []
+    matched_count = coverage_summary.get("matched_code_count", 0)
+    code_count = coverage_summary.get("code_count", 0)
+
+    if coverage_level != "full":
+        readiness = "use_with_caution" if matched_count >= 2 else "insufficient"
+        primary_reason = "partial_coverage" if matched_count else "no_coverage"
+        interpretation = (
+            f"仅{matched_count}/{code_count}个代码命中龙虎榜，"
+            f"排序可参考但需补齐未命中代码{','.join(unmatched_codes)}"
+            if unmatched_codes else
+            f"仅{matched_count}/{code_count}个代码命中龙虎榜，样本覆盖不足"
+        )
+    elif leadership_level in {"strong", "moderate"} and signal_tag != "shared_mixed_direction_divergence":
+        readiness = "actionable"
+        primary_reason = "strong_leadership"
+        interpretation = "样本全命中且领先差距明确，可直接用于横向辨识排序"
+    elif signal_tag == "shared_mixed_direction_divergence":
+        readiness = "use_with_caution"
+        primary_reason = "direction_divergence"
+        interpretation = "样本全命中但共同游资方向分歧，需结合分时和题材强弱复核"
+    else:
+        readiness = "reference_only"
+        primary_reason = "weak_leadership"
+        interpretation = "样本全命中但领先差距不明显，仅适合作为参考排序"
+
+    return {
+        "readiness_level": readiness,
+        "primary_reason": primary_reason,
+        "coverage_level": coverage_level,
+        "leadership_level": leadership_level,
+        "signal_tag": signal_tag,
+        "interpretation": interpretation,
+    }
+
+
 def _apply_lhb_compare_identity_tags_to_rows(rows: list[dict], comparison_summary: dict) -> None:
     tags_by_code = {
         item["code"]: item
@@ -1557,10 +1601,16 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
     )
     recognition_gap = _summarize_lhb_compare_recognition_gap(recognition_leaderboard)
     coverage_summary = _summarize_lhb_compare_code_coverage(rows, codes)
+    readiness_summary = _summarize_lhb_compare_readiness(
+        coverage_summary,
+        recognition_gap,
+        composite_signal,
+    )
     return {
         "code_count": len(codes),
         "matched_code_count": sum(1 for row in rows if row.get("filtered_count", 0)),
         "code_coverage_summary": coverage_summary,
+        "compare_readiness_summary": readiness_summary,
         "top_code_by_youzi_abs_net": _lhb_compare_top_code(rows, "youzi_abs_net_amount"),
         "top_code_by_profiled_abs_net": _lhb_compare_top_code(rows, "profiled_abs_net_amount"),
         "top_code_by_profiled_abs_net_ratio": _lhb_compare_top_code(
