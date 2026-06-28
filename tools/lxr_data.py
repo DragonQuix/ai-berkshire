@@ -1536,6 +1536,7 @@ class LxrData:
         dominant_type: Optional[str] = None,
         dominant_direction: Optional[str] = None,
         youzi_alias: Optional[str] = None,
+        min_dominant_net: Optional[float] = None,
         source: str = "auto",
     ) -> dict:
         """获取 A 股龙虎榜买卖席位明细。当前统一入口走东方财富免费源。"""
@@ -1554,6 +1555,7 @@ class LxrData:
                 dominant_type,
                 dominant_direction,
                 youzi_alias,
+                min_dominant_net,
             )),
         ])
 
@@ -1570,6 +1572,7 @@ class LxrData:
         dominant_type: Optional[str],
         dominant_direction: Optional[str],
         youzi_alias: Optional[str],
+        min_dominant_net: Optional[float],
     ) -> dict:
         args = ["lhb-detail"]
         if code:
@@ -1594,6 +1597,8 @@ class LxrData:
             args.extend(["--dominant-direction", str(dominant_direction)])
         if youzi_alias:
             args.extend(["--youzi-alias", str(youzi_alias)])
+        if min_dominant_net is not None:
+            args.extend(["--min-dominant-net", str(min_dominant_net)])
         args.append("--json")
         text = self._call_legacy_tool(args)
         data = json.loads(text)
@@ -1852,6 +1857,12 @@ def _cli():
         help="区间模式下按资金主导方向过滤",
     )
     p_lhb_detail.add_argument("--youzi-alias", default=None, help="区间模式下按游资/活跃席位别名过滤")
+    p_lhb_detail.add_argument(
+        "--min-dominant-net",
+        type=float,
+        default=None,
+        help="区间模式下按主导资金绝对净额下限过滤",
+    )
     p_lhb_detail.add_argument("--source", choices=["auto", "legacy"], default="auto")
     p_lhb_detail.add_argument("--quiet", action="store_true")
 
@@ -1944,6 +1955,7 @@ def _cli():
             dominant_type=args.dominant_type,
             dominant_direction=args.dominant_direction,
             youzi_alias=args.youzi_alias,
+            min_dominant_net=args.min_dominant_net,
             source=args.source,
         )
     elif args.command == "datapack":

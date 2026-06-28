@@ -28,7 +28,7 @@
 | `kline <code> [--days N] [--adjust qfq]` | 前复权K线（A股/港股） | `kline 00700 --days 120` |
 | `shareholders <code> --kind {majority,num,fund}` | 前十大股东/股东人数/基金持股 | `shareholders 600519 --kind majority` |
 | `lhb [code] [--limit N]` | A股龙虎榜明细（东方财富免费源，`_source: legacy`） | `lhb 600519 --limit 5` |
-| `lhb-detail [code] --date YYYY-MM-DD` / `--trade-id ID` / `--start-date YYYY-MM-DD --end-date YYYY-MM-DD` | A股龙虎榜买卖席位明细；区间模式先筛龙虎榜记录再按 `trade_id` 批量拉详情，并输出 `range_flow_summary`；可用 `--dominant-type` / `--dominant-direction` 过滤资金主导方，或用 `--youzi-alias` 过滤指定游资/活跃席位；席位含 `seat_category`、`seat_profile`，记录含 `seat_profile_summary` / `seat_amount_summary` / `seat_flow_analysis`；`source_detail: legacy:ashare_data/lhb-detail` | `lhb-detail 000004 --start-date 2026-06-01 --end-date 2026-06-26 --youzi-alias 拉萨天团` |
+| `lhb-detail [code] --date YYYY-MM-DD` / `--trade-id ID` / `--start-date YYYY-MM-DD --end-date YYYY-MM-DD` | A股龙虎榜买卖席位明细；区间模式先筛龙虎榜记录再按 `trade_id` 批量拉详情，并输出 `range_flow_summary`；可用 `--dominant-type` / `--dominant-direction` 过滤资金主导方，用 `--youzi-alias` 过滤指定游资/活跃席位，或用 `--min-dominant-net` 过滤主导资金绝对净额下限；席位含 `seat_category`、`seat_profile`，记录含 `seat_profile_summary` / `seat_amount_summary` / `seat_flow_analysis`；`source_detail: legacy:ashare_data/lhb-detail` | `lhb-detail 000004 --start-date 2026-06-01 --end-date 2026-06-26 --min-dominant-net 500000` |
 
 ### 行业深度与治理（阶段4）
 | 命令 | 说明 | 示例 |

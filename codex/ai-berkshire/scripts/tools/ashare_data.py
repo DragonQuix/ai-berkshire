@@ -555,6 +555,14 @@ def _record_has_youzi_alias(record: dict, alias: str) -> bool:
     return alias in (flow.get("dominant_aliases") or [])
 
 
+def _record_meets_min_dominant_net(record: dict, threshold: float) -> bool:
+    amount = (record.get("seat_flow_analysis") or {}).get("dominant_net_amount")
+    try:
+        return abs(float(amount)) >= threshold
+    except (TypeError, ValueError):
+        return False
+
+
 def _fetch_lhb_detail_range(
     code: str | None = None,
     start_date: str | None = None,
@@ -565,6 +573,7 @@ def _fetch_lhb_detail_range(
     dominant_type: str | None = None,
     dominant_direction: str | None = None,
     youzi_alias: str | None = None,
+    min_dominant_net: float | None = None,
 ) -> dict:
     if not start_date or not end_date:
         raise ValueError("lhb-detail 日期区间需要 --start-date 和 --end-date")
@@ -599,6 +608,11 @@ def _fetch_lhb_detail_range(
         ]
     if youzi_alias:
         records = [record for record in records if _record_has_youzi_alias(record, youzi_alias)]
+    if min_dominant_net is not None:
+        records = [
+            record for record in records
+            if _record_meets_min_dominant_net(record, min_dominant_net)
+        ]
     return {
         "_source": "legacy",
         "source_detail": "eastmoney:lhb-detail-range",
@@ -613,6 +627,7 @@ def _fetch_lhb_detail_range(
         "dominant_type": dominant_type,
         "dominant_direction": dominant_direction,
         "youzi_alias": youzi_alias,
+        "min_dominant_net": min_dominant_net,
         "records": records,
         "range_flow_summary": summarize_lhb_range_flow(records),
     }
@@ -673,6 +688,7 @@ def cmd_lhb_detail(
     dominant_type: str | None = None,
     dominant_direction: str | None = None,
     youzi_alias: str | None = None,
+    min_dominant_net: float | None = None,
 ):
     """龙虎榜买卖席位明细。"""
     if start_date or end_date:
@@ -686,6 +702,7 @@ def cmd_lhb_detail(
             dominant_type,
             dominant_direction,
             youzi_alias,
+            min_dominant_net,
         )
     else:
         payload = _fetch_lhb_detail(code, trade_date, trade_id, limit)
@@ -858,6 +875,12 @@ def main():
         help="区间模式下按资金主导方向过滤",
     )
     p_lhb_detail.add_argument("--youzi-alias", default=None, help="区间模式下按游资/活跃席位别名过滤")
+    p_lhb_detail.add_argument(
+        "--min-dominant-net",
+        type=float,
+        default=None,
+        help="区间模式下按主导资金绝对净额下限过滤",
+    )
     p_lhb_detail.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
 
     args = parser.parse_args()
@@ -889,6 +912,7 @@ def main():
             args.dominant_type,
             args.dominant_direction,
             args.youzi_alias,
+            args.min_dominant_net,
         ),
     }
     cmds[args.command]()
