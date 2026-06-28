@@ -1,24 +1,28 @@
 # ai-berkshire Roadmap
 
-## P0：近期（1-2个月）
+## P0：已完成（2026-06-28）
 
-### 权限安全多 Agent 架构后续加固
+> 状态：P0 已关闭。后续开发重心转入 P1。以下能力作为当前基线维护，不再把席位画像库持续扩展、更多免费 A 股财务/行情源覆盖、真实题材板块龙虎榜对比列为近期目标。
+
+### 权限安全多 Agent 架构加固
 > 2026-06-28 已落地：`docs/source-pack-templates.md` 标准化 5 类 source pack；`tools/verify_multi_agent_permissions.py` 扫描高风险后台 Agent 旧句式；`tools/verify_channel_capability.py --quick` 已覆盖 18 个 root/Codex reference SHA256 同步检查。
 
-- 将团队类 Skill 的 source pack 模板标准化，覆盖上市公司、财报、未上市公司、新闻异动和公众号文章
-- 新增静态校验脚本，扫描 `skills/*.md` 与 Codex reference 中的高风险后台 Agent 取数/写文件句式
-- 扩展同步校验，覆盖全部 18 个 Skill 的 root/codex reference SHA256 一致性
+- 已完成团队类 Skill 的 source pack 模板标准化，覆盖上市公司、财报、未上市公司、新闻异动和公众号文章
+- 已新增静态校验脚本，扫描 `skills/*.md` 与 Codex reference 中的高风险后台 Agent 取数/写文件句式
+- 已扩展同步校验，覆盖全部 18 个 Skill 的 root/codex reference SHA256 一致性
 - 参考 ADR：`docs/adr/2026-06-28-permission-safe-multi-agent.md`
 
 ### A股数据源接入
-> 2026-06-28 已新增小切片：`tools/ashare_data.py lhb` 与 `tools/lxr_data.py lhb` 接入东方财富龙虎榜免费源；同日继续新增 `lhb-detail`，按 `TRADE_ID` 或 `code + date` 拉取买卖席位明细，并补充 `seat_profile` / `seat_profile_summary` 做席位画像与游资识别。随后新增 `lhb-detail --start-date --end-date` 区间批量筛选，先筛龙虎榜记录再按 `trade_id` 拉详情，并在记录层输出 `seat_amount_summary` 聚合机构/北向/游资/营业部买卖净额、`seat_flow_analysis` 标注资金主导方；区间 payload 追加 `range_flow_summary` 作为多日聚合摘要，追加 `range_seat_profile_summary` 按过滤后记录聚合席位画像、别名净额与 top seats，并内置 `recognition_summary` 汇总可识别席位数量、游资别名数、可识别净额绝对值、游资净额绝对值、可识别主导类型、席位/净额占比和 `top_youzi_seats`，同时输出按游资 alias 聚合并按绝对净额排序的 `youzi_alias_strengths`，作为后续同板块辨识度对比的别名排序基础；继续新增 `lhb-compare`，支持用户给定 2-4 个代码做同区间龙虎榜辨识度排序，复用既有区间模式与过滤条件，`rows` 直接带行级游资辨识标签、共同/独有占比、综合辨识分和排行原因，并支持 `--sort-by youzi_recognition_score` 显式按综合辨识分排序，非 JSON 输出直接展示对比可用性、命中覆盖、领先差距、组合信号、Top 游资横向对比、方向一致性/分歧摘要、共同/独有游资贡献 Top、行级辨识分和标签，并在 `comparison_summary` 汇总命中覆盖、对比可用性、共同游资 alias、alias 覆盖频次、共同游资强度占比、共同游资集中度、每股共同/独有游资贡献度、每股游资辨识来源标签、标签数量/占比汇总、综合辨识度排行、领先代码与第二名分差、每股 Top 游资别名横向对比、共同/独有/方向/集中度组合信号、跨代码 alias 净额强度、同向/分歧方向及方向一致性汇总和领先代码，不接真实同板块成分 API。输出 canonical `_source: legacy`，详细渠道写入 `source_detail`。
+> 2026-06-28 已新增小切片：`tools/ashare_data.py lhb` 与 `tools/lxr_data.py lhb` 接入东方财富龙虎榜免费源；同日继续新增 `lhb-detail`，按 `TRADE_ID` 或 `code + date` 拉取买卖席位明细，并补充 `seat_profile` / `seat_profile_summary` 做席位画像与游资识别。随后新增 `lhb-detail --start-date --end-date` 区间批量筛选，先筛龙虎榜记录再按 `trade_id` 拉详情，并在记录层输出 `seat_amount_summary` 聚合机构/北向/游资/营业部买卖净额、`seat_flow_analysis` 标注资金主导方；区间 payload 追加 `range_flow_summary` 作为多日聚合摘要，追加 `range_seat_profile_summary` 按过滤后记录聚合席位画像、别名净额与 top seats，并内置 `recognition_summary` 汇总可识别席位数量、游资别名数、可识别净额绝对值、游资净额绝对值、可识别主导类型、席位/净额占比和 `top_youzi_seats`，同时输出按游资 alias 聚合并按绝对净额排序的 `youzi_alias_strengths`，作为后续同板块辨识度对比的别名排序基础；继续新增 `lhb-compare`，支持用户给定 2-4 个代码做同区间龙虎榜辨识度排序，复用既有区间模式与过滤条件，`rows` 直接带行级游资辨识标签、共同/独有占比、综合辨识分和排行原因，并支持 `--sort-by youzi_recognition_score` 显式按综合辨识分排序，支持 `--min-recognition-score` 过滤低综合辨识分行并保留 `filtered_out_codes`；继续新增 `lhb-industry-compare`，基于理杏仁申万行业成分自动取锚定股票同板块最多 4 个代码再复用 `lhb-compare`，非 JSON 输出直接展示对比可用性、命中覆盖、领先差距、组合信号、Top 游资横向对比、方向一致性/分歧摘要、共同/独有游资贡献 Top、行级辨识分和标签，并在 `comparison_summary` 汇总命中覆盖、对比可用性、共同游资 alias、alias 覆盖频次、共同游资强度占比、共同游资集中度、每股共同/独有游资贡献度、每股游资辨识来源标签、标签数量/占比汇总、综合辨识度排行、领先代码与第二名分差、每股 Top 游资别名横向对比、共同/独有/方向/集中度组合信号、跨代码 alias 净额强度、同向/分歧方向及方向一致性汇总和领先代码。输出 canonical `_source: legacy` 或 `lixinger+legacy`，详细渠道写入 `source_detail`。
 
-- 接入 akshare、东方财富等免费数据源
-- 覆盖 A 股财务数据、行情、龙虎榜
-- 龙虎榜下一步：席位画像库持续扩展、同板块龙虎榜辨识度对比
-- 现有 Skill 无需改动，数据层扩展即可
+- 已接入东方财富龙虎榜免费源，并经 `lxr_data.py` 统一入口输出 `_source` / `source_detail`
+- 已覆盖 A 股龙虎榜列表、买卖席位明细、区间聚合、多股对比、同申万行业对比
+- 已保留既有 A 股财务、行情免费源兼容入口
+- 冻结项：不继续追踪席位画像库扩展、更多免费 A 股财务/行情源覆盖、真实题材板块龙虎榜对比；如未来重新需要，再从 P1/P2 重新立项
 
-## P1：中期（3-6个月）
+## P1：下一阶段
+
+> 状态：准备启动。P1 优先目标应选择一个能端到端提升投研产物质量的切片，避免同时推进多个方向。
 
 ### HTML 报告输出
 - 在 Markdown 基础上增加 HTML 报告格式
