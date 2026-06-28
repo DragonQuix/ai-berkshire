@@ -36,6 +36,8 @@ python tools/team_research_outputs.py validate reports/{公司名}
 
 该命令只做结构校验，不替代事实抽检。只有结构校验通过且 `audit-results.json` 的事实抽检判决为 `pass`，最终报告才可发布。
 
+结构校验会检查最终报告中出现的显式来源 ref（如 `S1`、`E2`、`P3`、`A4`）是否存在于 `source-index.md` 的 ref 列。若最终报告引用未定义来源 ref，校验必须失败。
+
 ## `data-pack.json` 最小结构
 
 ```json
@@ -163,3 +165,4 @@ python tools/team_research_outputs.py validate reports/{公司名}
 - `audit-results.json` verdict 为 `pass`。
 - 最终报告包含关键数据溯源和冲突仲裁小节。
 - `python tools/team_research_outputs.py validate reports/{公司名}` 返回 `pass`。
+- 最终报告没有引用未定义来源 ref。

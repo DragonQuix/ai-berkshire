@@ -59,3 +59,13 @@ def test_contract_and_investment_team_reference_validate_command() -> None:
 
     for text in (docs, root, codex):
         assert "python tools/team_research_outputs.py validate" in text
+
+
+def test_contract_and_investment_team_define_ref_consistency_gate() -> None:
+    docs = read_text("docs/team-research-output-contract.md")
+    root = read_text("skills/investment-team.md")
+    codex = read_text("codex/ai-berkshire/references/skills/investment-team.md")
+
+    for text in (docs, root, codex):
+        assert "未定义来源 ref" in text
+        assert "source-index.md" in text

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -29,6 +30,8 @@ REQUIRED_ROOT_FILES = (
     "audit-results.json",
     "最终报告.md",
 )
+
+SOURCE_REF_RE = re.compile(r"\b[SEPA]\d+\b")
 
 
 def build_data_pack(company: str, ticker: str, market: str, generated_at: str) -> dict[str, Any]:
@@ -237,10 +240,29 @@ def _load_json(path: Path, invalid_files: list[dict[str, str]]) -> dict[str, Any
         return None
 
 
+def extract_source_index_refs(text: str) -> set[str]:
+    refs: set[str] = set()
+    for line in text.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if not cells:
+            continue
+        first = cells[0]
+        if SOURCE_REF_RE.fullmatch(first):
+            refs.add(first)
+    return refs
+
+
+def extract_report_refs(text: str) -> set[str]:
+    return set(SOURCE_REF_RE.findall(text))
+
+
 def validate_team_research_outputs(company_dir: str | Path) -> dict[str, Any]:
     root = Path(company_dir)
     missing_files: list[str] = []
     invalid_files: list[dict[str, str]] = []
+    undefined_refs: list[str] = []
 
     for filename in REQUIRED_ROOT_FILES:
         if not (root / filename).exists():
@@ -264,12 +286,24 @@ def validate_team_research_outputs(company_dir: str | Path) -> dict[str, Any]:
         if audit is not None and audit.get("verdict") not in {"pass", "reject"}:
             invalid_files.append({"file": "audit-results.json", "reason": "verdict must be pass or reject"})
 
+    source_refs: set[str] = set()
+    source_index_path = root / "source-index.md"
+    if source_index_path.exists():
+        source_refs = extract_source_index_refs(source_index_path.read_text(encoding="utf-8"))
+
     report_path = root / "最终报告.md"
     if report_path.exists():
         report = report_path.read_text(encoding="utf-8")
         for section in ("## 关键数据溯源", "## 角色冲突与 Team Lead 仲裁"):
             if section not in report:
                 invalid_files.append({"file": "最终报告.md", "reason": f"missing section: {section}"})
+        report_refs = extract_report_refs(report)
+        undefined_refs = sorted(report_refs - source_refs)
+        if undefined_refs:
+            invalid_files.append({
+                "file": "最终报告.md",
+                "reason": f"undefined source refs: {', '.join(undefined_refs)}",
+            })
 
     status = "pass" if not missing_files and not invalid_files else "fail"
     return {
@@ -277,6 +311,7 @@ def validate_team_research_outputs(company_dir: str | Path) -> dict[str, Any]:
         "status": status,
         "missing_files": missing_files,
         "invalid_files": invalid_files,
+        "undefined_refs": undefined_refs,
     }
 
 

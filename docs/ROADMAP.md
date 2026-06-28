@@ -40,7 +40,7 @@
 - 输出对比矩阵和择优建议
 
 ### 团队研究产物结构升级
-> 2026-06-28 已启动第一切片：新增 `docs/team-research-output-contract.md`，将团队研究必需产物、关键数据溯源、角色冲突仲裁与准出规则固化为可测试 contract，并要求 `/investment-team` 遵循。同日继续新增 `tools/team_research_outputs.py`，可初始化 `data-pack.json`、`source-index.md`、`role-briefs/`、`audit-results.json` 和 `最终报告.md` 空模板；`audit-results.json` 初始 `verdict` 为 `reject`，防止未抽检即发布。随后追加 `validate` 子命令，用于准出前检查必需产物、JSON 结构和最终报告溯源/仲裁小节。
+> 2026-06-28 已启动第一切片：新增 `docs/team-research-output-contract.md`，将团队研究必需产物、关键数据溯源、角色冲突仲裁与准出规则固化为可测试 contract，并要求 `/investment-team` 遵循。同日继续新增 `tools/team_research_outputs.py`，可初始化 `data-pack.json`、`source-index.md`、`role-briefs/`、`audit-results.json` 和 `最终报告.md` 空模板；`audit-results.json` 初始 `verdict` 为 `reject`，防止未抽检即发布。随后追加 `validate` 子命令，用于准出前检查必需产物、JSON 结构、最终报告溯源/仲裁小节和未定义来源 ref。
 
 - 默认生成 `data-pack.json`、`source-index.md`、`role-briefs/`、`audit-results.json` 与最终报告
 - 最终报告中的关键数据能追溯到资料包或来源索引

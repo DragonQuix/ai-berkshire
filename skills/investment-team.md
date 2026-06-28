@@ -92,6 +92,8 @@ python tools/team_research_outputs.py validate reports/{公司名}
 
 结构校验通过不等于事实抽检通过；最终发布仍必须满足 `audit-results.json` verdict 为 `pass`。
 
+若最终报告引用未定义来源 ref（即 ref 未出现在 `source-index.md` 的 ref 列），结构校验必须打回，Team Lead 需要补齐来源索引或修正报告引用。
+
 最终报告中的关键数据必须能追溯到 `data-pack.json` 或 `source-index.md`；角色结论与最终结论冲突时，必须写明 Team Lead 的仲裁理由。
 
 `role-briefs/` 至少包含：
