@@ -41,10 +41,13 @@
 
 ### 团队研究产物结构升级
 > 2026-06-28 已启动第一切片：新增 `docs/team-research-output-contract.md`，将团队研究必需产物、关键数据溯源、角色冲突仲裁与准出规则固化为可测试 contract，并要求 `/investment-team` 遵循。同日继续新增 `tools/team_research_outputs.py`，可初始化 `data-pack.json`、`source-index.md`、`role-briefs/`、`audit-results.json` 和 `最终报告.md` 空模板；`audit-results.json` 初始 `verdict` 为 `reject`，防止未抽检即发布。随后追加 `validate` 子命令，用于准出前检查必需产物、JSON 结构、最终报告溯源/仲裁小节、未定义来源 ref，并继续覆盖 `data-pack.json.source_refs` 与 `audit-results.json.items[*].source_ref`。
+>
+> 2026-06-28 继续推进第二切片（抽检闭环）：`tools/team_research_outputs.py` 新增 `audit-extract` 子命令，从最终报告采样（复用 `tools/report_audit.py` 的抽取与采样逻辑）直接生成 `audit-results.json.items[*]` 的 contract 结构（`status=pending`、`verdict` 重置为 `reject`），打通 `report_audit` 输出与 contract 格式之间需要手工翻译的鸿沟；`validate` 同步强化为校验 `items[*].status` 取值（`pass`/`fail`/`pending`）、必填字段、`pass`/`fail` 项须携带 `verified_value` 与 `source_ref`、`verdict` 为 `pass` 时 `items` 非空且全部 `status==pass`。`docs/team-research-output-contract.md` 与 `skills/investment-team.md`（root+codex）已固化抽检闭环流程。
 
 - 默认生成 `data-pack.json`、`source-index.md`、`role-briefs/`、`audit-results.json` 与最终报告
 - 最终报告中的关键数据能追溯到资料包或来源索引
 - 角色结论与最终结论冲突时，必须写明 Team Lead 的仲裁理由
+- `audit-results.json` 抽检清单可由 `audit-extract` 从最终报告自动生成，`validate` 把关 item 结构与 verdict/status 一致性
 
 ## P2：长期（6个月+）
 
