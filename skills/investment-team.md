@@ -92,6 +92,8 @@ python tools/team_research_outputs.py validate reports/{公司名}
 
 结构校验通过不等于事实抽检通过；最终发布仍必须满足 `audit-results.json` verdict 为 `pass`。
 
+`audit-results.json.items[*].status` 只能是 `pass`、`fail` 或 `pending`；`claim`、`report_location`、`expected_value` 必须非空；`status` 为 `pass`/`fail` 时 `verified_value` 与 `source_ref` 必须非空且 `source_ref` 在 `source-index.md` 中已定义；`verdict` 为 `pass` 时 `items` 必须非空且全部 `status == pass`，否则结构校验打回。
+
 若最终报告引用未定义来源 ref（即 ref 未出现在 `source-index.md` 的 ref 列），结构校验必须打回，Team Lead 需要补齐来源索引或修正报告引用。
 
 同一规则也适用于 `data-pack.json` 任意层级的 `source_refs` 列表，以及 `audit-results.json.items[*].source_ref` 字段；这些字段不得引用未定义来源 ref。
@@ -266,20 +268,23 @@ python tools/team_research_outputs.py validate reports/{公司名}
 
 ### 第九步：数据抽检（准出流程）
 
+最终报告写完后，用 `team_research_outputs.py audit-extract` 从报告中采样生成 contract 格式抽检清单，直接写入 `audit-results.json`：
+
 ```bash
-# Step 1 — 提取抽检清单（15%随机抽样）
-python tools/report_audit.py extract \
-  --report <报告文件路径>
+# Step 1 — 从最终报告采样生成 contract 格式抽检清单（复用 report_audit 抽取）
+python tools/team_research_outputs.py audit-extract reports/{公司名} \
+  --ratio 0.15 --seed 42
 
-# Step 2 — 对清单每项从可靠信源取数（参见 skills/financial-data.md）
+# Step 2 — 对 audit-results.json.items 每项从可靠信源取数（参见 skills/financial-data.md），
+#          填入 verified_value 与 source_ref，并把 status 改为 pass/fail
 
-# Step 3 — 输出准出/打回判决
-python tools/report_audit.py verdict \
-  --results '<填好的JSON>' \
-  --report <报告文件名>
+# Step 3 — 准出结构校验
+python tools/team_research_outputs.py validate reports/{公司名}
 ```
 
-**【准出】** 全部通过 → 报告可发布；**【打回】** 有不通过 → 修正后重审。
+`audit-extract` 复用 `tools/report_audit.py` 的抽取与采样逻辑，但直接产出 `audit-results.json.items[*]` 的 contract 结构（`status=pending`），并把 `verdict` 重置为 `reject`；不需要再用 `report_audit.py extract/verdict` 手工翻译格式。
+
+**【准出】** `validate` 通过且 `audit-results.json` verdict 改为 `pass`（全部 item `status==pass`）→ 报告可发布；**【打回】** 有 `fail` item 或 `validate` 不通过 → 修正后重审。
 
 ### 第十步：清理团队
 
