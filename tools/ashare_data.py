@@ -1823,6 +1823,19 @@ def cmd_lhb_compare(
             f"scope={item.get('alias_scope') or '-'} "
             f"辨识分={item.get('youzi_recognition_score', '-')}"
         )
+    direction = summary.get("youzi_direction_consistency_summary") or {}
+    if direction:
+        shared_count = direction.get("shared_alias_count", 0)
+        same_count = direction.get("same_direction_shared_alias_count", 0)
+        mixed_count = direction.get("mixed_direction_shared_alias_count", 0)
+        print(
+            f"方向一致性: {direction.get('dominant_shared_direction_consistency') or '-'}，"
+            f"同向={same_count}/{shared_count}，分歧={mixed_count}/{shared_count}"
+        )
+        if direction.get("top_same_direction_shared_alias"):
+            print(f"同向Top: {direction['top_same_direction_shared_alias']}")
+        if direction.get("top_mixed_direction_shared_alias"):
+            print(f"分歧Top: {direction['top_mixed_direction_shared_alias']}")
     for row in payload["rows"]:
         print(
             f"{row['rank']:>2}. {row['code']} "
