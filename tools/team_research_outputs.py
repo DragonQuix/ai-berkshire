@@ -34,6 +34,9 @@ REQUIRED_ROOT_FILES = (
 SOURCE_REF_RE = re.compile(r"\b[SEPA]\d+\b")
 REPORT_REF_CUE_RE = re.compile(r"(引用|source-index|source_refs?)", re.IGNORECASE)
 
+AUDIT_ITEM_STATUSES = ("pass", "fail", "pending")
+AUDIT_REQUIRED_FIELDS = ("claim", "report_location", "expected_value")
+
 
 def build_data_pack(company: str, ticker: str, market: str, generated_at: str) -> dict[str, Any]:
     return {
@@ -313,6 +316,58 @@ def _add_undefined_ref_error(
     return undefined
 
 
+def _validate_audit_items(audit: dict[str, Any], invalid_files: list[dict[str, str]]) -> None:
+    """校验 audit-results.json.items[*] 结构与 verdict/status 一致性。
+
+    规则：
+      - items 必须是列表。
+      - 每个 item 必须是 dict，status 必须是 pass/fail/pending。
+      - claim/report_location/expected_value 必须非空。
+      - status 为 pass/fail 时，verified_value 与 source_ref 必须非空。
+      - verdict 为 pass 时，items 必须非空且全部 status == pass。
+    """
+    items = audit.get("items")
+    if not isinstance(items, list):
+        invalid_files.append({"file": "audit-results.json", "reason": "items must be a list"})
+        return
+    for idx, item in enumerate(items):
+        if not isinstance(item, dict):
+            invalid_files.append({
+                "file": "audit-results.json",
+                "reason": f"item {idx} must be an object",
+            })
+            continue
+        status = item.get("status")
+        if status not in AUDIT_ITEM_STATUSES:
+            invalid_files.append({
+                "file": "audit-results.json",
+                "reason": f"item {idx} status must be pass/fail/pending",
+            })
+        missing = [f for f in AUDIT_REQUIRED_FIELDS if not item.get(f)]
+        if missing:
+            invalid_files.append({
+                "file": "audit-results.json",
+                "reason": f"item {idx} missing required fields: {', '.join(missing)}",
+            })
+        if status in {"pass", "fail"} and (not item.get("verified_value") or not item.get("source_ref")):
+            invalid_files.append({
+                "file": "audit-results.json",
+                "reason": f"item {idx} status {status} requires verified_value and source_ref",
+            })
+    verdict = audit.get("verdict")
+    if verdict == "pass":
+        if not items:
+            invalid_files.append({
+                "file": "audit-results.json",
+                "reason": "verdict pass requires non-empty items",
+            })
+        elif not all(isinstance(item, dict) and item.get("status") == "pass" for item in items):
+            invalid_files.append({
+                "file": "audit-results.json",
+                "reason": "verdict pass requires all items status pass",
+            })
+
+
 def validate_team_research_outputs(company_dir: str | Path) -> dict[str, Any]:
     root = Path(company_dir)
     missing_files: list[str] = []
@@ -345,6 +400,7 @@ def validate_team_research_outputs(company_dir: str | Path) -> dict[str, Any]:
         if audit is not None:
             if audit.get("verdict") not in {"pass", "reject"}:
                 invalid_files.append({"file": "audit-results.json", "reason": "verdict must be pass or reject"})
+            _validate_audit_items(audit, invalid_files)
             audit_refs = extract_json_source_refs(audit)
 
     source_refs: set[str] = set()

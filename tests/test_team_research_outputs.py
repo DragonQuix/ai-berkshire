@@ -294,3 +294,158 @@ def test_validate_team_research_outputs_reports_undefined_audit_refs(tmp_path: P
         "file": "audit-results.json",
         "reason": "undefined source refs: S404",
     } in result["invalid_files"]
+
+
+def _write_audit(company_dir: Path, items: list, verdict: str = "reject") -> None:
+    audit_path = company_dir / "audit-results.json"
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    audit["items"] = items
+    audit["verdict"] = verdict
+    audit_path.write_text(json.dumps(audit, ensure_ascii=False), encoding="utf-8")
+
+
+def _audit_item(**overrides) -> dict:
+    base = {
+        "claim": "收入 6600 亿",
+        "report_location": "核心数据速览",
+        "source_ref": "S1",
+        "expected_value": "6600亿",
+        "verified_value": "6600亿",
+        "status": "pass",
+        "note": "",
+    }
+    base.update(overrides)
+    return base
+
+
+def _seed_source_index(company_dir: Path) -> None:
+    (company_dir / "source-index.md").write_text(
+        "# 腾讯 来源索引\n\n"
+        "| ref | 来源 | 标题 | 日期 | 链接/路径 | _source | 用途 | 可信度 |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| S1 | 年报 | 2025 年报 | 2026-03-20 | https://example.com | web | 财务口径核对 | 高 |\n",
+        encoding="utf-8",
+    )
+
+
+def test_validate_team_research_outputs_rejects_invalid_item_status(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _seed_source_index(company_dir)
+    _write_audit(company_dir, [_audit_item(status="maybe")], verdict="reject")
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert {
+        "file": "audit-results.json",
+        "reason": "item 0 status must be pass/fail/pending",
+    } in result["invalid_files"]
+
+
+def test_validate_team_research_outputs_rejects_item_missing_required_fields(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _seed_source_index(company_dir)
+    _write_audit(company_dir, [_audit_item(claim="", expected_value="")], verdict="reject")
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert {
+        "file": "audit-results.json",
+        "reason": "item 0 missing required fields: claim, expected_value",
+    } in result["invalid_files"]
+
+
+def test_validate_team_research_outputs_rejects_pass_item_without_verification(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _seed_source_index(company_dir)
+    _write_audit(company_dir, [_audit_item(verified_value="", source_ref="")], verdict="reject")
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert {
+        "file": "audit-results.json",
+        "reason": "item 0 status pass requires verified_value and source_ref",
+    } in result["invalid_files"]
+
+
+def test_validate_team_research_outputs_rejects_verdict_pass_with_pending_items(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _seed_source_index(company_dir)
+    _write_audit(company_dir, [_audit_item(status="pending", source_ref="", verified_value="")], verdict="pass")
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert {
+        "file": "audit-results.json",
+        "reason": "verdict pass requires all items status pass",
+    } in result["invalid_files"]
+
+
+def test_validate_team_research_outputs_rejects_verdict_pass_with_fail_items(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _seed_source_index(company_dir)
+    _write_audit(company_dir, [_audit_item(status="fail")], verdict="pass")
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert {
+        "file": "audit-results.json",
+        "reason": "verdict pass requires all items status pass",
+    } in result["invalid_files"]
+
+
+def test_validate_team_research_outputs_rejects_verdict_pass_with_empty_items(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _seed_source_index(company_dir)
+    _write_audit(company_dir, [], verdict="pass")
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert {
+        "file": "audit-results.json",
+        "reason": "verdict pass requires non-empty items",
+    } in result["invalid_files"]
+
+
+def test_validate_team_research_outputs_passes_all_pass_items_with_verdict_pass(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _seed_source_index(company_dir)
+    _write_audit(company_dir, [_audit_item(), _audit_item(claim="毛利率 55%", expected_value="55%")], verdict="pass")
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "pass"
+    assert result["invalid_files"] == []
