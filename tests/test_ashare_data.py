@@ -1124,6 +1124,20 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                 top_alias="拉萨天团",
                 top_alias_net=300000,
                 youzi_aliases=["拉萨天团", "章盟主"],
+                youzi_alias_strengths=[
+                    {
+                        "alias": "拉萨天团",
+                        "net_amount": 300000,
+                        "abs_net_amount": 300000,
+                        "net_direction": "net_buy",
+                    },
+                    {
+                        "alias": "章盟主",
+                        "net_amount": -120000,
+                        "abs_net_amount": 120000,
+                        "net_direction": "net_sell",
+                    },
+                ],
             )
         return _lhb_compare_payload(
             code="000005",
@@ -1203,6 +1217,40 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                 {"alias": "章盟主", "code_count": 2, "codes": ["000004", "000005"]},
                 {"alias": "拉萨天团", "code_count": 1, "codes": ["000004"]},
             ],
+            "youzi_alias_cross_code_strengths": [
+                {
+                    "alias": "章盟主",
+                    "code_count": 2,
+                    "total_net_amount": -820000,
+                    "total_abs_net_amount": 820000,
+                    "codes": [
+                        {
+                            "code": "000005",
+                            "net_amount": -700000,
+                            "abs_net_amount": 700000,
+                            "net_direction": "net_sell",
+                        },
+                        {
+                            "code": "000004",
+                            "net_amount": -120000,
+                            "abs_net_amount": 120000,
+                            "net_direction": "net_sell",
+                        },
+                    ],
+                },
+                {
+                    "alias": "拉萨天团",
+                    "code_count": 1,
+                    "total_net_amount": 300000,
+                    "total_abs_net_amount": 300000,
+                    "codes": [{
+                        "code": "000004",
+                        "net_amount": 300000,
+                        "abs_net_amount": 300000,
+                        "net_direction": "net_buy",
+                    }],
+                },
+            ],
         },
         "rows": [
             {
@@ -1258,13 +1306,14 @@ def _lhb_compare_payload(
     top_alias,
     top_alias_net,
     youzi_aliases=None,
+    youzi_alias_strengths=None,
 ):
     return {
         "code": code,
         "filtered_count": filtered_count,
         "range_flow_summary": {"trade_dates": trade_dates},
         "range_seat_profile_summary": {
-            "youzi_alias_strengths": [{
+            "youzi_alias_strengths": youzi_alias_strengths or [{
                 "alias": top_alias,
                 "net_amount": top_alias_net,
                 "abs_net_amount": abs(top_alias_net),

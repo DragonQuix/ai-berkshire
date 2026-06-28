@@ -880,7 +880,40 @@ def _lhb_compare_top_code(rows: list[dict], field: str) -> str | None:
     return top.get("code")
 
 
-def _summarize_lhb_compare(rows: list[dict], codes: list[str]) -> dict:
+def _summarize_lhb_compare_alias_strengths(payloads: list[dict]) -> list[dict]:
+    alias_rows: dict[str, list[dict]] = {}
+    for payload in payloads:
+        code = payload.get("code")
+        if not code:
+            continue
+        seat_summary = payload.get("range_seat_profile_summary") or {}
+        for item in seat_summary.get("youzi_alias_strengths") or []:
+            alias = item.get("alias")
+            if not alias:
+                continue
+            net_amount = _lhb_numeric_amount(item.get("net_amount"))
+            abs_net_amount = _lhb_numeric_amount(item.get("abs_net_amount"))
+            alias_rows.setdefault(alias, []).append({
+                "code": code,
+                "net_amount": net_amount,
+                "abs_net_amount": abs_net_amount,
+                "net_direction": item.get("net_direction") or _lhb_net_direction(net_amount),
+            })
+
+    out = []
+    for alias, items in alias_rows.items():
+        items = sorted(items, key=lambda item: (-item["abs_net_amount"], item["code"]))
+        out.append({
+            "alias": alias,
+            "code_count": len(items),
+            "total_net_amount": sum(item["net_amount"] for item in items),
+            "total_abs_net_amount": sum(item["abs_net_amount"] for item in items),
+            "codes": items,
+        })
+    return sorted(out, key=lambda item: (-item["total_abs_net_amount"], item["alias"]))
+
+
+def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[dict]) -> dict:
     alias_codes: dict[str, set[str]] = {}
     for row in rows:
         code = row.get("code")
@@ -912,6 +945,7 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str]) -> dict:
             if item["code_count"] >= 2
         ],
         "youzi_alias_frequency": alias_frequency,
+        "youzi_alias_cross_code_strengths": _summarize_lhb_compare_alias_strengths(payloads),
     }
 
 
@@ -936,23 +970,22 @@ def _fetch_lhb_compare(
     if not 2 <= len(clean_codes) <= 4:
         raise ValueError("lhb-compare 需要 2-4 个股票代码")
 
-    rows = [
-        _lhb_compare_row(
-            _fetch_lhb_detail_range(
-                code,
-                start_date,
-                end_date,
-                list_limit,
-                page,
-                detail_limit,
-                dominant_type,
-                dominant_direction,
-                youzi_alias,
-                min_dominant_net,
-            )
+    payloads = [
+        _fetch_lhb_detail_range(
+            code,
+            start_date,
+            end_date,
+            list_limit,
+            page,
+            detail_limit,
+            dominant_type,
+            dominant_direction,
+            youzi_alias,
+            min_dominant_net,
         )
         for code in clean_codes
     ]
+    rows = [_lhb_compare_row(payload) for payload in payloads]
     rows = sorted(
         rows,
         key=lambda row: (-_lhb_numeric_amount(row.get(sort_by)), row.get("code") or ""),
@@ -974,7 +1007,7 @@ def _fetch_lhb_compare(
         "youzi_alias": youzi_alias,
         "min_dominant_net": min_dominant_net,
         "sort_by": sort_by,
-        "comparison_summary": _summarize_lhb_compare(rows, clean_codes),
+        "comparison_summary": _summarize_lhb_compare(rows, clean_codes, payloads),
         "rows": rows,
     }
 
