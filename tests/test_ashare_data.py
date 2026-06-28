@@ -249,6 +249,22 @@ def test_fetch_lhb_detail_groups_buy_and_sell_seats(monkeypatch):
             "aliases": [],
         },
     }
+    assert out["records"][0]["seat_amount_summary"]["youzi"] == {
+        "buy_amount": 762307,
+        "sell_amount": 106076,
+        "net_amount": 656231,
+        "buy_count": 1,
+        "sell_count": 0,
+        "aliases": ["拉萨天团"],
+    }
+    assert out["records"][0]["seat_amount_summary"]["brokerage"] == {
+        "buy_amount": 0,
+        "sell_amount": 219258,
+        "net_amount": -219258,
+        "buy_count": 0,
+        "sell_count": 1,
+        "aliases": [],
+    }
 
 
 def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):

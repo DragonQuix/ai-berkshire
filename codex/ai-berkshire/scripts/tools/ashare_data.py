@@ -21,7 +21,11 @@ import subprocess
 import sys
 from decimal import Decimal, ROUND_HALF_EVEN
 
-from lhb_seat_profiles import build_lhb_seat_profile, summarize_lhb_seat_profiles
+from lhb_seat_profiles import (
+    build_lhb_seat_profile,
+    summarize_lhb_seat_amounts,
+    summarize_lhb_seat_profiles,
+)
 
 _TIMEOUT = 15
 
@@ -509,6 +513,9 @@ def _fetch_lhb_detail(
         record["buy_seats"] = buy_by_id.get(key, [])
         record["sell_seats"] = sell_by_id.get(key, [])
         record["seat_profile_summary"] = summarize_lhb_seat_profiles(
+            record["buy_seats"], record["sell_seats"]
+        )
+        record["seat_amount_summary"] = summarize_lhb_seat_amounts(
             record["buy_seats"], record["sell_seats"]
         )
     payload_code = _clean_a_code(code) if code else (records[0].get("code") if records else None)

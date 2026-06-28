@@ -249,6 +249,15 @@ def summarize_lhb_seat_profiles(buy_seats: list[dict], sell_seats: list[dict]) -
     }
 
 
+def summarize_lhb_seat_amounts(buy_seats: list[dict], sell_seats: list[dict]) -> dict:
+    summary = {key: _empty_amount_bucket() for key in SUMMARY_KEYS}
+    for seat in buy_seats:
+        _add_amounts(summary, seat, "buy")
+    for seat in sell_seats:
+        _add_amounts(summary, seat, "sell")
+    return summary
+
+
 def _empty_profile(profile_type: str) -> dict:
     return {
         "type": profile_type,
@@ -276,3 +285,41 @@ def _summarize_side(seats: list[dict]) -> dict:
             aliases.append(alias)
     summary["aliases"] = aliases
     return summary
+
+
+def _empty_amount_bucket() -> dict:
+    return {
+        "buy_amount": 0,
+        "sell_amount": 0,
+        "net_amount": 0,
+        "buy_count": 0,
+        "sell_count": 0,
+        "aliases": [],
+    }
+
+
+def _add_amounts(summary: dict, seat: dict, side: str) -> None:
+    profile = seat.get("seat_profile") or {}
+    profile_type = profile.get("type") or seat.get("seat_category") or "unknown"
+    if profile_type not in summary:
+        profile_type = "brokerage"
+    bucket = summary[profile_type]
+    bucket["buy_amount"] += _numeric_amount(seat.get("buy_amount"))
+    bucket["sell_amount"] += _numeric_amount(seat.get("sell_amount"))
+    bucket["net_amount"] += _numeric_amount(seat.get("net_amount"))
+    bucket[f"{side}_count"] += 1
+    alias = profile.get("alias")
+    if profile_type == "youzi" and alias and alias not in bucket["aliases"]:
+        bucket["aliases"].append(alias)
+
+
+def _numeric_amount(value) -> int | float:
+    if value in (None, ""):
+        return 0
+    if isinstance(value, (int, float)):
+        return value
+    try:
+        num = float(str(value).replace(",", ""))
+    except (TypeError, ValueError):
+        return 0
+    return int(num) if num.is_integer() else num
