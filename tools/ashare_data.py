@@ -647,6 +647,38 @@ def _public_lhb_range_seat(key: str, bucket: dict, include_key: bool) -> dict:
     return out
 
 
+def _public_lhb_youzi_alias_strength(bucket: dict) -> dict:
+    net_amount = bucket["net_amount"]
+    return {
+        "alias": bucket["alias"],
+        "buy_count": bucket["buy_count"],
+        "sell_count": bucket["sell_count"],
+        "buy_amount": bucket["buy_amount"],
+        "sell_amount": bucket["sell_amount"],
+        "net_amount": net_amount,
+        "abs_net_amount": abs(net_amount),
+        "net_direction": (
+            "net_buy" if net_amount > 0 else ("net_sell" if net_amount < 0 else "flat")
+        ),
+        "trade_dates": sorted(bucket["trade_dates"]),
+        "seat_names": sorted(bucket["seat_names"]),
+    }
+
+
+def _summarize_lhb_youzi_alias_strengths(buckets: dict[str, dict]) -> list[dict]:
+    alias_buckets = [
+        bucket for bucket in buckets.values()
+        if bucket["type"] == "youzi" and bucket["alias"]
+    ]
+    return [
+        _public_lhb_youzi_alias_strength(bucket)
+        for bucket in sorted(
+            alias_buckets,
+            key=lambda bucket: (-abs(bucket["net_amount"]), bucket["alias"]),
+        )
+    ]
+
+
 def _summarize_lhb_recognition(top_keys: list[str], buckets: dict[str, dict]) -> dict:
     profiled_keys = [
         key for key in top_keys
@@ -713,6 +745,7 @@ def _summarize_lhb_range_seat_profiles(records: list[dict]) -> dict:
         "seat_count": len(buckets),
         "by_type": by_type,
         "youzi_aliases": sorted(youzi_aliases),
+        "youzi_alias_strengths": _summarize_lhb_youzi_alias_strengths(buckets),
         "seats": {
             key: _public_lhb_range_seat(key, buckets[key], include_key=False)
             for key in sorted(buckets)

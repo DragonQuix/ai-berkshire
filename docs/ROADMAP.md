@@ -11,7 +11,7 @@
 - 参考 ADR：`docs/adr/2026-06-28-permission-safe-multi-agent.md`
 
 ### A股数据源接入
-> 2026-06-28 已新增小切片：`tools/ashare_data.py lhb` 与 `tools/lxr_data.py lhb` 接入东方财富龙虎榜免费源；同日继续新增 `lhb-detail`，按 `TRADE_ID` 或 `code + date` 拉取买卖席位明细，并补充 `seat_profile` / `seat_profile_summary` 做席位画像与游资识别。随后新增 `lhb-detail --start-date --end-date` 区间批量筛选，先筛龙虎榜记录再按 `trade_id` 拉详情，并在记录层输出 `seat_amount_summary` 聚合机构/北向/游资/营业部买卖净额、`seat_flow_analysis` 标注资金主导方；区间 payload 追加 `range_flow_summary` 作为多日聚合摘要，追加 `range_seat_profile_summary` 按过滤后记录聚合席位画像、别名净额与 top seats，并内置 `recognition_summary` 汇总可识别席位数量、游资别名数、可识别净额绝对值、游资净额绝对值、可识别主导类型、席位/净额占比和 `top_youzi_seats`，作为后续同板块辨识度对比的排序基础；同时支持 `--dominant-type` / `--dominant-direction` / `--youzi-alias` / `--min-dominant-net` 过滤。输出 canonical `_source: legacy`，详细渠道写入 `source_detail`。
+> 2026-06-28 已新增小切片：`tools/ashare_data.py lhb` 与 `tools/lxr_data.py lhb` 接入东方财富龙虎榜免费源；同日继续新增 `lhb-detail`，按 `TRADE_ID` 或 `code + date` 拉取买卖席位明细，并补充 `seat_profile` / `seat_profile_summary` 做席位画像与游资识别。随后新增 `lhb-detail --start-date --end-date` 区间批量筛选，先筛龙虎榜记录再按 `trade_id` 拉详情，并在记录层输出 `seat_amount_summary` 聚合机构/北向/游资/营业部买卖净额、`seat_flow_analysis` 标注资金主导方；区间 payload 追加 `range_flow_summary` 作为多日聚合摘要，追加 `range_seat_profile_summary` 按过滤后记录聚合席位画像、别名净额与 top seats，并内置 `recognition_summary` 汇总可识别席位数量、游资别名数、可识别净额绝对值、游资净额绝对值、可识别主导类型、席位/净额占比和 `top_youzi_seats`，同时输出按游资 alias 聚合并按绝对净额排序的 `youzi_alias_strengths`，作为后续同板块辨识度对比的别名排序基础；同时支持 `--dominant-type` / `--dominant-direction` / `--youzi-alias` / `--min-dominant-net` 过滤。输出 canonical `_source: legacy`，详细渠道写入 `source_detail`。
 
 - 接入 akshare、东方财富等免费数据源
 - 覆盖 A 股财务数据、行情、龙虎榜

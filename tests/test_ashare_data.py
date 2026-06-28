@@ -519,6 +519,18 @@ def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):
                 },
             },
             "youzi_aliases": ["拉萨天团"],
+            "youzi_alias_strengths": [{
+                "alias": "拉萨天团",
+                "buy_count": 1,
+                "sell_count": 0,
+                "buy_amount": 762307,
+                "sell_amount": 106076,
+                "net_amount": 656231,
+                "abs_net_amount": 656231,
+                "net_direction": "net_buy",
+                "trade_dates": ["2026-06-26"],
+                "seat_names": ["东方财富证券股份有限公司拉萨东环路第二证券营业部"],
+            }],
             "seats": {
                 "brokerage:中信证券股份有限公司杭州延安路证券营业部": {
                     "type": "brokerage",
@@ -923,6 +935,93 @@ def test_lhb_range_seat_profile_summary_reports_recognition_signals():
             },
         ],
     }
+
+
+def test_lhb_range_seat_profile_summary_aggregates_youzi_alias_strengths():
+    records = [
+        {
+            "trade_date": "2026-06-26",
+            "buy_seats": [
+                {
+                    "seat_name": "东方财富证券股份有限公司拉萨东环路第二证券营业部",
+                    "seat_profile": {"type": "youzi", "alias": "拉萨天团"},
+                    "buy_amount": 1000,
+                    "sell_amount": 100,
+                    "net_amount": 900,
+                },
+                {
+                    "seat_name": "国泰君安证券上海江苏路证券营业部",
+                    "seat_profile": {"type": "youzi", "alias": "章盟主"},
+                    "buy_amount": 200,
+                    "sell_amount": 0,
+                    "net_amount": 200,
+                },
+                {
+                    "seat_name": "机构专用",
+                    "seat_profile": {"type": "institution", "alias": "机构专用"},
+                    "buy_amount": 300,
+                    "sell_amount": 0,
+                    "net_amount": 300,
+                },
+            ],
+            "sell_seats": [{
+                "seat_name": "东方财富证券股份有限公司拉萨团结路第二证券营业部",
+                "seat_profile": {"type": "youzi", "alias": "拉萨天团"},
+                "buy_amount": 0,
+                "sell_amount": 400,
+                "net_amount": -400,
+            }],
+        },
+        {
+            "trade_date": "2026-06-27",
+            "buy_seats": [{
+                "seat_name": "未映射游资席位",
+                "seat_profile": {"type": "youzi", "alias": None},
+                "buy_amount": 999,
+                "sell_amount": 0,
+                "net_amount": 999,
+            }],
+            "sell_seats": [{
+                "seat_name": "国泰君安证券上海江苏路证券营业部",
+                "seat_profile": {"type": "youzi", "alias": "章盟主"},
+                "buy_amount": 10,
+                "sell_amount": 900,
+                "net_amount": -890,
+            }],
+        },
+    ]
+
+    out = ad._summarize_lhb_range_seat_profiles(records)
+
+    assert out["youzi_alias_strengths"] == [
+        {
+            "alias": "章盟主",
+            "buy_count": 1,
+            "sell_count": 1,
+            "buy_amount": 210,
+            "sell_amount": 900,
+            "net_amount": -690,
+            "abs_net_amount": 690,
+            "net_direction": "net_sell",
+            "trade_dates": ["2026-06-26", "2026-06-27"],
+            "seat_names": ["国泰君安证券上海江苏路证券营业部"],
+        },
+        {
+            "alias": "拉萨天团",
+            "buy_count": 1,
+            "sell_count": 1,
+            "buy_amount": 1000,
+            "sell_amount": 500,
+            "net_amount": 500,
+            "abs_net_amount": 500,
+            "net_direction": "net_buy",
+            "trade_dates": ["2026-06-26"],
+            "seat_names": [
+                "东方财富证券股份有限公司拉萨东环路第二证券营业部",
+                "东方财富证券股份有限公司拉萨团结路第二证券营业部",
+            ],
+        },
+    ]
 
 
 def test_fetch_lhb_detail_range_filters_by_min_dominant_net(monkeypatch):
