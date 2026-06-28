@@ -92,3 +92,41 @@ def test_codex_copy_matches_root_tool() -> None:
         REPO / "codex" / "ai-berkshire" / "scripts" / "tools" / "team_research_outputs.py"
     ).read_text(encoding="utf-8")
     assert codex == root
+
+
+def test_validate_team_research_outputs_passes_scaffold(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path,
+        company="腾讯",
+        ticker="00700",
+        market="hk",
+        generated_at="2026-06-28",
+    )
+
+    result = tro.validate_team_research_outputs(tmp_path / "腾讯")
+
+    assert result["status"] == "pass"
+    assert result["missing_files"] == []
+    assert result["invalid_files"] == []
+
+
+def test_validate_team_research_outputs_reports_missing_and_invalid_files(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path,
+        company="腾讯",
+        ticker="00700",
+        market="hk",
+        generated_at="2026-06-28",
+    )
+    (tmp_path / "腾讯" / "source-index.md").unlink()
+    audit_path = tmp_path / "腾讯" / "audit-results.json"
+    audit_path.write_text('{"verdict": "maybe"}\n', encoding="utf-8")
+
+    result = tro.validate_team_research_outputs(tmp_path / "腾讯")
+
+    assert result["status"] == "fail"
+    assert "source-index.md" in result["missing_files"]
+    assert {
+        "file": "audit-results.json",
+        "reason": "verdict must be pass or reject",
+    } in result["invalid_files"]

@@ -50,3 +50,12 @@ def test_investment_team_references_scaffold_tool() -> None:
         assert "python tools/team_research_outputs.py" in text
         assert "--ticker" in text
         assert "--market" in text
+
+
+def test_contract_and_investment_team_reference_validate_command() -> None:
+    docs = read_text("docs/team-research-output-contract.md")
+    root = read_text("skills/investment-team.md")
+    codex = read_text("codex/ai-berkshire/references/skills/investment-team.md")
+
+    for text in (docs, root, codex):
+        assert "python tools/team_research_outputs.py validate" in text

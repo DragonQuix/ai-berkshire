@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,13 @@ ROLE_FILES = {
     "industry-researcher.md": "industry-researcher",
     "risk-assessor.md": "risk-assessor",
 }
+
+REQUIRED_ROOT_FILES = (
+    "data-pack.json",
+    "source-index.md",
+    "audit-results.json",
+    "最终报告.md",
+)
 
 
 def build_data_pack(company: str, ticker: str, market: str, generated_at: str) -> dict[str, Any]:
@@ -221,31 +229,105 @@ def init_team_research_outputs(
     }
 
 
+def _load_json(path: Path, invalid_files: list[dict[str, str]]) -> dict[str, Any] | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        invalid_files.append({"file": path.name, "reason": f"invalid json: {exc}"})
+        return None
+
+
+def validate_team_research_outputs(company_dir: str | Path) -> dict[str, Any]:
+    root = Path(company_dir)
+    missing_files: list[str] = []
+    invalid_files: list[dict[str, str]] = []
+
+    for filename in REQUIRED_ROOT_FILES:
+        if not (root / filename).exists():
+            missing_files.append(filename)
+
+    role_dir = root / "role-briefs"
+    for filename in ROLE_FILES:
+        rel = f"role-briefs/{filename}"
+        if not (role_dir / filename).exists():
+            missing_files.append(rel)
+
+    data_pack_path = root / "data-pack.json"
+    if data_pack_path.exists():
+        data_pack = _load_json(data_pack_path, invalid_files)
+        if data_pack is not None and data_pack.get("meta", {}).get("owner") != "Team Lead":
+            invalid_files.append({"file": "data-pack.json", "reason": "meta.owner must be Team Lead"})
+
+    audit_path = root / "audit-results.json"
+    if audit_path.exists():
+        audit = _load_json(audit_path, invalid_files)
+        if audit is not None and audit.get("verdict") not in {"pass", "reject"}:
+            invalid_files.append({"file": "audit-results.json", "reason": "verdict must be pass or reject"})
+
+    report_path = root / "最终报告.md"
+    if report_path.exists():
+        report = report_path.read_text(encoding="utf-8")
+        for section in ("## 关键数据溯源", "## 角色冲突与 Team Lead 仲裁"):
+            if section not in report:
+                invalid_files.append({"file": "最终报告.md", "reason": f"missing section: {section}"})
+
+    status = "pass" if not missing_files and not invalid_files else "fail"
+    return {
+        "company_dir": str(root),
+        "status": status,
+        "missing_files": missing_files,
+        "invalid_files": invalid_files,
+    }
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="初始化 /investment-team 结构化产物目录")
-    parser.add_argument("company", help="公司名，例如 腾讯")
-    parser.add_argument("--reports-dir", default="reports", help="报告根目录，默认 reports")
-    parser.add_argument("--ticker", default="", help="证券代码，例如 00700")
-    parser.add_argument("--market", default="", help="市场，例如 hk/cn/us")
-    parser.add_argument("--date", default=None, help="生成日期 YYYY-MM-DD，默认今天")
-    parser.add_argument("--overwrite", action="store_true", help="覆盖已有文件")
-    parser.add_argument("--json", action="store_true", help="输出 JSON")
+    if len(sys.argv) > 1 and sys.argv[1] not in {"init", "validate", "-h", "--help"}:
+        sys.argv.insert(1, "init")
+
+    parser = argparse.ArgumentParser(description="初始化或校验 /investment-team 结构化产物目录")
+    subparsers = parser.add_subparsers(dest="command")
+
+    init_parser = subparsers.add_parser("init", help="初始化结构化产物目录")
+    init_parser.add_argument("company", help="公司名，例如 腾讯")
+    init_parser.add_argument("--reports-dir", default="reports", help="报告根目录，默认 reports")
+    init_parser.add_argument("--ticker", default="", help="证券代码，例如 00700")
+    init_parser.add_argument("--market", default="", help="市场，例如 hk/cn/us")
+    init_parser.add_argument("--date", default=None, help="生成日期 YYYY-MM-DD，默认今天")
+    init_parser.add_argument("--overwrite", action="store_true", help="覆盖已有文件")
+    init_parser.add_argument("--json", action="store_true", help="输出 JSON")
+
+    validate_parser = subparsers.add_parser("validate", help="校验结构化产物目录")
+    validate_parser.add_argument("company_dir", help="公司报告目录，例如 reports/腾讯")
+    validate_parser.add_argument("--json", action="store_true", help="输出 JSON")
     args = parser.parse_args()
 
-    result = init_team_research_outputs(
-        reports_dir=args.reports_dir,
-        company=args.company,
-        ticker=args.ticker,
-        market=args.market,
-        generated_at=args.date,
-        overwrite=args.overwrite,
-    )
+    if args.command in {None, "init"}:
+        result = init_team_research_outputs(
+            reports_dir=args.reports_dir,
+            company=args.company,
+            ticker=args.ticker,
+            market=args.market,
+            generated_at=args.date,
+            overwrite=args.overwrite,
+        )
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        else:
+            print(f"company_dir: {result['company_dir']}")
+            print(f"created: {len(result['created_files'])}")
+            print(f"skipped: {len(result['skipped_files'])}")
+        return 0
+
+    result = validate_team_research_outputs(args.company_dir)
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
         print(f"company_dir: {result['company_dir']}")
-        print(f"created: {len(result['created_files'])}")
-        print(f"skipped: {len(result['skipped_files'])}")
+        print(f"status: {result['status']}")
+        print(f"missing: {len(result['missing_files'])}")
+        print(f"invalid: {len(result['invalid_files'])}")
+    if result["status"] != "pass":
+        return 1
     return 0
 
 
