@@ -1396,6 +1396,47 @@ def _summarize_lhb_compare_composite_signal(
     }
 
 
+def _lhb_recognition_leadership_level(score_gap: float) -> str:
+    if score_gap >= 20:
+        return "strong"
+    if score_gap >= 10:
+        return "moderate"
+    if score_gap > 0:
+        return "narrow"
+    return "none"
+
+
+def _summarize_lhb_compare_recognition_gap(
+    recognition_leaderboard: list[dict],
+) -> dict:
+    leader = recognition_leaderboard[0] if recognition_leaderboard else {}
+    runner_up = recognition_leaderboard[1] if len(recognition_leaderboard) > 1 else {}
+    leader_score = _lhb_numeric_amount(leader.get("recognition_score"))
+    runner_up_score = _lhb_numeric_amount(runner_up.get("recognition_score"))
+    score_gap = round(leader_score - runner_up_score, 2) if runner_up else 0
+    level = _lhb_recognition_leadership_level(score_gap)
+    leader_code = leader.get("code")
+    runner_up_code = runner_up.get("code")
+    if leader_code and runner_up_code:
+        interpretation = (
+            f"{leader_code}综合辨识分领先{runner_up_code} "
+            f"{score_gap}分，领先强度{level}"
+        )
+    elif leader_code:
+        interpretation = f"{leader_code}为唯一命中代码，无法计算第二名差距"
+    else:
+        interpretation = "无命中代码，无法计算综合辨识领先差距"
+    return {
+        "leader_code": leader_code,
+        "runner_up_code": runner_up_code,
+        "leader_score": leader_score,
+        "runner_up_score": runner_up_score,
+        "score_gap": score_gap,
+        "leadership_level": level,
+        "interpretation": interpretation,
+    }
+
+
 def _apply_lhb_compare_identity_tags_to_rows(rows: list[dict], comparison_summary: dict) -> None:
     tags_by_code = {
         item["code"]: item
@@ -1483,6 +1524,7 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         identity_summary,
         recognition_leaderboard,
     )
+    recognition_gap = _summarize_lhb_compare_recognition_gap(recognition_leaderboard)
     return {
         "code_count": len(codes),
         "matched_code_count": sum(1 for row in rows if row.get("filtered_count", 0)),
@@ -1503,6 +1545,7 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         "youzi_code_identity_tags": identity_tags,
         "youzi_code_identity_summary": identity_summary,
         "youzi_recognition_leaderboard": recognition_leaderboard,
+        "youzi_recognition_gap_summary": recognition_gap,
         "top_youzi_alias_comparison": top_alias_comparison,
         "youzi_composite_signal_summary": composite_signal,
         "same_direction_youzi_aliases": same_direction_aliases,

@@ -1327,6 +1327,15 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                     "rank_reason": "游资净额占比0.3；可识别净额占比0.5；独有游资主导；Top游资拉萨天团",
                 },
             ],
+            "youzi_recognition_gap_summary": {
+                "leader_code": "000005",
+                "runner_up_code": "000004",
+                "leader_score": 73.0,
+                "runner_up_score": 35.93,
+                "score_gap": 37.07,
+                "leadership_level": "strong",
+                "interpretation": "000005综合辨识分领先000004 37.07分，领先强度strong",
+            },
             "top_youzi_alias_comparison": [
                 {
                     "rank": 1,
@@ -1704,6 +1713,77 @@ def test_fetch_lhb_compare_summarizes_composite_signal(monkeypatch):
         "dominant_shared_direction_consistency": "same_direction",
         "dominant_identity_tag": "mixed",
         "interpretation": "共同游资章盟主单一集中且方向一致；综合辨识领先代码000005",
+    }
+
+
+def test_fetch_lhb_compare_summarizes_recognition_gap(monkeypatch):
+    def fake_fetch_range(
+        code,
+        start_date,
+        end_date,
+        list_limit=20,
+        page=1,
+        detail_limit=10,
+        dominant_type=None,
+        dominant_direction=None,
+        youzi_alias=None,
+        min_dominant_net=None,
+    ):
+        if code == "000004":
+            return _lhb_compare_payload(
+                code="000004",
+                filtered_count=2,
+                trade_dates=["2026-06-26"],
+                profiled_abs_net_amount=500000,
+                profiled_abs_net_ratio=0.5,
+                youzi_abs_net_amount=300000,
+                youzi_abs_net_ratio=0.3,
+                top_alias="拉萨天团",
+                top_alias_net=300000,
+                youzi_aliases=["拉萨天团", "章盟主"],
+                youzi_alias_strengths=[
+                    {
+                        "alias": "拉萨天团",
+                        "net_amount": 300000,
+                        "abs_net_amount": 300000,
+                        "net_direction": "net_buy",
+                    },
+                    {
+                        "alias": "章盟主",
+                        "net_amount": -120000,
+                        "abs_net_amount": 120000,
+                        "net_direction": "net_sell",
+                    },
+                ],
+            )
+        return _lhb_compare_payload(
+            code="000005",
+            filtered_count=1,
+            trade_dates=["2026-06-25"],
+            profiled_abs_net_amount=800000,
+            profiled_abs_net_ratio=0.8,
+            youzi_abs_net_amount=700000,
+            youzi_abs_net_ratio=0.7,
+            top_alias="章盟主",
+            top_alias_net=-700000,
+        )
+
+    monkeypatch.setattr(ad, "_fetch_lhb_detail_range", fake_fetch_range)
+
+    out = ad._fetch_lhb_compare(
+        codes=["000004", "000005"],
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+    )
+
+    assert out["comparison_summary"]["youzi_recognition_gap_summary"] == {
+        "leader_code": "000005",
+        "runner_up_code": "000004",
+        "leader_score": 73.0,
+        "runner_up_score": 35.93,
+        "score_gap": 37.07,
+        "leadership_level": "strong",
+        "interpretation": "000005综合辨识分领先000004 37.07分，领先强度strong",
     }
 
 
