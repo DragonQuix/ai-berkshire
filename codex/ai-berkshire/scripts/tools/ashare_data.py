@@ -647,6 +647,29 @@ def _public_lhb_range_seat(key: str, bucket: dict, include_key: bool) -> dict:
     return out
 
 
+def _summarize_lhb_recognition(top_keys: list[str], buckets: dict[str, dict]) -> dict:
+    profiled_keys = [
+        key for key in top_keys
+        if buckets[key]["type"] in ("youzi", "institution", "northbound")
+    ]
+    youzi_aliases = sorted({
+        buckets[key]["alias"]
+        for key in profiled_keys
+        if buckets[key]["type"] == "youzi" and buckets[key]["alias"]
+    })
+    return {
+        "profiled_seat_count": len(profiled_keys),
+        "brokerage_or_unknown_seat_count": len(buckets) - len(profiled_keys),
+        "profiled_abs_net_amount": sum(abs(buckets[key]["net_amount"]) for key in profiled_keys),
+        "youzi_alias_count": len(youzi_aliases),
+        "youzi_aliases": youzi_aliases,
+        "top_profiled_seats": [
+            _public_lhb_range_seat(key, buckets[key], include_key=True)
+            for key in profiled_keys
+        ],
+    }
+
+
 def _summarize_lhb_range_seat_profiles(records: list[dict]) -> dict:
     buckets: dict[str, dict] = {}
     for record in records:
@@ -679,6 +702,7 @@ def _summarize_lhb_range_seat_profiles(records: list[dict]) -> dict:
             _public_lhb_range_seat(key, buckets[key], include_key=True)
             for key in top_keys
         ],
+        "recognition_summary": _summarize_lhb_recognition(top_keys, buckets),
     }
 
 
