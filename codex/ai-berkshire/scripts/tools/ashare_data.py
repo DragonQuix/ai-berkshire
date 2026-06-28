@@ -545,6 +545,16 @@ def _lhb_detail_record_key(record: dict) -> str:
     )
 
 
+def _record_has_youzi_alias(record: dict, alias: str) -> bool:
+    for key in ("buy_seats", "sell_seats"):
+        for seat in record.get(key) or []:
+            profile = seat.get("seat_profile") or {}
+            if profile.get("alias") == alias:
+                return True
+    flow = record.get("seat_flow_analysis") or {}
+    return alias in (flow.get("dominant_aliases") or [])
+
+
 def _fetch_lhb_detail_range(
     code: str | None = None,
     start_date: str | None = None,
@@ -554,6 +564,7 @@ def _fetch_lhb_detail_range(
     detail_limit: int = 10,
     dominant_type: str | None = None,
     dominant_direction: str | None = None,
+    youzi_alias: str | None = None,
 ) -> dict:
     if not start_date or not end_date:
         raise ValueError("lhb-detail 日期区间需要 --start-date 和 --end-date")
@@ -586,6 +597,8 @@ def _fetch_lhb_detail_range(
             record for record in records
             if (record.get("seat_flow_analysis") or {}).get("dominant_direction") == dominant_direction
         ]
+    if youzi_alias:
+        records = [record for record in records if _record_has_youzi_alias(record, youzi_alias)]
     return {
         "_source": "legacy",
         "source_detail": "eastmoney:lhb-detail-range",
@@ -599,6 +612,7 @@ def _fetch_lhb_detail_range(
         "filtered_count": len(records),
         "dominant_type": dominant_type,
         "dominant_direction": dominant_direction,
+        "youzi_alias": youzi_alias,
         "records": records,
         "range_flow_summary": summarize_lhb_range_flow(records),
     }
@@ -658,6 +672,7 @@ def cmd_lhb_detail(
     page: int = 1,
     dominant_type: str | None = None,
     dominant_direction: str | None = None,
+    youzi_alias: str | None = None,
 ):
     """龙虎榜买卖席位明细。"""
     if start_date or end_date:
@@ -670,6 +685,7 @@ def cmd_lhb_detail(
             limit,
             dominant_type,
             dominant_direction,
+            youzi_alias,
         )
     else:
         payload = _fetch_lhb_detail(code, trade_date, trade_id, limit)
@@ -841,6 +857,7 @@ def main():
         default=None,
         help="区间模式下按资金主导方向过滤",
     )
+    p_lhb_detail.add_argument("--youzi-alias", default=None, help="区间模式下按游资/活跃席位别名过滤")
     p_lhb_detail.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
 
     args = parser.parse_args()
@@ -871,6 +888,7 @@ def main():
             args.page,
             args.dominant_type,
             args.dominant_direction,
+            args.youzi_alias,
         ),
     }
     cmds[args.command]()

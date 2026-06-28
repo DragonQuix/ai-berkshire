@@ -627,5 +627,39 @@ def test_get_lhb_detail_passes_dominant_filters_to_legacy_ashare(monkeypatch):
     assert out["dominant_direction"] == "net_buy"
 
 
+def test_get_lhb_detail_passes_youzi_alias_to_legacy_ashare(monkeypatch):
+    from lxr_data import LxrData
+
+    class FakeClient:
+        config = {"data_type_ttl_seconds": {}}
+        cache = _FakeCache()
+
+    d = LxrData(client=FakeClient(), verbose=False)
+    calls = []
+
+    def fake_legacy(args):
+        calls.append(args)
+        return (
+            '{"_source":"legacy","source_detail":"eastmoney:lhb-detail-range",'
+            '"youzi_alias":"拉萨天团","records":[]}'
+        )
+
+    monkeypatch.setattr(d, "_call_legacy_tool", fake_legacy)
+
+    out = d.get_lhb_detail(
+        code="000004",
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+        youzi_alias="拉萨天团",
+    )
+
+    assert calls == [[
+        "lhb-detail", "000004", "--start-date", "2026-06-01",
+        "--end-date", "2026-06-26", "--youzi-alias", "拉萨天团", "--json",
+    ]]
+    assert out["_source"] == "legacy"
+    assert out["youzi_alias"] == "拉萨天团"
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1535,6 +1535,7 @@ class LxrData:
         page: int = 1,
         dominant_type: Optional[str] = None,
         dominant_direction: Optional[str] = None,
+        youzi_alias: Optional[str] = None,
         source: str = "auto",
     ) -> dict:
         """获取 A 股龙虎榜买卖席位明细。当前统一入口走东方财富免费源。"""
@@ -1552,6 +1553,7 @@ class LxrData:
                 page,
                 dominant_type,
                 dominant_direction,
+                youzi_alias,
             )),
         ])
 
@@ -1567,6 +1569,7 @@ class LxrData:
         page: int,
         dominant_type: Optional[str],
         dominant_direction: Optional[str],
+        youzi_alias: Optional[str],
     ) -> dict:
         args = ["lhb-detail"]
         if code:
@@ -1589,6 +1592,8 @@ class LxrData:
             args.extend(["--dominant-type", str(dominant_type)])
         if dominant_direction:
             args.extend(["--dominant-direction", str(dominant_direction)])
+        if youzi_alias:
+            args.extend(["--youzi-alias", str(youzi_alias)])
         args.append("--json")
         text = self._call_legacy_tool(args)
         data = json.loads(text)
@@ -1846,6 +1851,7 @@ def _cli():
         default=None,
         help="区间模式下按资金主导方向过滤",
     )
+    p_lhb_detail.add_argument("--youzi-alias", default=None, help="区间模式下按游资/活跃席位别名过滤")
     p_lhb_detail.add_argument("--source", choices=["auto", "legacy"], default="auto")
     p_lhb_detail.add_argument("--quiet", action="store_true")
 
@@ -1937,6 +1943,7 @@ def _cli():
             page=args.page,
             dominant_type=args.dominant_type,
             dominant_direction=args.dominant_direction,
+            youzi_alias=args.youzi_alias,
             source=args.source,
         )
     elif args.command == "datapack":
