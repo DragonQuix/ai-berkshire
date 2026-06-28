@@ -10,13 +10,22 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from datetime import date
 from pathlib import Path
 from typing import Any
 
-from report_audit import extract_data_points, sample_points
+try:
+    from report_audit import extract_data_points, sample_points
+except ModuleNotFoundError as _exc:
+    # 兼容包式导入（tools.team_research_outputs）：此时 report_audit 不在 sys.path，
+    # 把脚本目录加入路径后再导入。若错误不是来自 report_audit 本身则原样抛出。
+    if "report_audit" not in str(_exc):
+        raise
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from report_audit import extract_data_points, sample_points
 
 
 ROLE_FILES = {

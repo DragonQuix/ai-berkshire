@@ -620,3 +620,21 @@ def test_validate_rejects_non_standard_source_ref_even_when_pending(tmp_path: Pa
     )
     assert reason is not None
     assert "source_ref must match [SEPA]<digits>" in reason["reason"]
+
+
+def test_team_research_outputs_importable_as_package() -> None:
+    """作为包（tools.team_research_outputs）从仓库根导入时不报错。
+
+    回归测试：audit-extract 引入 `from report_audit import ...` 后，包式导入会
+    因 report_audit 不在 sys.path 而失败，破坏以前可用的 namespace-package 入口。
+    """
+    import subprocess
+    proc = subprocess.run(
+        [sys.executable, "-c", "import tools.team_research_outputs"],
+        cwd=str(REPO),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    assert proc.returncode == 0, proc.stderr
