@@ -1074,6 +1074,7 @@ def _summarize_lhb_compare_code_identity_summary(identity_tags: list[dict]) -> d
     tag_order = ["shared_dominant", "unique_dominant", "balanced", "no_youzi"]
     tag_counts = {tag: 0 for tag in tag_order}
     top_codes = {tag: None for tag in tag_order}
+    total_count = len(identity_tags)
     for item in identity_tags:
         tag = item.get("identity_tag")
         if tag not in tag_counts:
@@ -1095,9 +1096,14 @@ def _summarize_lhb_compare_code_identity_summary(identity_tags: list[dict]) -> d
         dominant_tag = "mixed"
     return {
         "tag_counts": tag_counts,
+        "tag_ratios": {
+            tag: round(count / total_count, 4) if total_count else 0
+            for tag, count in tag_counts.items()
+        },
         "top_codes_by_tag": top_codes,
         "dominant_identity_tag": dominant_tag,
         "dominant_identity_count": dominant_count,
+        "dominant_identity_ratio": round(dominant_count / total_count, 4) if total_count else 0,
     }
 
 

@@ -1287,6 +1287,12 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                     "balanced": 0,
                     "no_youzi": 0,
                 },
+                "tag_ratios": {
+                    "shared_dominant": 0.5,
+                    "unique_dominant": 0.5,
+                    "balanced": 0,
+                    "no_youzi": 0,
+                },
                 "top_codes_by_tag": {
                     "shared_dominant": "000005",
                     "unique_dominant": "000004",
@@ -1295,6 +1301,7 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                 },
                 "dominant_identity_tag": "mixed",
                 "dominant_identity_count": 1,
+                "dominant_identity_ratio": 0.5,
             },
             "same_direction_youzi_aliases": [{"alias": "章盟主", "net_direction": "net_sell"}],
             "mixed_direction_youzi_aliases": [],
