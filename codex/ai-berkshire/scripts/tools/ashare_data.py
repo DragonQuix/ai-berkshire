@@ -1651,6 +1651,7 @@ def _fetch_lhb_compare(
     dominant_direction: str | None = None,
     youzi_alias: str | None = None,
     min_dominant_net: float | None = None,
+    min_recognition_score: float | None = None,
     sort_by: str = "youzi_abs_net_amount",
 ) -> dict:
     if not start_date or not end_date:
@@ -1679,6 +1680,15 @@ def _fetch_lhb_compare(
     rows = [_lhb_compare_row(payload) for payload in payloads]
     comparison_summary = _summarize_lhb_compare(rows, clean_codes, payloads)
     _apply_lhb_compare_identity_tags_to_rows(rows, comparison_summary)
+    filtered_out_codes: list[str] = []
+    if min_recognition_score is not None:
+        kept_rows = []
+        for row in rows:
+            if _lhb_numeric_amount(row.get("youzi_recognition_score")) >= min_recognition_score:
+                kept_rows.append(row)
+            elif row.get("code"):
+                filtered_out_codes.append(row["code"])
+        rows = kept_rows
     rows = sorted(
         rows,
         key=lambda row: (-_lhb_numeric_amount(row.get(sort_by)), row.get("code") or ""),
@@ -1686,7 +1696,7 @@ def _fetch_lhb_compare(
     for idx, row in enumerate(rows, start=1):
         row["rank"] = idx
 
-    return {
+    result = {
         "_source": "legacy",
         "source_detail": "eastmoney:lhb-compare",
         "codes": clean_codes,
@@ -1703,6 +1713,13 @@ def _fetch_lhb_compare(
         "comparison_summary": comparison_summary,
         "rows": rows,
     }
+    if min_recognition_score is not None:
+        result.update({
+            "min_recognition_score": min_recognition_score,
+            "filtered_row_count": len(rows),
+            "filtered_out_codes": filtered_out_codes,
+        })
+    return result
 
 
 def cmd_lhb(
@@ -1758,23 +1775,24 @@ def cmd_lhb_compare(
     dominant_direction: str | None = None,
     youzi_alias: str | None = None,
     min_dominant_net: float | None = None,
+    min_recognition_score: float | None = None,
     sort_by: str = "youzi_abs_net_amount",
     json_output: bool = False,
 ):
     """多股票龙虎榜区间辨识度对比。"""
-    payload = _fetch_lhb_compare(
-        codes,
-        start_date,
-        end_date,
-        list_limit,
-        page,
-        limit,
-        dominant_type,
-        dominant_direction,
-        youzi_alias,
-        min_dominant_net,
-        sort_by,
-    )
+    compare_kwargs = {
+        "list_limit": list_limit,
+        "page": page,
+        "detail_limit": limit,
+        "dominant_type": dominant_type,
+        "dominant_direction": dominant_direction,
+        "youzi_alias": youzi_alias,
+        "min_dominant_net": min_dominant_net,
+        "sort_by": sort_by,
+    }
+    if min_recognition_score is not None:
+        compare_kwargs["min_recognition_score"] = min_recognition_score
+    payload = _fetch_lhb_compare(codes, start_date, end_date, **compare_kwargs)
     if json_output:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return
@@ -2094,6 +2112,7 @@ def main():
     )
     p_lhb_compare.add_argument("--youzi-alias", default=None, help="按游资/活跃席位别名过滤")
     p_lhb_compare.add_argument("--min-dominant-net", type=float, default=None, help="主导资金绝对净额下限")
+    p_lhb_compare.add_argument("--min-recognition-score", type=float, default=None, help="综合辨识分下限")
     p_lhb_compare.add_argument("--sort-by", choices=_LHB_COMPARE_SORT_FIELDS, default="youzi_abs_net_amount")
     p_lhb_compare.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
 
@@ -2139,6 +2158,7 @@ def main():
             args.dominant_direction,
             args.youzi_alias,
             args.min_dominant_net,
+            args.min_recognition_score,
             args.sort_by,
             args.json,
         ),

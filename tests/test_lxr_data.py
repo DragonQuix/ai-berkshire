@@ -343,6 +343,71 @@ class TestMacroAndIndexValuation(unittest.TestCase):
         self.assertNotIn("cp", sent["metricsList"])
         self.assertEqual(r["valuation"]["pe_ttm"]["cv"], 17.78)
 
+    def test_industry_constituents_for_stock_anchor_first(self):
+        cli = FakeClient({
+            "cn/industry/constituents/sw_2021": [[
+                {"stockCode": "340000", "constituents": [
+                    {"stockCode": "600519"}, {"stockCode": "000568"}, {"stockCode": "000596"},
+                ]},
+                {"stockCode": "340500", "constituents": [
+                    {"stockCode": "000568"}, {"stockCode": "600519"}, {"stockCode": "000596"},
+                ]},
+            ]],
+            "cn/industry": [[
+                {"stockCode": "340000", "name": "食品饮料", "level": "one"},
+                {"stockCode": "340500", "name": "白酒", "level": "two"},
+            ]],
+        })
+        d = lxd.LxrData(client=cli, verbose=False)
+
+        r = d.get_industry_constituents_for_stock("600519", max_codes=3)
+
+        self.assertEqual(r["_source"], "lixinger")
+        self.assertEqual(r["industry_code"], "340500")
+        self.assertEqual(r["industry_name"], "白酒")
+        self.assertEqual(r["codes"], ["600519", "000568", "000596"])
+
+    def test_lhb_industry_compare_uses_industry_constituents(self):
+        d = lxd.LxrData(client=FakeClient(), verbose=False)
+        calls = []
+
+        def fake_compare(**kwargs):
+            calls.append(kwargs)
+            return {
+                "_source": "legacy",
+                "source_detail": "legacy:ashare_data/lhb-compare",
+                "codes": kwargs["codes"],
+                "rows": [{"code": "000568", "rank": 1}],
+            }
+
+        fake_industry = {
+            "_source": "lixinger",
+            "source_detail": "lixinger:industry-constituents",
+            "anchor_code": "600519",
+            "industry_code": "340500",
+            "industry_name": "白酒",
+            "level": "two",
+            "codes": ["600519", "000568", "000596"],
+            "constituent_count": 3,
+        }
+        with mock.patch.object(d, "get_industry_constituents_for_stock", return_value=fake_industry):
+            with mock.patch.object(d, "get_lhb_compare", side_effect=fake_compare):
+                out = d.get_lhb_industry_compare(
+                    "600519",
+                    start_date="2026-06-01",
+                    end_date="2026-06-26",
+                    max_codes=3,
+                    min_recognition_score=50,
+                    sort_by="youzi_recognition_score",
+                )
+
+        self.assertEqual(calls[0]["codes"], ["600519", "000568", "000596"])
+        self.assertEqual(calls[0]["min_recognition_score"], 50)
+        self.assertEqual(calls[0]["sort_by"], "youzi_recognition_score")
+        self.assertEqual(out["source_detail"], "lixinger+legacy:lhb-industry-compare")
+        self.assertEqual(out["industry"]["industry_name"], "白酒")
+        self.assertEqual(out["compare"]["rows"][0]["code"], "000568")
+
 
 class TestQualityMetrics(unittest.TestCase):
     def test_compute_quality_checks_pass(self):
@@ -725,6 +790,7 @@ def test_get_lhb_compare_passes_codes_and_filters_to_legacy_ashare(monkeypatch):
         dominant_direction="net_buy",
         youzi_alias="拉萨天团",
         min_dominant_net=200000,
+        min_recognition_score=50,
         sort_by="profiled_abs_net_amount",
     )
 
@@ -739,6 +805,7 @@ def test_get_lhb_compare_passes_codes_and_filters_to_legacy_ashare(monkeypatch):
         "--dominant-direction", "net_buy",
         "--youzi-alias", "拉萨天团",
         "--min-dominant-net", "200000",
+        "--min-recognition-score", "50",
         "--sort-by", "profiled_abs_net_amount",
         "--json",
     ]]

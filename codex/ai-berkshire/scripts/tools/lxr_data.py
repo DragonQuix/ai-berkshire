@@ -1294,15 +1294,20 @@ class LxrData:
                     "fsTableType": it.get("fsTableType"),
                 }
         stock2codes = {}
+        code2stocks = {}
         for blk in cons_list:
             if not isinstance(blk, dict):
                 continue
             ind_code = blk.get("stockCode")
+            if ind_code:
+                code2stocks.setdefault(ind_code, [])
             for c in blk.get("constituents", []) or []:
                 sc = c.get("stockCode") if isinstance(c, dict) else None
                 if sc:
                     stock2codes.setdefault(sc, []).append(ind_code)
-        return {"code_info": code_info, "stock2codes": stock2codes}
+                    if ind_code:
+                        code2stocks[ind_code].append(sc)
+        return {"code_info": code_info, "stock2codes": stock2codes, "code2stocks": code2stocks}
 
     def get_industry_of_stock(self, code: str, source: str = "sw_2021", level: str = "two") -> dict:
         """返回股票所属申万行业（默认二级）。constituents 同时返回一/二/三级，按 level 精确选取。
@@ -1348,6 +1353,68 @@ class LxrData:
             "level": ci.get("level"), "fsTableType": ci.get("fsTableType"),
             "_source": "lixinger",
         }
+
+    def get_industry_constituents_for_stock(
+        self,
+        code: str,
+        source: str = "sw_2021",
+        level: str = "two",
+        max_codes: int = 4,
+    ) -> dict:
+        """返回锚定股票所属申万行业成分代码，锚定股票排第一。"""
+        market = _detect_market(code)
+        anchor = _norm_code(code, market)
+        result = {
+            "source_detail": f"lixinger:industry-constituents/{source}",
+            "anchor_code": anchor,
+            "market": market,
+            "source": source,
+            "level": None,
+            "industry_code": None,
+            "industry_name": None,
+            "codes": [],
+            "constituent_count": 0,
+            "_source": "none",
+        }
+        if market != "cn":
+            result["note"] = "申万行业分类仅覆盖A股"
+            return result
+
+        m = self._sw_industry_map(source=source)
+        codes = m["stock2codes"].get(anchor, [])
+        if not codes:
+            result["note"] = "未匹配到申万行业（可能为非主板/退市）"
+            return result
+        lvl_rank = {"one": 1, "two": 2, "three": 3}
+        target_rank = lvl_rank.get(level, 2)
+        chosen_code = None
+        for item in codes:
+            if (m["code_info"].get(item) or {}).get("level") == level:
+                chosen_code = item
+                break
+        if not chosen_code:
+            chosen_code = sorted(
+                codes,
+                key=lambda item: abs(
+                    lvl_rank.get((m["code_info"].get(item) or {}).get("level"), 0) - target_rank
+                ),
+            )[0]
+        info = m["code_info"].get(chosen_code) or {}
+        result.update({
+            "level": info.get("level"),
+            "industry_code": chosen_code,
+            "industry_name": info.get("name") or chosen_code,
+            "_source": "lixinger",
+        })
+        raw_codes = m.get("code2stocks", {}).get(chosen_code, [])
+        deduped = []
+        for item in [anchor, *raw_codes]:
+            norm = _norm_code(str(item), "cn") if item else None
+            if norm and norm not in deduped:
+                deduped.append(norm)
+        result["constituent_count"] = len(deduped)
+        result["codes"] = deduped[:max(0, max_codes)]
+        return result
 
     def get_industry_valuation(self, industry_code: str, source: str = "sw_2021", years: int = 10) -> dict:
         """行业估值：PE/PB/PS/股息率 当前值 + 10年分位点。"""
@@ -1620,6 +1687,7 @@ class LxrData:
         dominant_direction: Optional[str] = None,
         youzi_alias: Optional[str] = None,
         min_dominant_net: Optional[float] = None,
+        min_recognition_score: Optional[float] = None,
         sort_by: str = "youzi_abs_net_amount",
         source: str = "auto",
     ) -> dict:
@@ -1639,6 +1707,7 @@ class LxrData:
                 dominant_direction,
                 youzi_alias,
                 min_dominant_net,
+                min_recognition_score,
                 sort_by,
             ),
         )])
@@ -1655,6 +1724,7 @@ class LxrData:
         dominant_direction: Optional[str],
         youzi_alias: Optional[str],
         min_dominant_net: Optional[float],
+        min_recognition_score: Optional[float],
         sort_by: str,
     ) -> dict:
         args = ["lhb-compare"]
@@ -1674,6 +1744,8 @@ class LxrData:
             args.extend(["--youzi-alias", str(youzi_alias)])
         if min_dominant_net is not None:
             args.extend(["--min-dominant-net", str(min_dominant_net)])
+        if min_recognition_score is not None:
+            args.extend(["--min-recognition-score", str(min_recognition_score)])
         if sort_by != "youzi_abs_net_amount":
             args.extend(["--sort-by", str(sort_by)])
         args.append("--json")
@@ -1683,6 +1755,61 @@ class LxrData:
         if "_source" not in data:
             data["_source"] = "legacy"
         return data
+
+    def get_lhb_industry_compare(
+        self,
+        code: str,
+        start_date: str,
+        end_date: str,
+        max_codes: int = 4,
+        source: str = "sw_2021",
+        level: str = "two",
+        limit: int = 10,
+        list_limit: int = 20,
+        page: int = 1,
+        dominant_type: Optional[str] = None,
+        dominant_direction: Optional[str] = None,
+        youzi_alias: Optional[str] = None,
+        min_dominant_net: Optional[float] = None,
+        min_recognition_score: Optional[float] = None,
+        sort_by: str = "youzi_recognition_score",
+    ) -> dict:
+        """给定锚定股票，自动取同申万行业成分并复用 lhb-compare。"""
+        industry = self.get_industry_constituents_for_stock(
+            code,
+            source=source,
+            level=level,
+            max_codes=max_codes,
+        )
+        codes = industry.get("codes") or []
+        result = {
+            "source_detail": "lixinger+legacy:lhb-industry-compare",
+            "anchor_code": industry.get("anchor_code"),
+            "industry": industry,
+            "compare": None,
+            "_source": "none",
+        }
+        if len(codes) < 2:
+            result["error"] = "同板块龙虎榜对比至少需要 2 个行业成分代码"
+            return result
+        compare = self.get_lhb_compare(
+            codes=codes[:4],
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+            list_limit=list_limit,
+            page=page,
+            dominant_type=dominant_type,
+            dominant_direction=dominant_direction,
+            youzi_alias=youzi_alias,
+            min_dominant_net=min_dominant_net,
+            min_recognition_score=min_recognition_score,
+            sort_by=sort_by,
+            source="auto",
+        )
+        result["compare"] = compare
+        result["_source"] = "lixinger+legacy" if compare.get("_source") == "legacy" else compare.get("_source")
+        return result
 
     # ------------------------------------------------------------------
     # 研究数据包（跨 Skill 共享，TTL 1h）
@@ -1964,6 +2091,7 @@ def _cli():
     )
     p_lhb_compare.add_argument("--youzi-alias", default=None, help="按游资/活跃席位别名过滤")
     p_lhb_compare.add_argument("--min-dominant-net", type=float, default=None, help="主导资金绝对净额下限")
+    p_lhb_compare.add_argument("--min-recognition-score", type=float, default=None, help="综合辨识分下限")
     p_lhb_compare.add_argument(
         "--sort-by",
         choices=[
@@ -1976,6 +2104,43 @@ def _cli():
     )
     p_lhb_compare.add_argument("--source", choices=["auto", "legacy"], default="auto")
     p_lhb_compare.add_argument("--quiet", action="store_true")
+
+    p_lhb_industry = sub.add_parser("lhb-industry-compare", help="A股同申万行业龙虎榜辨识度对比")
+    p_lhb_industry.add_argument("code", help="锚定股票代码，如 600519")
+    p_lhb_industry.add_argument("--start-date", required=True, help="开始日期 YYYY-MM-DD")
+    p_lhb_industry.add_argument("--end-date", required=True, help="结束日期 YYYY-MM-DD")
+    p_lhb_industry.add_argument("--max-codes", type=int, default=4, help="最多对比行业成分数，2-4")
+    p_lhb_industry.add_argument("--industry-source", default="sw_2021", choices=["sw", "sw_2021", "cni"])
+    p_lhb_industry.add_argument("--level", default="two", choices=["one", "two", "three"])
+    p_lhb_industry.add_argument("--limit", type=int, default=10)
+    p_lhb_industry.add_argument("--list-limit", type=int, default=20)
+    p_lhb_industry.add_argument("--page", type=int, default=1)
+    p_lhb_industry.add_argument(
+        "--dominant-type",
+        choices=["institution", "northbound", "youzi", "brokerage", "unknown"],
+        default=None,
+        help="按资金主导类型过滤",
+    )
+    p_lhb_industry.add_argument(
+        "--dominant-direction",
+        choices=["net_buy", "net_sell", "flat"],
+        default=None,
+        help="按资金主导方向过滤",
+    )
+    p_lhb_industry.add_argument("--youzi-alias", default=None, help="按游资/活跃席位别名过滤")
+    p_lhb_industry.add_argument("--min-dominant-net", type=float, default=None, help="主导资金绝对净额下限")
+    p_lhb_industry.add_argument("--min-recognition-score", type=float, default=None, help="综合辨识分下限")
+    p_lhb_industry.add_argument(
+        "--sort-by",
+        choices=[
+            "youzi_abs_net_amount",
+            "profiled_abs_net_amount",
+            "profiled_abs_net_ratio",
+            "youzi_recognition_score",
+        ],
+        default="youzi_recognition_score",
+    )
+    p_lhb_industry.add_argument("--quiet", action="store_true")
 
     for skill in _MX_SKILLS:
         p_mx = sub.add_parser(skill, help=f"调用妙想 {skill}（1h 缓存，自动 Windows 输出目录）")
@@ -2081,8 +2246,27 @@ def _cli():
             dominant_direction=args.dominant_direction,
             youzi_alias=args.youzi_alias,
             min_dominant_net=args.min_dominant_net,
+            min_recognition_score=args.min_recognition_score,
             sort_by=args.sort_by,
             source=args.source,
+        )
+    elif args.command == "lhb-industry-compare":
+        data = LxrData(verbose=not args.quiet).get_lhb_industry_compare(
+            args.code,
+            start_date=args.start_date,
+            end_date=args.end_date,
+            max_codes=args.max_codes,
+            source=args.industry_source,
+            level=args.level,
+            limit=args.limit,
+            list_limit=args.list_limit,
+            page=args.page,
+            dominant_type=args.dominant_type,
+            dominant_direction=args.dominant_direction,
+            youzi_alias=args.youzi_alias,
+            min_dominant_net=args.min_dominant_net,
+            min_recognition_score=args.min_recognition_score,
+            sort_by=args.sort_by,
         )
     elif args.command == "datapack":
         data = LxrData(verbose=not args.quiet).get_research_datapack(

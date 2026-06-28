@@ -220,6 +220,7 @@ python tools/lxr_data.py lhb-detail 000004 --start-date 2026-06-01 --end-date 20
 python tools/lxr_data.py lhb-detail 000004 --start-date 2026-06-01 --end-date 2026-06-26 --youzi-alias 拉萨天团
 python tools/lxr_data.py lhb-detail 000004 --start-date 2026-06-01 --end-date 2026-06-26 --min-dominant-net 500000
 python tools/lxr_data.py lhb-compare 000004 000005 --start-date 2026-06-01 --end-date 2026-06-26 --sort-by profiled_abs_net_amount
+python tools/lxr_data.py lhb-industry-compare 600519 --start-date 2026-06-01 --end-date 2026-06-26 --max-codes 4
 
 # Batch API
 cd tools; python -c "from lxr_client import LixingerClient; import json; c=LixingerClient(); print(json.dumps(c.post_raw('cn/company/fundamental/non_financial', {'stockCodes':['600519','601336'],'date':'2026-06-26','metricsList':['pe_ttm','pb']})['data'], ensure_ascii=False))"
@@ -231,7 +232,7 @@ python C:\Users\admin\.claude\skills\mx-xuangu\mx_xuangu.py "ROE大于15%的A股
 python C:\Users\admin\.claude\skills\mx-data\mx_data.py "腾讯控股近三年净利润 营业收入" $env:TEMP\mx_skills
 ```
 
-`lhb-detail` 记录中的 `buy_seats` / `sell_seats` 已包含 `seat_category` 与 `seat_profile`；记录层包含 `seat_profile_summary`、`seat_amount_summary` 与 `seat_flow_analysis`，用于区分机构、北向、普通营业部与已知游资/活跃席位，按类型聚合买入/卖出/净额，并标注资金主导方。区间模式额外返回 `range_flow_summary`，汇总多日主导类型、方向、类型净额和游资别名；同时返回 `range_seat_profile_summary`，基于过滤后的 records 按 `seat_profile.type` 与别名/席位名聚合买卖次数、金额、净额、交易日、席位名和按绝对净额排序的 `top_seats`，并提供 `youzi_alias_strengths` 按游资 alias 聚合买卖次数、金额、净额、方向、交易日和席位名，默认按绝对净额降序；其中 `recognition_summary` 汇总可识别席位数量、游资别名数、可识别净额绝对值、游资净额绝对值、可识别主导类型、区间内席位/净额占比、`top_profiled_seats` 和 `top_youzi_seats`，并可用 `--dominant-type` / `--dominant-direction` / `--youzi-alias` / `--min-dominant-net` 过滤记录。`lhb-compare` 在用户显式给定多个股票代码时复用上述区间能力，输出按游资净额绝对值、可识别净额绝对值或可识别净额占比排序的 `rows`，行级回填游资辨识标签和共同/独有占比，并在 `comparison_summary` 汇总领先代码、共同游资 alias、alias 覆盖频次、共同游资强度占比、共同游资集中度、每股共同/独有游资贡献度、每股游资辨识来源标签及标签数量/占比汇总、跨代码 alias 净额强度明细、共同 alias 的同向/分歧方向和方向一致性汇总，作为同板块/主题横向辨识度对比基础。
+`lhb-detail` 记录中的 `buy_seats` / `sell_seats` 已包含 `seat_category` 与 `seat_profile`；记录层包含 `seat_profile_summary`、`seat_amount_summary` 与 `seat_flow_analysis`，用于区分机构、北向、普通营业部与已知游资/活跃席位，按类型聚合买入/卖出/净额，并标注资金主导方。区间模式额外返回 `range_flow_summary`，汇总多日主导类型、方向、类型净额和游资别名；同时返回 `range_seat_profile_summary`，基于过滤后的 records 按 `seat_profile.type` 与别名/席位名聚合买卖次数、金额、净额、交易日、席位名和按绝对净额排序的 `top_seats`，并提供 `youzi_alias_strengths` 按游资 alias 聚合买卖次数、金额、净额、方向、交易日和席位名，默认按绝对净额降序；其中 `recognition_summary` 汇总可识别席位数量、游资别名数、可识别净额绝对值、游资净额绝对值、可识别主导类型、区间内席位/净额占比、`top_profiled_seats` 和 `top_youzi_seats`，并可用 `--dominant-type` / `--dominant-direction` / `--youzi-alias` / `--min-dominant-net` 过滤记录。`lhb-compare` 在用户显式给定多个股票代码时复用上述区间能力，输出按游资净额绝对值、可识别净额绝对值或可识别净额占比排序的 `rows`，行级回填游资辨识标签和共同/独有占比，并在 `comparison_summary` 汇总领先代码、共同游资 alias、alias 覆盖频次、共同游资强度占比、共同游资集中度、每股共同/独有游资贡献度、每股游资辨识来源标签及标签数量/占比汇总、跨代码 alias 净额强度明细、共同 alias 的同向/分歧方向和方向一致性汇总，作为同板块/主题横向辨识度对比基础。`lhb-industry-compare` 进一步用理杏仁申万行业成分自动补齐同板块代码，再复用 `lhb-compare`，避免人工枚举同业。
 
 ---
 
