@@ -1213,6 +1213,13 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
             "top_code_by_profiled_abs_net": "000005",
             "top_code_by_profiled_abs_net_ratio": "000005",
             "shared_youzi_aliases": ["章盟主"],
+            "shared_youzi_strength_summary": {
+                "shared_alias_count": 1,
+                "shared_abs_net_amount": 820000,
+                "total_abs_net_amount": 1120000,
+                "shared_abs_net_ratio": 0.7321,
+                "top_shared_alias": "章盟主",
+            },
             "same_direction_youzi_aliases": [{"alias": "章盟主", "net_direction": "net_sell"}],
             "mixed_direction_youzi_aliases": [],
             "youzi_alias_frequency": [

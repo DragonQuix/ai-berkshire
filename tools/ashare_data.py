@@ -921,6 +921,25 @@ def _summarize_lhb_compare_alias_strengths(payloads: list[dict]) -> list[dict]:
     return sorted(out, key=lambda item: (-item["total_abs_net_amount"], item["alias"]))
 
 
+def _summarize_lhb_compare_shared_strength(alias_strengths: list[dict]) -> dict:
+    total_abs_net = sum(
+        _lhb_numeric_amount(item.get("total_abs_net_amount"))
+        for item in alias_strengths
+    )
+    shared_items = [item for item in alias_strengths if item.get("code_count", 0) >= 2]
+    shared_abs_net = sum(
+        _lhb_numeric_amount(item.get("total_abs_net_amount"))
+        for item in shared_items
+    )
+    return {
+        "shared_alias_count": len(shared_items),
+        "shared_abs_net_amount": shared_abs_net,
+        "total_abs_net_amount": total_abs_net,
+        "shared_abs_net_ratio": round(shared_abs_net / total_abs_net, 4) if total_abs_net else 0,
+        "top_shared_alias": shared_items[0]["alias"] if shared_items else None,
+    }
+
+
 def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[dict]) -> dict:
     alias_codes: dict[str, set[str]] = {}
     for row in rows:
@@ -965,6 +984,7 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
             item["alias"] for item in alias_frequency
             if item["code_count"] >= 2
         ],
+        "shared_youzi_strength_summary": _summarize_lhb_compare_shared_strength(alias_strengths),
         "same_direction_youzi_aliases": same_direction_aliases,
         "mixed_direction_youzi_aliases": mixed_direction_aliases,
         "youzi_alias_frequency": alias_frequency,
