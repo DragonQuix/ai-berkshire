@@ -1966,7 +1966,12 @@ def _cli():
     p_lhb_compare.add_argument("--min-dominant-net", type=float, default=None, help="主导资金绝对净额下限")
     p_lhb_compare.add_argument(
         "--sort-by",
-        choices=["youzi_abs_net_amount", "profiled_abs_net_amount", "profiled_abs_net_ratio"],
+        choices=[
+            "youzi_abs_net_amount",
+            "profiled_abs_net_amount",
+            "profiled_abs_net_ratio",
+            "youzi_recognition_score",
+        ],
         default="youzi_abs_net_amount",
     )
     p_lhb_compare.add_argument("--source", choices=["auto", "legacy"], default="auto")

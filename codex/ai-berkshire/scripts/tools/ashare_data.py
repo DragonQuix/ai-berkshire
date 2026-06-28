@@ -35,6 +35,7 @@ _LHB_COMPARE_SORT_FIELDS = (
     "youzi_abs_net_amount",
     "profiled_abs_net_amount",
     "profiled_abs_net_ratio",
+    "youzi_recognition_score",
 )
 
 
@@ -1676,6 +1677,8 @@ def _fetch_lhb_compare(
         for code in clean_codes
     ]
     rows = [_lhb_compare_row(payload) for payload in payloads]
+    comparison_summary = _summarize_lhb_compare(rows, clean_codes, payloads)
+    _apply_lhb_compare_identity_tags_to_rows(rows, comparison_summary)
     rows = sorted(
         rows,
         key=lambda row: (-_lhb_numeric_amount(row.get(sort_by)), row.get("code") or ""),
@@ -1683,8 +1686,6 @@ def _fetch_lhb_compare(
     for idx, row in enumerate(rows, start=1):
         row["rank"] = idx
 
-    comparison_summary = _summarize_lhb_compare(rows, clean_codes, payloads)
-    _apply_lhb_compare_identity_tags_to_rows(rows, comparison_summary)
     return {
         "_source": "legacy",
         "source_detail": "eastmoney:lhb-compare",
