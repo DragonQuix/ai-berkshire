@@ -1836,6 +1836,24 @@ def cmd_lhb_compare(
             print(f"同向Top: {direction['top_same_direction_shared_alias']}")
         if direction.get("top_mixed_direction_shared_alias"):
             print(f"分歧Top: {direction['top_mixed_direction_shared_alias']}")
+    shared_strengths = summary.get("shared_youzi_code_strengths") or []
+    if shared_strengths:
+        item = shared_strengths[0]
+        print(
+            f"共同游资贡献Top: {item.get('code') or '-'} "
+            f"{item.get('top_shared_alias') or '-'} "
+            f"{_fmt_yi(item.get('shared_abs_net_amount'))} "
+            f"占比={item.get('shared_abs_net_ratio', '-')}"
+        )
+    unique_strengths = summary.get("unique_youzi_code_strengths") or []
+    if unique_strengths:
+        item = unique_strengths[0]
+        print(
+            f"独有游资贡献Top: {item.get('code') or '-'} "
+            f"{item.get('top_unique_alias') or '-'} "
+            f"{_fmt_yi(item.get('unique_abs_net_amount'))} "
+            f"占比={item.get('unique_abs_net_ratio', '-')}"
+        )
     for row in payload["rows"]:
         print(
             f"{row['rank']:>2}. {row['code']} "

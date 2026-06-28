@@ -2225,6 +2225,68 @@ def test_cmd_lhb_compare_prints_direction_consistency_summary(monkeypatch, capsy
     assert "分歧Top: 拉萨天团" in out
 
 
+def test_cmd_lhb_compare_prints_shared_unique_strength_summary(monkeypatch, capsys):
+    def fake_fetch_compare(
+        codes,
+        start_date,
+        end_date,
+        list_limit=20,
+        page=1,
+        detail_limit=10,
+        dominant_type=None,
+        dominant_direction=None,
+        youzi_alias=None,
+        min_dominant_net=None,
+        sort_by="youzi_abs_net_amount",
+    ):
+        return {
+            "_source": "legacy",
+            "source_detail": "eastmoney:lhb-compare",
+            "codes": codes,
+            "start_date": start_date,
+            "end_date": end_date,
+            "comparison_summary": {
+                "shared_youzi_code_strengths": [
+                    {
+                        "code": "000005",
+                        "shared_abs_net_amount": 700000,
+                        "shared_abs_net_ratio": 1.0,
+                        "top_shared_alias": "章盟主",
+                    }
+                ],
+                "unique_youzi_code_strengths": [
+                    {
+                        "code": "000004",
+                        "unique_abs_net_amount": 300000,
+                        "unique_abs_net_ratio": 0.7143,
+                        "top_unique_alias": "拉萨天团",
+                    }
+                ],
+            },
+            "rows": [
+                {
+                    "rank": 1,
+                    "code": "000005",
+                    "youzi_abs_net_amount": 700000,
+                    "profiled_abs_net_amount": 800000,
+                    "top_youzi_alias": "章盟主",
+                },
+            ],
+        }
+
+    monkeypatch.setattr(ad, "_fetch_lhb_compare", fake_fetch_compare)
+
+    ad.cmd_lhb_compare(
+        ["000004", "000005"],
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+    )
+
+    out = capsys.readouterr().out
+    assert "共同游资贡献Top: 000005 章盟主 70.00万 占比=1.0" in out
+    assert "独有游资贡献Top: 000004 拉萨天团 30.00万 占比=0.7143" in out
+
+
 def _lhb_compare_payload(
     code,
     filtered_count,
