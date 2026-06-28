@@ -55,6 +55,7 @@ python tools/ashare_data.py valuation 600519 --source lixinger
 python tools/lxr_data.py lhb 600519 --limit 5 --quiet
 python tools/lxr_data.py lhb-detail --trade-id 100357777 --quiet  # 买卖席位明细；含 seat_profile / seat_profile_summary / seat_amount_summary / seat_flow_analysis
 python tools/lxr_data.py lhb-detail 000004 --start-date 2026-06-01 --end-date 2026-06-26 --quiet  # 区间批量席位明细；含 range_flow_summary
+python tools/lxr_data.py lhb-detail 000004 --start-date 2026-06-01 --end-date 2026-06-26 --dominant-type youzi --dominant-direction net_buy --quiet
 
 # 市值/估值精确验算（自动从理杏仁取股价/股本/EPS/BVPS/分位点）
 python tools/financial_rigor.py verify-market-cap 601336 --source lixinger
@@ -179,7 +180,7 @@ python tools/financial_rigor.py verify-market-cap --price 510 --shares 9.11e9 --
 | 指数估值(沪深300/恒生PE/PB分位) | `lxr_data.py index-val 000300 --market cn` | aastocks / mx-data |
 | 申万二级行业估值对比 | `lxr_data.py industry-compare 600519` | mx-data "白酒板块估值" |
 | A股龙虎榜明细 | `lxr_data.py lhb 600519 --limit 5`（东方财富免费源，`_source: legacy`） | 理杏仁 `trading-abnormal` |
-| A股龙虎榜买卖席位 | `lxr_data.py lhb-detail --trade-id 100357777`、`lhb-detail 000004 --date 2026-06-26` 或 `lhb-detail 000004 --start-date 2026-06-01 --end-date 2026-06-26`（区间模式先筛龙虎榜记录再按 `trade_id` 批量拉详情；区间 payload 含 `range_flow_summary`；席位含 `seat_category` / `seat_profile`，记录含 `seat_profile_summary` / `seat_amount_summary` / `seat_flow_analysis`，`source_detail: legacy:ashare_data/lhb-detail`） | 东方财富网页明细页 |
+| A股龙虎榜买卖席位 | `lxr_data.py lhb-detail --trade-id 100357777`、`lhb-detail 000004 --date 2026-06-26` 或 `lhb-detail 000004 --start-date 2026-06-01 --end-date 2026-06-26 --dominant-type youzi --dominant-direction net_buy`（区间模式先筛龙虎榜记录再按 `trade_id` 批量拉详情；区间 payload 含 `range_flow_summary`；可按主导类型/方向过滤；席位含 `seat_category` / `seat_profile`，记录含 `seat_profile_summary` / `seat_amount_summary` / `seat_flow_analysis`，`source_detail: legacy:ashare_data/lhb-detail`） | 东方财富网页明细页 |
 | **投研数据包（推荐）** | `lxr_data.py datapack 600519 --years 5`（TTL 1h） | 分拆 CLI |
 | **去劣 7 指标精算** | `lxr_data.py quality-metrics 600519 --years 10` | 手算 financials |
 | 妙想资讯搜索 | `lxr_data.py mx-search "{公司} 最新公告"` | 直调 mx_search.py |

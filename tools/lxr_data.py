@@ -1533,6 +1533,8 @@ class LxrData:
         end_date: Optional[str] = None,
         list_limit: int = 20,
         page: int = 1,
+        dominant_type: Optional[str] = None,
+        dominant_direction: Optional[str] = None,
         source: str = "auto",
     ) -> dict:
         """获取 A 股龙虎榜买卖席位明细。当前统一入口走东方财富免费源。"""
@@ -1540,7 +1542,16 @@ class LxrData:
             return {"_source": "none", "error": f"未知 source: {source}"}
         return self._run_chain([
             ("legacy", lambda: self._get_lhb_detail_legacy(
-                code, trade_date, trade_id, limit, start_date, end_date, list_limit, page
+                code,
+                trade_date,
+                trade_id,
+                limit,
+                start_date,
+                end_date,
+                list_limit,
+                page,
+                dominant_type,
+                dominant_direction,
             )),
         ])
 
@@ -1554,6 +1565,8 @@ class LxrData:
         end_date: Optional[str],
         list_limit: int,
         page: int,
+        dominant_type: Optional[str],
+        dominant_direction: Optional[str],
     ) -> dict:
         args = ["lhb-detail"]
         if code:
@@ -1572,6 +1585,10 @@ class LxrData:
             args.extend(["--list-limit", str(list_limit)])
         if page != 1:
             args.extend(["--page", str(page)])
+        if dominant_type:
+            args.extend(["--dominant-type", str(dominant_type)])
+        if dominant_direction:
+            args.extend(["--dominant-direction", str(dominant_direction)])
         args.append("--json")
         text = self._call_legacy_tool(args)
         data = json.loads(text)
@@ -1817,6 +1834,18 @@ def _cli():
     p_lhb_detail.add_argument("--limit", type=int, default=10)
     p_lhb_detail.add_argument("--list-limit", type=int, default=20, help="区间模式下先筛选的龙虎榜记录数")
     p_lhb_detail.add_argument("--page", type=int, default=1, help="区间模式下龙虎榜列表页码")
+    p_lhb_detail.add_argument(
+        "--dominant-type",
+        choices=["institution", "northbound", "youzi", "brokerage", "unknown"],
+        default=None,
+        help="区间模式下按资金主导类型过滤",
+    )
+    p_lhb_detail.add_argument(
+        "--dominant-direction",
+        choices=["net_buy", "net_sell", "flat"],
+        default=None,
+        help="区间模式下按资金主导方向过滤",
+    )
     p_lhb_detail.add_argument("--source", choices=["auto", "legacy"], default="auto")
     p_lhb_detail.add_argument("--quiet", action="store_true")
 
@@ -1906,6 +1935,8 @@ def _cli():
             end_date=args.end_date,
             list_limit=args.list_limit,
             page=args.page,
+            dominant_type=args.dominant_type,
+            dominant_direction=args.dominant_direction,
             source=args.source,
         )
     elif args.command == "datapack":

@@ -552,6 +552,8 @@ def _fetch_lhb_detail_range(
     list_limit: int = 20,
     page: int = 1,
     detail_limit: int = 10,
+    dominant_type: str | None = None,
+    dominant_direction: str | None = None,
 ) -> dict:
     if not start_date or not end_date:
         raise ValueError("lhb-detail 日期区间需要 --start-date 和 --end-date")
@@ -574,6 +576,16 @@ def _fetch_lhb_detail_range(
                 continue
             seen.add(key)
             records.append(record)
+    if dominant_type:
+        records = [
+            record for record in records
+            if (record.get("seat_flow_analysis") or {}).get("dominant_type") == dominant_type
+        ]
+    if dominant_direction:
+        records = [
+            record for record in records
+            if (record.get("seat_flow_analysis") or {}).get("dominant_direction") == dominant_direction
+        ]
     return {
         "_source": "legacy",
         "source_detail": "eastmoney:lhb-detail-range",
@@ -584,6 +596,9 @@ def _fetch_lhb_detail_range(
         "detail_limit": detail_limit,
         "page": page,
         "source_lhb_count": len(rows),
+        "filtered_count": len(records),
+        "dominant_type": dominant_type,
+        "dominant_direction": dominant_direction,
         "records": records,
         "range_flow_summary": summarize_lhb_range_flow(records),
     }
@@ -641,10 +656,21 @@ def cmd_lhb_detail(
     end_date: str | None = None,
     list_limit: int = 20,
     page: int = 1,
+    dominant_type: str | None = None,
+    dominant_direction: str | None = None,
 ):
     """龙虎榜买卖席位明细。"""
     if start_date or end_date:
-        payload = _fetch_lhb_detail_range(code, start_date, end_date, list_limit, page, limit)
+        payload = _fetch_lhb_detail_range(
+            code,
+            start_date,
+            end_date,
+            list_limit,
+            page,
+            limit,
+            dominant_type,
+            dominant_direction,
+        )
     else:
         payload = _fetch_lhb_detail(code, trade_date, trade_id, limit)
     if json_output:
@@ -803,6 +829,18 @@ def main():
     p_lhb_detail.add_argument("--limit", type=int, default=10, help="每侧席位条数，1-100")
     p_lhb_detail.add_argument("--list-limit", type=int, default=20, help="区间模式下先筛选的龙虎榜记录数，1-100")
     p_lhb_detail.add_argument("--page", type=int, default=1, help="区间模式下龙虎榜列表页码")
+    p_lhb_detail.add_argument(
+        "--dominant-type",
+        choices=["institution", "northbound", "youzi", "brokerage", "unknown"],
+        default=None,
+        help="区间模式下按资金主导类型过滤",
+    )
+    p_lhb_detail.add_argument(
+        "--dominant-direction",
+        choices=["net_buy", "net_sell", "flat"],
+        default=None,
+        help="区间模式下按资金主导方向过滤",
+    )
     p_lhb_detail.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
 
     args = parser.parse_args()
@@ -831,6 +869,8 @@ def main():
             args.end_date,
             args.list_limit,
             args.page,
+            args.dominant_type,
+            args.dominant_direction,
         ),
     }
     cmds[args.command]()

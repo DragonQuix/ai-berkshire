@@ -590,5 +590,42 @@ def test_get_lhb_detail_passes_date_range_to_legacy_ashare(monkeypatch):
     assert out["records"][0]["trade_id"] == "100357777"
 
 
+def test_get_lhb_detail_passes_dominant_filters_to_legacy_ashare(monkeypatch):
+    from lxr_data import LxrData
+
+    class FakeClient:
+        config = {"data_type_ttl_seconds": {}}
+        cache = _FakeCache()
+
+    d = LxrData(client=FakeClient(), verbose=False)
+    calls = []
+
+    def fake_legacy(args):
+        calls.append(args)
+        return (
+            '{"_source":"legacy","source_detail":"eastmoney:lhb-detail-range",'
+            '"dominant_type":"youzi","dominant_direction":"net_buy","records":[]}'
+        )
+
+    monkeypatch.setattr(d, "_call_legacy_tool", fake_legacy)
+
+    out = d.get_lhb_detail(
+        code="000004",
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+        dominant_type="youzi",
+        dominant_direction="net_buy",
+    )
+
+    assert calls == [[
+        "lhb-detail", "000004", "--start-date", "2026-06-01",
+        "--end-date", "2026-06-26", "--dominant-type", "youzi",
+        "--dominant-direction", "net_buy", "--json",
+    ]]
+    assert out["_source"] == "legacy"
+    assert out["dominant_type"] == "youzi"
+    assert out["dominant_direction"] == "net_buy"
+
+
 if __name__ == "__main__":
     unittest.main()
