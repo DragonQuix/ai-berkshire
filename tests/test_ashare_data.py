@@ -1220,6 +1220,16 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                 "shared_abs_net_ratio": 0.7321,
                 "top_shared_alias": "章盟主",
             },
+            "shared_youzi_concentration_summary": {
+                "shared_alias_count": 1,
+                "shared_abs_net_amount": 820000,
+                "top_shared_alias": "章盟主",
+                "top_shared_alias_abs_net_amount": 820000,
+                "top_shared_alias_abs_net_ratio": 1.0,
+                "top_shared_alias_code_count": 2,
+                "top_shared_alias_direction_consistency": "same_net_sell",
+                "concentration_level": "single_alias",
+            },
             "shared_youzi_code_strengths": [
                 {
                     "code": "000005",

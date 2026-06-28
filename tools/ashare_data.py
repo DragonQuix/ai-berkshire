@@ -940,6 +940,46 @@ def _summarize_lhb_compare_shared_strength(alias_strengths: list[dict]) -> dict:
     }
 
 
+def _lhb_shared_concentration_level(shared_alias_count: int, top_ratio: float) -> str:
+    if not shared_alias_count:
+        return "none"
+    if shared_alias_count == 1:
+        return "single_alias"
+    if top_ratio >= 0.6:
+        return "high"
+    if top_ratio >= 0.4:
+        return "medium"
+    return "low"
+
+
+def _summarize_lhb_compare_shared_concentration(alias_strengths: list[dict]) -> dict:
+    shared_items = [
+        item for item in alias_strengths
+        if item.get("code_count", 0) >= 2
+    ]
+    shared_items = sorted(
+        shared_items,
+        key=lambda item: (-_lhb_numeric_amount(item.get("total_abs_net_amount")), item["alias"]),
+    )
+    shared_abs_net = sum(
+        _lhb_numeric_amount(item.get("total_abs_net_amount"))
+        for item in shared_items
+    )
+    top_item = shared_items[0] if shared_items else {}
+    top_abs_net = _lhb_numeric_amount(top_item.get("total_abs_net_amount"))
+    top_ratio = round(top_abs_net / shared_abs_net, 4) if shared_abs_net else 0
+    return {
+        "shared_alias_count": len(shared_items),
+        "shared_abs_net_amount": shared_abs_net,
+        "top_shared_alias": top_item.get("alias"),
+        "top_shared_alias_abs_net_amount": top_abs_net,
+        "top_shared_alias_abs_net_ratio": top_ratio,
+        "top_shared_alias_code_count": top_item.get("code_count", 0),
+        "top_shared_alias_direction_consistency": top_item.get("direction_consistency"),
+        "concentration_level": _lhb_shared_concentration_level(len(shared_items), top_ratio),
+    }
+
+
 def _summarize_lhb_compare_shared_code_strengths(alias_strengths: list[dict]) -> list[dict]:
     buckets: dict[str, dict] = {}
     for alias_item in alias_strengths:
@@ -1178,6 +1218,9 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
             if item["code_count"] >= 2
         ],
         "shared_youzi_strength_summary": _summarize_lhb_compare_shared_strength(alias_strengths),
+        "shared_youzi_concentration_summary": _summarize_lhb_compare_shared_concentration(
+            alias_strengths,
+        ),
         "shared_youzi_code_strengths": shared_code_strengths,
         "unique_youzi_code_strengths": unique_code_strengths,
         "youzi_code_identity_tags": identity_tags,
