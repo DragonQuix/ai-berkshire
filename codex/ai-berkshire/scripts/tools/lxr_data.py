@@ -49,6 +49,7 @@ CLI：
     python tools/lxr_data.py datapack 601336 --years 5
     python tools/lxr_data.py quality-metrics 600519 --years 10
     python tools/lxr_data.py lhb 600519 --limit 5
+    python tools/lxr_data.py lhb-detail --trade-id 100357777
     python tools/lxr_data.py mx-search "新华保险最新公告"
     python tools/lxr_data.py mx-xuangu "ROE大于15%的A股，返回前10只"
 """
@@ -1522,6 +1523,45 @@ class LxrData:
             data["_source"] = "legacy"
         return data
 
+    def get_lhb_detail(
+        self,
+        code: Optional[str] = None,
+        trade_date: Optional[str] = None,
+        trade_id: Optional[str] = None,
+        limit: int = 10,
+        source: str = "auto",
+    ) -> dict:
+        """获取 A 股龙虎榜买卖席位明细。当前统一入口走东方财富免费源。"""
+        if source not in ("auto", "legacy"):
+            return {"_source": "none", "error": f"未知 source: {source}"}
+        return self._run_chain([
+            ("legacy", lambda: self._get_lhb_detail_legacy(code, trade_date, trade_id, limit)),
+        ])
+
+    def _get_lhb_detail_legacy(
+        self,
+        code: Optional[str],
+        trade_date: Optional[str],
+        trade_id: Optional[str],
+        limit: int,
+    ) -> dict:
+        args = ["lhb-detail"]
+        if code:
+            args.append(_norm_code(code, "cn"))
+        if trade_date:
+            args.extend(["--date", str(trade_date)[:10]])
+        if trade_id:
+            args.extend(["--trade-id", str(trade_id)])
+        if limit != 10:
+            args.extend(["--limit", str(limit)])
+        args.append("--json")
+        text = self._call_legacy_tool(args)
+        data = json.loads(text)
+        data["source_detail"] = "legacy:ashare_data/lhb-detail"
+        if "_source" not in data:
+            data["_source"] = "legacy"
+        return data
+
     # ------------------------------------------------------------------
     # 研究数据包（跨 Skill 共享，TTL 1h）
     # ------------------------------------------------------------------
@@ -1750,6 +1790,14 @@ def _cli():
     p_lhb.add_argument("--source", choices=["auto", "legacy"], default="auto")
     p_lhb.add_argument("--quiet", action="store_true")
 
+    p_lhb_detail = sub.add_parser("lhb-detail", help="A股龙虎榜买卖席位明细（东方财富免费源）")
+    p_lhb_detail.add_argument("code", nargs="?", default=None, help="股票代码；配合 --date 使用")
+    p_lhb_detail.add_argument("--date", dest="trade_date", default=None, help="交易日期 YYYY-MM-DD")
+    p_lhb_detail.add_argument("--trade-id", default=None, help="东方财富 TRADE_ID，优先使用")
+    p_lhb_detail.add_argument("--limit", type=int, default=10)
+    p_lhb_detail.add_argument("--source", choices=["auto", "legacy"], default="auto")
+    p_lhb_detail.add_argument("--quiet", action="store_true")
+
     for skill in _MX_SKILLS:
         p_mx = sub.add_parser(skill, help=f"调用妙想 {skill}（1h 缓存，自动 Windows 输出目录）")
         p_mx.add_argument("query", help="自然语言查询")
@@ -1825,6 +1873,14 @@ def _cli():
     elif args.command == "lhb":
         data = LxrData(verbose=not args.quiet).get_lhb(
             args.code, limit=args.limit, page=args.page, source=args.source,
+        )
+    elif args.command == "lhb-detail":
+        data = LxrData(verbose=not args.quiet).get_lhb_detail(
+            args.code,
+            trade_date=args.trade_date,
+            trade_id=args.trade_id,
+            limit=args.limit,
+            source=args.source,
         )
     elif args.command == "datapack":
         data = LxrData(verbose=not args.quiet).get_research_datapack(

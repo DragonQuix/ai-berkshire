@@ -11,10 +11,11 @@
 - 参考 ADR：`docs/adr/2026-06-28-permission-safe-multi-agent.md`
 
 ### A股数据源接入
-> 2026-06-28 已新增小切片：`tools/ashare_data.py lhb` 与 `tools/lxr_data.py lhb` 接入东方财富龙虎榜免费源，输出 canonical `_source: legacy`，详细渠道写入 `source_detail`。
+> 2026-06-28 已新增小切片：`tools/ashare_data.py lhb` 与 `tools/lxr_data.py lhb` 接入东方财富龙虎榜免费源；同日继续新增 `lhb-detail`，按 `TRADE_ID` 或 `code + date` 拉取买卖席位明细。输出 canonical `_source: legacy`，详细渠道写入 `source_detail`。
 
 - 接入 akshare、东方财富等免费数据源
 - 覆盖 A 股财务数据、行情、龙虎榜
+- 龙虎榜下一步：席位画像/游资识别映射、按日期区间批量筛选
 - 现有 Skill 无需改动，数据层扩展即可
 
 ## P1：中期（3-6个月）

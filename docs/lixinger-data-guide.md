@@ -28,6 +28,7 @@
 | `kline <code> [--days N] [--adjust qfq]` | 前复权K线（A股/港股） | `kline 00700 --days 120` |
 | `shareholders <code> --kind {majority,num,fund}` | 前十大股东/股东人数/基金持股 | `shareholders 600519 --kind majority` |
 | `lhb [code] [--limit N]` | A股龙虎榜明细（东方财富免费源，`_source: legacy`） | `lhb 600519 --limit 5` |
+| `lhb-detail [code] --date YYYY-MM-DD` / `--trade-id ID` | A股龙虎榜买卖席位明细（东方财富免费源，`source_detail: legacy:ashare_data/lhb-detail`） | `lhb-detail --trade-id 100357777` |
 
 ### 行业深度与治理（阶段4）
 | 命令 | 说明 | 示例 |

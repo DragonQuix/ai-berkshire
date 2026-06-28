@@ -61,3 +61,120 @@ def test_normalize_lhb_row_keeps_core_fields():
         "source_detail": "eastmoney:lhb",
         "_source": "legacy",
     }
+
+
+def test_lhb_detail_params_filter_by_trade_id():
+    params = ad._eastmoney_lhb_detail_params("buy", trade_id="100357777", limit=5)
+
+    assert params["reportName"] == "RPT_BILLBOARD_DAILYDETAILSBUY"
+    assert params["pageSize"] == "5"
+    assert params["filter"] == '(TRADE_ID="100357777")'
+    assert params["sortColumns"] == "BUY"
+    assert params["sortTypes"] == "-1"
+
+
+def test_normalize_lhb_detail_seat_row_classifies_institution():
+    row = {
+        "TRADE_ID": "100357777",
+        "TRADE_DATE": "2026-06-26 00:00:00",
+        "SECURITY_CODE": "000004",
+        "SECUCODE": "000004.SZ",
+        "SECURITY_NAME_ABBR": "国华退",
+        "EXPLANATION": "退市整理期",
+        "OPERATEDEPT_CODE": "0",
+        "OPERATEDEPT_NAME": "机构专用",
+        "BUY": 1000000,
+        "SELL": 250000,
+        "NET": 750000,
+        "TOTAL_BUYRIO": 0.12,
+        "TOTAL_SELLRIO": 0.03,
+        "RISE_PROBABILITY_3DAY": 66.6,
+        "TOTAL_BUYER_SALESTIMES_3DAY": 12,
+    }
+
+    out = ad._normalize_lhb_detail_seat(row, "buy")
+
+    assert out == {
+        "trade_id": "100357777",
+        "trade_date": "2026-06-26",
+        "code": "000004",
+        "secucode": "000004.SZ",
+        "name": "国华退",
+        "reason": "退市整理期",
+        "rank_type": "buy",
+        "seat_code": "0",
+        "seat_name": "机构专用",
+        "seat_category": "institution",
+        "buy_amount": 1000000,
+        "sell_amount": 250000,
+        "net_amount": 750000,
+        "buy_ratio": 0.12,
+        "sell_ratio": 0.03,
+        "rise_probability_3day": 66.6,
+        "buyer_sales_times_3day": 12,
+        "source_detail": "eastmoney:lhb-detail",
+        "_source": "legacy",
+    }
+
+
+def test_fetch_lhb_detail_groups_buy_and_sell_seats(monkeypatch):
+    calls = []
+
+    def fake_curl_json(url, params):
+        calls.append(params)
+        report = params["reportName"]
+        if report == "RPT_BILLBOARD_DAILYDETAILS":
+            return {"result": {"data": [{
+                "TRADE_ID": "100357777",
+                "TRADE_DATE": "2026-06-26 00:00:00",
+                "SECURITY_CODE": "000004",
+                "SECUCODE": "000004.SZ",
+                "SECURITY_NAME_ABBR": "国华退",
+                "EXPLANATION": "退市整理期",
+                "CLOSE_PRICE": 0.28,
+                "CHANGE_RATE": 7.6923,
+                "ACCUM_AMOUNT": 2971598,
+                "ACCUM_VOLUME": 11358930,
+                "TOTAL_BUY": 1931424,
+                "TOTAL_SELL": 926973,
+                "TOTAL_NET": 1004451,
+            }]}}
+        if report == "RPT_BILLBOARD_DAILYDETAILSBUY":
+            return {"result": {"data": [{
+                "TRADE_ID": "100357777",
+                "TRADE_DATE": "2026-06-26 00:00:00",
+                "SECURITY_CODE": "000004",
+                "OPERATEDEPT_CODE": "10472087",
+                "OPERATEDEPT_NAME": "东方财富证券股份有限公司拉萨东环路第二证券营业部",
+                "EXPLANATION": "退市整理期",
+                "BUY": 762307,
+                "SELL": 106076,
+                "NET": 656231,
+            }]}}
+        if report == "RPT_BILLBOARD_DAILYDETAILSSELL":
+            return {"result": {"data": [{
+                "TRADE_ID": "100357777",
+                "TRADE_DATE": "2026-06-26 00:00:00",
+                "SECURITY_CODE": "000004",
+                "OPERATEDEPT_CODE": "10467671",
+                "OPERATEDEPT_NAME": "国金证券股份有限公司上海奉贤区金碧路证券营业部",
+                "EXPLANATION": "退市整理期",
+                "BUY": 0,
+                "SELL": 219258,
+                "NET": -219258,
+            }]}}
+        raise AssertionError(report)
+
+    monkeypatch.setattr(ad, "_curl_json", fake_curl_json)
+
+    out = ad._fetch_lhb_detail(trade_id="100357777")
+
+    assert [c["reportName"] for c in calls] == [
+        "RPT_BILLBOARD_DAILYDETAILS",
+        "RPT_BILLBOARD_DAILYDETAILSBUY",
+        "RPT_BILLBOARD_DAILYDETAILSSELL",
+    ]
+    assert out["source_detail"] == "eastmoney:lhb-detail"
+    assert out["records"][0]["trade_id"] == "100357777"
+    assert out["records"][0]["buy_seats"][0]["seat_code"] == "10472087"
+    assert out["records"][0]["sell_seats"][0]["seat_code"] == "10467671"

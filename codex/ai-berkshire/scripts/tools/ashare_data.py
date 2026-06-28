@@ -8,6 +8,7 @@
     python3.11 tools/ashare_data.py financials 600519               # 核心财务数据（近5年）
     python3.11 tools/ashare_data.py valuation 600519                # 估值指标
     python3.11 tools/ashare_data.py lhb 600519 --limit 5             # 龙虎榜
+    python3.11 tools/ashare_data.py lhb-detail --trade-id 100357777  # 龙虎榜买卖席位
     python3.11 tools/ashare_data.py search 茅台                      # 搜索股票代码
 
 需要 Python >= 3.8，零外部依赖。
@@ -351,6 +352,149 @@ def _fetch_lhb_rows(code: str | None = None, limit: int = 20, page: int = 1) -> 
     return [_normalize_lhb_row(row) for row in rows]
 
 
+_LHB_DETAIL_REPORTS = {
+    "summary": ("RPT_BILLBOARD_DAILYDETAILS", "", ""),
+    "buy": ("RPT_BILLBOARD_DAILYDETAILSBUY", "BUY", "-1"),
+    "sell": ("RPT_BILLBOARD_DAILYDETAILSSELL", "SELL", "-1"),
+}
+
+
+def _eastmoney_lhb_detail_params(
+    kind: str,
+    code: str | None = None,
+    trade_date: str | None = None,
+    trade_id: str | int | None = None,
+    limit: int = 10,
+) -> dict:
+    """东方财富龙虎榜单次上榜详情参数。kind: summary/buy/sell。"""
+    if kind not in _LHB_DETAIL_REPORTS:
+        raise ValueError(f"未知龙虎榜明细类型: {kind}")
+    report, sort_column, sort_type = _LHB_DETAIL_REPORTS[kind]
+    if trade_id:
+        filter_text = f'(TRADE_ID="{str(trade_id).strip()}")'
+    elif code and trade_date:
+        filter_text = f"(TRADE_DATE='{str(trade_date)[:10]}')(SECURITY_CODE=\"{_clean_a_code(code)}\")"
+    else:
+        raise ValueError("lhb-detail 需要 --trade-id 或 code + --date")
+    return {
+        "reportName": report,
+        "columns": "ALL",
+        "filter": filter_text,
+        "pageNumber": "1",
+        "pageSize": str(max(1, min(int(limit), 100))),
+        "sortColumns": sort_column,
+        "sortTypes": sort_type,
+        "source": "WEB",
+        "client": "WEB",
+    }
+
+
+def _lhb_detail_rows(data: dict) -> list[dict]:
+    if not isinstance(data, dict):
+        return []
+    return data.get("result", {}).get("data", []) or []
+
+
+def _classify_lhb_seat(name: str | None) -> str:
+    text = str(name or "")
+    if "机构专用" in text or text == "机构席位":
+        return "institution"
+    if "沪股通专用" in text or "深股通专用" in text:
+        return "northbound"
+    if not text:
+        return "unknown"
+    return "brokerage"
+
+
+def _normalize_lhb_detail_summary(row: dict) -> dict:
+    return {
+        "trade_id": str(row.get("TRADE_ID") or ""),
+        "trade_date": str(row.get("TRADE_DATE") or "")[:10],
+        "code": row.get("SECURITY_CODE"),
+        "secucode": row.get("SECUCODE"),
+        "name": row.get("SECURITY_NAME_ABBR"),
+        "reason": row.get("EXPLANATION"),
+        "close_price": row.get("CLOSE_PRICE"),
+        "change_rate": row.get("CHANGE_RATE"),
+        "turnover_rate": row.get("TURNRATE"),
+        "accum_amount": row.get("ACCUM_AMOUNT"),
+        "accum_volume": row.get("ACCUM_VOLUME"),
+        "total_buy": row.get("TOTAL_BUY"),
+        "total_sell": row.get("TOTAL_SELL"),
+        "total_net": row.get("TOTAL_NET"),
+        "buy_top_ratio": row.get("TOTAL_BUYRIOTOP"),
+        "sell_top_ratio": row.get("TOTAL_SELLRIOTOP"),
+        "buy_seats": [],
+        "sell_seats": [],
+        "source_detail": "eastmoney:lhb-detail",
+        "_source": "legacy",
+    }
+
+
+def _normalize_lhb_detail_seat(row: dict, rank_type: str) -> dict:
+    return {
+        "trade_id": str(row.get("TRADE_ID") or ""),
+        "trade_date": str(row.get("TRADE_DATE") or "")[:10],
+        "code": row.get("SECURITY_CODE"),
+        "secucode": row.get("SECUCODE"),
+        "name": row.get("SECURITY_NAME_ABBR"),
+        "reason": row.get("EXPLANATION"),
+        "rank_type": rank_type,
+        "seat_code": row.get("OPERATEDEPT_CODE"),
+        "seat_name": row.get("OPERATEDEPT_NAME"),
+        "seat_category": _classify_lhb_seat(row.get("OPERATEDEPT_NAME")),
+        "buy_amount": row.get("BUY"),
+        "sell_amount": row.get("SELL"),
+        "net_amount": row.get("NET"),
+        "buy_ratio": row.get("TOTAL_BUYRIO"),
+        "sell_ratio": row.get("TOTAL_SELLRIO"),
+        "rise_probability_3day": row.get("RISE_PROBABILITY_3DAY"),
+        "buyer_sales_times_3day": row.get("TOTAL_BUYER_SALESTIMES_3DAY"),
+        "source_detail": "eastmoney:lhb-detail",
+        "_source": "legacy",
+    }
+
+
+def _group_lhb_detail_seats(rows: list[dict], rank_type: str) -> dict[str, list[dict]]:
+    grouped: dict[str, list[dict]] = {}
+    for row in rows:
+        seat = _normalize_lhb_detail_seat(row, rank_type)
+        key = seat["trade_id"] or f"{seat['trade_date']}:{seat['reason']}"
+        grouped.setdefault(key, []).append(seat)
+    return grouped
+
+
+def _fetch_lhb_detail(
+    code: str | None = None,
+    trade_date: str | None = None,
+    trade_id: str | int | None = None,
+    limit: int = 10,
+) -> dict:
+    url = "https://datacenter-web.eastmoney.com/api/data/v1/get"
+    common = {"code": code, "trade_date": trade_date, "trade_id": trade_id, "limit": limit}
+    summary = _lhb_detail_rows(_curl_json(url, _eastmoney_lhb_detail_params("summary", **common)))
+    buy_rows = _lhb_detail_rows(_curl_json(url, _eastmoney_lhb_detail_params("buy", **common)))
+    sell_rows = _lhb_detail_rows(_curl_json(url, _eastmoney_lhb_detail_params("sell", **common)))
+    buy_by_id = _group_lhb_detail_seats(buy_rows, "buy")
+    sell_by_id = _group_lhb_detail_seats(sell_rows, "sell")
+    records = [_normalize_lhb_detail_summary(row) for row in summary]
+    for record in records:
+        key = record["trade_id"] or f"{record['trade_date']}:{record['reason']}"
+        record["buy_seats"] = buy_by_id.get(key, [])
+        record["sell_seats"] = sell_by_id.get(key, [])
+    payload_code = _clean_a_code(code) if code else (records[0].get("code") if records else None)
+    payload_date = str(trade_date)[:10] if trade_date else (records[0].get("trade_date") if records else None)
+    return {
+        "_source": "legacy",
+        "source_detail": "eastmoney:lhb-detail",
+        "code": payload_code,
+        "trade_date": payload_date,
+        "trade_id": str(trade_id) if trade_id else (records[0].get("trade_id") if records else None),
+        "limit": limit,
+        "records": records,
+    }
+
+
 def cmd_lhb(code: str | None = None, limit: int = 20, page: int = 1, json_output: bool = False):
     """龙虎榜明细。"""
     rows = _fetch_lhb_rows(code, limit, page)
@@ -382,6 +526,41 @@ def cmd_lhb(code: str | None = None, limit: int = 20, page: int = 1, json_output
         print(f"  净买入:     {_fmt_yi(r['net_amount'])}")
         print(f"  成交额:     {_fmt_yi(r['deal_amount'])}")
         print(f"  交易市场:   {r['trade_market']}")
+
+
+def cmd_lhb_detail(
+    code: str | None = None,
+    trade_date: str | None = None,
+    trade_id: str | None = None,
+    limit: int = 10,
+    json_output: bool = False,
+):
+    """龙虎榜买卖席位明细。"""
+    payload = _fetch_lhb_detail(code, trade_date, trade_id, limit)
+    if json_output:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return
+
+    title_code = payload.get("code") or "-"
+    title_date = payload.get("trade_date") or "-"
+    print("=" * 60)
+    print(f"龙虎榜席位明细: {title_code} {title_date}")
+    print("=" * 60)
+    if not payload["records"]:
+        print("  ⚠️ 未找到龙虎榜席位明细")
+        return
+    for record in payload["records"]:
+        print(f"\n  --- {record['trade_date']} {record['name']} ({record['code']}) ---")
+        print(f"  原因:       {record['reason']}")
+        print(f"  合计买/卖:  {_fmt_yi(record['total_buy'])} / {_fmt_yi(record['total_sell'])}")
+        print(f"  合计净额:   {_fmt_yi(record['total_net'])}")
+        for label, seats in (("买入前五", record["buy_seats"]), ("卖出前五", record["sell_seats"])):
+            print(f"  {label}:")
+            for seat in seats[:limit]:
+                print(
+                    f"    {seat['seat_name']} | 买 {_fmt_yi(seat['buy_amount'])} "
+                    f"卖 {_fmt_yi(seat['sell_amount'])} 净 {_fmt_yi(seat['net_amount'])}"
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -500,6 +679,13 @@ def main():
     p_lhb.add_argument("--page", type=int, default=1, help="页码")
     p_lhb.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
 
+    p_lhb_detail = sub.add_parser("lhb-detail", help="龙虎榜买卖席位明细（东方财富）")
+    p_lhb_detail.add_argument("code", nargs="?", default=None, help="股票代码；配合 --date 使用")
+    p_lhb_detail.add_argument("--date", dest="trade_date", default=None, help="交易日期 YYYY-MM-DD")
+    p_lhb_detail.add_argument("--trade-id", default=None, help="东方财富 TRADE_ID，优先使用")
+    p_lhb_detail.add_argument("--limit", type=int, default=10, help="每侧席位条数，1-100")
+    p_lhb_detail.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -514,6 +700,9 @@ def main():
                               if args.source == "lixinger" else cmd_valuation(args.code)),
         "search": lambda: cmd_search(args.keyword),
         "lhb": lambda: cmd_lhb(args.code, args.limit, args.page, args.json),
+        "lhb-detail": lambda: cmd_lhb_detail(
+            args.code, args.trade_date, args.trade_id, args.limit, args.json
+        ),
     }
     cmds[args.command]()
 

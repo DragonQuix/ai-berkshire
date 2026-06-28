@@ -195,7 +195,7 @@ python tools/lxr_data.py financials 601336 --years 5 --source lixinger
 | `_source: mx-data` | 妙想金融数据 |
 | `_source: mx-search` | 妙想资讯搜索 |
 | `_source: mx-xuangu` | 妙想智能选股 |
-| `_source: legacy` | 东方财富/腾讯/aastocks 等免费源；详细渠道写入 `source_detail`，如 `eastmoney:lhb` |
+| `_source: legacy` | 东方财富/腾讯/aastocks 等免费源；详细渠道写入 `source_detail`，如 `eastmoney:lhb` / `eastmoney:lhb-detail` |
 | `需年报原文` | 仅作交叉验证，非主路径（保险 EV/NBV **已移出此类**） |
 
 ---
@@ -211,6 +211,10 @@ python tools/lxr_data.py industry-deep 601336 --years 3
 # 理杏仁全能力抽检
 python tools/lxr_data.py financials 600519 --years 3 --source lixinger
 python tools/lxr_data.py industry-compare 601336
+
+# 东方财富龙虎榜免费源
+python tools/lxr_data.py lhb 000004 --limit 1
+python tools/lxr_data.py lhb-detail --trade-id 100357777
 
 # Batch API
 cd tools; python -c "from lxr_client import LixingerClient; import json; c=LixingerClient(); print(json.dumps(c.post_raw('cn/company/fundamental/non_financial', {'stockCodes':['600519','601336'],'date':'2026-06-26','metricsList':['pe_ttm','pb']})['data'], ensure_ascii=False))"

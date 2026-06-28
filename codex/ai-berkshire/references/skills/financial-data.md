@@ -53,6 +53,7 @@ python tools/ashare_data.py valuation 600519 --source lixinger
 
 # A股龙虎榜（东方财富免费源，经统一入口返回 JSON）
 python tools/lxr_data.py lhb 600519 --limit 5 --quiet
+python tools/lxr_data.py lhb-detail --trade-id 100357777 --quiet  # 买卖席位明细
 
 # 市值/估值精确验算（自动从理杏仁取股价/股本/EPS/BVPS/分位点）
 python tools/financial_rigor.py verify-market-cap 601336 --source lixinger
@@ -177,6 +178,7 @@ python tools/financial_rigor.py verify-market-cap --price 510 --shares 9.11e9 --
 | 指数估值(沪深300/恒生PE/PB分位) | `lxr_data.py index-val 000300 --market cn` | aastocks / mx-data |
 | 申万二级行业估值对比 | `lxr_data.py industry-compare 600519` | mx-data "白酒板块估值" |
 | A股龙虎榜明细 | `lxr_data.py lhb 600519 --limit 5`（东方财富免费源，`_source: legacy`） | 理杏仁 `trading-abnormal` |
+| A股龙虎榜买卖席位 | `lxr_data.py lhb-detail --trade-id 100357777` 或 `lhb-detail 000004 --date 2026-06-26`（`source_detail: legacy:ashare_data/lhb-detail`） | 东方财富网页明细页 |
 | **投研数据包（推荐）** | `lxr_data.py datapack 600519 --years 5`（TTL 1h） | 分拆 CLI |
 | **去劣 7 指标精算** | `lxr_data.py quality-metrics 600519 --years 10` | 手算 financials |
 | 妙想资讯搜索 | `lxr_data.py mx-search "{公司} 最新公告"` | 直调 mx_search.py |
