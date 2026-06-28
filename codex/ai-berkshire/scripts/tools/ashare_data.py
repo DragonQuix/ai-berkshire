@@ -1341,6 +1341,61 @@ def _summarize_lhb_compare_top_alias_comparison(
     ]
 
 
+def _lhb_composite_signal_tag(
+    concentration: dict,
+    direction_summary: dict,
+    identity_summary: dict,
+) -> str:
+    has_shared = concentration.get("shared_alias_count", 0) > 0
+    direction = direction_summary.get("dominant_shared_direction_consistency")
+    level = concentration.get("concentration_level")
+    identity = identity_summary.get("dominant_identity_tag")
+    if has_shared and direction == "same_direction" and level in {"single_alias", "high"}:
+        return "shared_same_direction_cluster"
+    if has_shared and direction == "mixed_direction":
+        return "shared_mixed_direction_divergence"
+    if identity == "unique_dominant":
+        return "unique_youzi_driven"
+    if has_shared:
+        return "shared_youzi_present"
+    return "no_shared_youzi_signal"
+
+
+def _summarize_lhb_compare_composite_signal(
+    concentration: dict,
+    direction_summary: dict,
+    identity_summary: dict,
+    recognition_leaderboard: list[dict],
+) -> dict:
+    leader = recognition_leaderboard[0] if recognition_leaderboard else {}
+    top_alias = concentration.get("top_shared_alias") or None
+    tag = _lhb_composite_signal_tag(concentration, direction_summary, identity_summary)
+    if tag == "shared_same_direction_cluster":
+        interpretation = (
+            f"共同游资{top_alias}单一集中且方向一致；"
+            f"综合辨识领先代码{leader.get('code')}"
+        )
+    elif tag == "shared_mixed_direction_divergence":
+        interpretation = f"共同游资{top_alias}跨股方向分歧；需核对分时与题材强弱"
+    elif tag == "unique_youzi_driven":
+        interpretation = f"独有游资主导；综合辨识领先代码{leader.get('code')}"
+    elif tag == "shared_youzi_present":
+        interpretation = f"存在共同游资{top_alias}；集中度或方向一致性不强"
+    else:
+        interpretation = "未形成共同游资信号；优先看单股独有席位"
+    return {
+        "signal_tag": tag,
+        "leading_code": leader.get("code"),
+        "leading_top_alias": top_alias,
+        "shared_concentration_level": concentration.get("concentration_level"),
+        "dominant_shared_direction_consistency": (
+            direction_summary.get("dominant_shared_direction_consistency")
+        ),
+        "dominant_identity_tag": identity_summary.get("dominant_identity_tag"),
+        "interpretation": interpretation,
+    }
+
+
 def _apply_lhb_compare_identity_tags_to_rows(rows: list[dict], comparison_summary: dict) -> None:
     tags_by_code = {
         item["code"]: item
@@ -1408,6 +1463,9 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         shared_code_strengths,
         unique_code_strengths,
     )
+    shared_strength = _summarize_lhb_compare_shared_strength(alias_strengths)
+    shared_concentration = _summarize_lhb_compare_shared_concentration(alias_strengths)
+    identity_summary = _summarize_lhb_compare_code_identity_summary(identity_tags)
     direction_summary = _summarize_lhb_compare_direction_consistency(alias_strengths)
     recognition_leaderboard = _summarize_lhb_compare_recognition_leaderboard(
         rows,
@@ -1417,6 +1475,12 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
     top_alias_comparison = _summarize_lhb_compare_top_alias_comparison(
         rows,
         alias_strengths,
+        recognition_leaderboard,
+    )
+    composite_signal = _summarize_lhb_compare_composite_signal(
+        shared_concentration,
+        direction_summary,
+        identity_summary,
         recognition_leaderboard,
     )
     return {
@@ -1432,16 +1496,15 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
             item["alias"] for item in alias_frequency
             if item["code_count"] >= 2
         ],
-        "shared_youzi_strength_summary": _summarize_lhb_compare_shared_strength(alias_strengths),
-        "shared_youzi_concentration_summary": _summarize_lhb_compare_shared_concentration(
-            alias_strengths,
-        ),
+        "shared_youzi_strength_summary": shared_strength,
+        "shared_youzi_concentration_summary": shared_concentration,
         "shared_youzi_code_strengths": shared_code_strengths,
         "unique_youzi_code_strengths": unique_code_strengths,
         "youzi_code_identity_tags": identity_tags,
-        "youzi_code_identity_summary": _summarize_lhb_compare_code_identity_summary(identity_tags),
+        "youzi_code_identity_summary": identity_summary,
         "youzi_recognition_leaderboard": recognition_leaderboard,
         "top_youzi_alias_comparison": top_alias_comparison,
+        "youzi_composite_signal_summary": composite_signal,
         "same_direction_youzi_aliases": same_direction_aliases,
         "mixed_direction_youzi_aliases": mixed_direction_aliases,
         "youzi_direction_consistency_summary": direction_summary,
