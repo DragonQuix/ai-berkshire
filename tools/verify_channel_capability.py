@@ -235,7 +235,7 @@ def check_sync(root_rel: str, codex_rel: str) -> int:
     ha = hashlib.sha256(a.read_bytes()).hexdigest()
     hb = hashlib.sha256(b.read_bytes()).hexdigest()
     if ha == hb:
-        _pass(f"{root_rel} ↔ {codex_rel} 同步一致 (sha256={ha[:16]})")
+        _pass(f"{root_rel} <-> {codex_rel} 同步一致 (sha256={ha[:16]})")
         return 0
     _fail(f"{root_rel} ↔ {codex_rel} 不一致 (root={ha[:16]} codex={hb[:16]})")
     return 1
