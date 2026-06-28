@@ -1315,6 +1315,18 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
             },
             "same_direction_youzi_aliases": [{"alias": "章盟主", "net_direction": "net_sell"}],
             "mixed_direction_youzi_aliases": [],
+            "youzi_direction_consistency_summary": {
+                "alias_count": 2,
+                "shared_alias_count": 1,
+                "single_code_alias_count": 1,
+                "same_direction_shared_alias_count": 1,
+                "mixed_direction_shared_alias_count": 0,
+                "same_direction_shared_alias_ratio": 1.0,
+                "mixed_direction_shared_alias_ratio": 0,
+                "top_same_direction_shared_alias": "章盟主",
+                "top_mixed_direction_shared_alias": None,
+                "dominant_shared_direction_consistency": "same_direction",
+            },
             "youzi_alias_frequency": [
                 {"alias": "章盟主", "code_count": 2, "codes": ["000004", "000005"]},
                 {"alias": "拉萨天团", "code_count": 1, "codes": ["000004"]},

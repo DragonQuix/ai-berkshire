@@ -980,6 +980,54 @@ def _summarize_lhb_compare_shared_concentration(alias_strengths: list[dict]) -> 
     }
 
 
+def _lhb_shared_direction_dominance(same_count: int, mixed_count: int) -> str:
+    if same_count > mixed_count:
+        return "same_direction"
+    if mixed_count > same_count:
+        return "mixed_direction"
+    if same_count:
+        return "balanced"
+    return "none"
+
+
+def _summarize_lhb_compare_direction_consistency(alias_strengths: list[dict]) -> dict:
+    shared_items = [
+        item for item in alias_strengths
+        if item.get("code_count", 0) >= 2
+    ]
+    same_items = [
+        item for item in shared_items
+        if str(item.get("direction_consistency") or "").startswith("same_")
+    ]
+    mixed_items = [
+        item for item in shared_items
+        if item.get("direction_consistency") == "mixed"
+    ]
+    shared_count = len(shared_items)
+    return {
+        "alias_count": len(alias_strengths),
+        "shared_alias_count": shared_count,
+        "single_code_alias_count": sum(
+            1 for item in alias_strengths
+            if item.get("code_count", 0) == 1
+        ),
+        "same_direction_shared_alias_count": len(same_items),
+        "mixed_direction_shared_alias_count": len(mixed_items),
+        "same_direction_shared_alias_ratio": (
+            round(len(same_items) / shared_count, 4) if shared_count else 0
+        ),
+        "mixed_direction_shared_alias_ratio": (
+            round(len(mixed_items) / shared_count, 4) if shared_count else 0
+        ),
+        "top_same_direction_shared_alias": same_items[0]["alias"] if same_items else None,
+        "top_mixed_direction_shared_alias": mixed_items[0]["alias"] if mixed_items else None,
+        "dominant_shared_direction_consistency": _lhb_shared_direction_dominance(
+            len(same_items),
+            len(mixed_items),
+        ),
+    }
+
+
 def _summarize_lhb_compare_shared_code_strengths(alias_strengths: list[dict]) -> list[dict]:
     buckets: dict[str, dict] = {}
     for alias_item in alias_strengths:
@@ -1227,6 +1275,9 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         "youzi_code_identity_summary": _summarize_lhb_compare_code_identity_summary(identity_tags),
         "same_direction_youzi_aliases": same_direction_aliases,
         "mixed_direction_youzi_aliases": mixed_direction_aliases,
+        "youzi_direction_consistency_summary": _summarize_lhb_compare_direction_consistency(
+            alias_strengths,
+        ),
         "youzi_alias_frequency": alias_frequency,
         "youzi_alias_cross_code_strengths": alias_strengths,
     }
