@@ -1026,6 +1026,50 @@ def _summarize_lhb_compare_unique_code_strengths(alias_strengths: list[dict]) ->
     return sorted(out, key=lambda item: (-item["unique_abs_net_amount"], item["code"]))
 
 
+def _summarize_lhb_compare_code_identity_tags(
+    shared_strengths: list[dict],
+    unique_strengths: list[dict],
+) -> list[dict]:
+    shared_by_code = {item["code"]: item for item in shared_strengths}
+    unique_by_code = {item["code"]: item for item in unique_strengths}
+    out = []
+    for code in sorted(set(shared_by_code) | set(unique_by_code)):
+        shared_item = shared_by_code.get(code) or {}
+        unique_item = unique_by_code.get(code) or {}
+        shared_abs_net = _lhb_numeric_amount(shared_item.get("shared_abs_net_amount"))
+        unique_abs_net = _lhb_numeric_amount(unique_item.get("unique_abs_net_amount"))
+        if shared_abs_net > unique_abs_net:
+            dominant_scope = "shared"
+            identity_tag = "shared_dominant"
+            dominant_abs_net = shared_abs_net
+            top_alias = shared_item.get("top_shared_alias")
+        elif unique_abs_net > shared_abs_net:
+            dominant_scope = "unique"
+            identity_tag = "unique_dominant"
+            dominant_abs_net = unique_abs_net
+            top_alias = unique_item.get("top_unique_alias")
+        elif shared_abs_net:
+            dominant_scope = "balanced"
+            identity_tag = "balanced"
+            dominant_abs_net = shared_abs_net
+            top_alias = shared_item.get("top_shared_alias") or unique_item.get("top_unique_alias")
+        else:
+            dominant_scope = "none"
+            identity_tag = "no_youzi"
+            dominant_abs_net = 0
+            top_alias = None
+        out.append({
+            "code": code,
+            "identity_tag": identity_tag,
+            "dominant_youzi_scope": dominant_scope,
+            "dominant_abs_net_amount": dominant_abs_net,
+            "shared_abs_net_ratio": shared_item.get("shared_abs_net_ratio", 0),
+            "unique_abs_net_ratio": unique_item.get("unique_abs_net_ratio", 0),
+            "top_scope_alias": top_alias,
+        })
+    return sorted(out, key=lambda item: (-item["dominant_abs_net_amount"], item["code"]))
+
+
 def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[dict]) -> dict:
     alias_codes: dict[str, set[str]] = {}
     for row in rows:
@@ -1057,6 +1101,8 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         item["alias"] for item in alias_strengths
         if item["code_count"] >= 2 and item["direction_consistency"] == "mixed"
     ]
+    shared_code_strengths = _summarize_lhb_compare_shared_code_strengths(alias_strengths)
+    unique_code_strengths = _summarize_lhb_compare_unique_code_strengths(alias_strengths)
     return {
         "code_count": len(codes),
         "matched_code_count": sum(1 for row in rows if row.get("filtered_count", 0)),
@@ -1071,8 +1117,12 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
             if item["code_count"] >= 2
         ],
         "shared_youzi_strength_summary": _summarize_lhb_compare_shared_strength(alias_strengths),
-        "shared_youzi_code_strengths": _summarize_lhb_compare_shared_code_strengths(alias_strengths),
-        "unique_youzi_code_strengths": _summarize_lhb_compare_unique_code_strengths(alias_strengths),
+        "shared_youzi_code_strengths": shared_code_strengths,
+        "unique_youzi_code_strengths": unique_code_strengths,
+        "youzi_code_identity_tags": _summarize_lhb_compare_code_identity_tags(
+            shared_code_strengths,
+            unique_code_strengths,
+        ),
         "same_direction_youzi_aliases": same_direction_aliases,
         "mixed_direction_youzi_aliases": mixed_direction_aliases,
         "youzi_alias_frequency": alias_frequency,

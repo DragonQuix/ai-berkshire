@@ -1260,6 +1260,26 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                     "top_unique_alias": None,
                 },
             ],
+            "youzi_code_identity_tags": [
+                {
+                    "code": "000005",
+                    "identity_tag": "shared_dominant",
+                    "dominant_youzi_scope": "shared",
+                    "dominant_abs_net_amount": 700000,
+                    "shared_abs_net_ratio": 1.0,
+                    "unique_abs_net_ratio": 0,
+                    "top_scope_alias": "章盟主",
+                },
+                {
+                    "code": "000004",
+                    "identity_tag": "unique_dominant",
+                    "dominant_youzi_scope": "unique",
+                    "dominant_abs_net_amount": 300000,
+                    "shared_abs_net_ratio": 0.2857,
+                    "unique_abs_net_ratio": 0.7143,
+                    "top_scope_alias": "拉萨天团",
+                },
+            ],
             "same_direction_youzi_aliases": [{"alias": "章盟主", "net_direction": "net_sell"}],
             "mixed_direction_youzi_aliases": [],
             "youzi_alias_frequency": [
