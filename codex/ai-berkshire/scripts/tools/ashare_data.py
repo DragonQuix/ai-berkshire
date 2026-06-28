@@ -1101,6 +1101,26 @@ def _summarize_lhb_compare_code_identity_summary(identity_tags: list[dict]) -> d
     }
 
 
+def _apply_lhb_compare_identity_tags_to_rows(rows: list[dict], comparison_summary: dict) -> None:
+    tags_by_code = {
+        item["code"]: item
+        for item in comparison_summary.get("youzi_code_identity_tags") or []
+        if item.get("code")
+    }
+    for row in rows:
+        tag = tags_by_code.get(row.get("code"))
+        if not tag:
+            continue
+        row.update({
+            "youzi_identity_tag": tag.get("identity_tag"),
+            "dominant_youzi_scope": tag.get("dominant_youzi_scope"),
+            "dominant_youzi_abs_net_amount": tag.get("dominant_abs_net_amount", 0),
+            "shared_youzi_abs_net_ratio": tag.get("shared_abs_net_ratio", 0),
+            "unique_youzi_abs_net_ratio": tag.get("unique_abs_net_ratio", 0),
+            "youzi_identity_top_alias": tag.get("top_scope_alias"),
+        })
+
+
 def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[dict]) -> dict:
     alias_codes: dict[str, set[str]] = {}
     for row in rows:
@@ -1207,6 +1227,8 @@ def _fetch_lhb_compare(
     for idx, row in enumerate(rows, start=1):
         row["rank"] = idx
 
+    comparison_summary = _summarize_lhb_compare(rows, clean_codes, payloads)
+    _apply_lhb_compare_identity_tags_to_rows(rows, comparison_summary)
     return {
         "_source": "legacy",
         "source_detail": "eastmoney:lhb-compare",
@@ -1221,7 +1243,7 @@ def _fetch_lhb_compare(
         "youzi_alias": youzi_alias,
         "min_dominant_net": min_dominant_net,
         "sort_by": sort_by,
-        "comparison_summary": _summarize_lhb_compare(rows, clean_codes, payloads),
+        "comparison_summary": comparison_summary,
         "rows": rows,
     }
 
