@@ -869,6 +869,52 @@ def _lhb_compare_row(payload: dict) -> dict:
     }
 
 
+def _lhb_compare_top_code(rows: list[dict], field: str) -> str | None:
+    candidates = [row for row in rows if row.get("filtered_count", 0)]
+    if not candidates:
+        return None
+    top = sorted(
+        candidates,
+        key=lambda row: (-_lhb_numeric_amount(row.get(field)), row.get("code") or ""),
+    )[0]
+    return top.get("code")
+
+
+def _summarize_lhb_compare(rows: list[dict], codes: list[str]) -> dict:
+    alias_codes: dict[str, set[str]] = {}
+    for row in rows:
+        code = row.get("code")
+        if not code:
+            continue
+        for alias in row.get("youzi_aliases") or []:
+            if alias:
+                alias_codes.setdefault(alias, set()).add(code)
+
+    alias_frequency = [
+        {"alias": alias, "code_count": len(code_set), "codes": sorted(code_set)}
+        for alias, code_set in alias_codes.items()
+    ]
+    alias_frequency = sorted(
+        alias_frequency,
+        key=lambda item: (-item["code_count"], item["alias"]),
+    )
+    return {
+        "code_count": len(codes),
+        "matched_code_count": sum(1 for row in rows if row.get("filtered_count", 0)),
+        "top_code_by_youzi_abs_net": _lhb_compare_top_code(rows, "youzi_abs_net_amount"),
+        "top_code_by_profiled_abs_net": _lhb_compare_top_code(rows, "profiled_abs_net_amount"),
+        "top_code_by_profiled_abs_net_ratio": _lhb_compare_top_code(
+            rows,
+            "profiled_abs_net_ratio",
+        ),
+        "shared_youzi_aliases": [
+            item["alias"] for item in alias_frequency
+            if item["code_count"] >= 2
+        ],
+        "youzi_alias_frequency": alias_frequency,
+    }
+
+
 def _fetch_lhb_compare(
     codes: list[str],
     start_date: str | None = None,
@@ -928,6 +974,7 @@ def _fetch_lhb_compare(
         "youzi_alias": youzi_alias,
         "min_dominant_net": min_dominant_net,
         "sort_by": sort_by,
+        "comparison_summary": _summarize_lhb_compare(rows, clean_codes),
         "rows": rows,
     }
 

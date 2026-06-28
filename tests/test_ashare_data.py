@@ -1123,6 +1123,7 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                 youzi_abs_net_ratio=0.3,
                 top_alias="拉萨天团",
                 top_alias_net=300000,
+                youzi_aliases=["拉萨天团", "章盟主"],
             )
         return _lhb_compare_payload(
             code="000005",
@@ -1191,6 +1192,18 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
         "youzi_alias": "拉萨天团",
         "min_dominant_net": 200000,
         "sort_by": "youzi_abs_net_amount",
+        "comparison_summary": {
+            "code_count": 2,
+            "matched_code_count": 2,
+            "top_code_by_youzi_abs_net": "000005",
+            "top_code_by_profiled_abs_net": "000005",
+            "top_code_by_profiled_abs_net_ratio": "000005",
+            "shared_youzi_aliases": ["章盟主"],
+            "youzi_alias_frequency": [
+                {"alias": "章盟主", "code_count": 2, "codes": ["000004", "000005"]},
+                {"alias": "拉萨天团", "code_count": 1, "codes": ["000004"]},
+            ],
+        },
         "rows": [
             {
                 "rank": 1,
@@ -1223,8 +1236,8 @@ def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
                 "dominant_profiled_type": "youzi",
                 "dominant_profiled_direction": "net_buy",
                 "dominant_profiled_net_amount": 300000,
-                "youzi_alias_count": 1,
-                "youzi_aliases": ["拉萨天团"],
+                "youzi_alias_count": 2,
+                "youzi_aliases": ["拉萨天团", "章盟主"],
                 "top_youzi_alias": "拉萨天团",
                 "top_youzi_alias_net_amount": 300000,
                 "top_youzi_alias_abs_net_amount": 300000,
@@ -1244,6 +1257,7 @@ def _lhb_compare_payload(
     youzi_abs_net_ratio,
     top_alias,
     top_alias_net,
+    youzi_aliases=None,
 ):
     return {
         "code": code,
@@ -1264,8 +1278,8 @@ def _lhb_compare_payload(
                 "dominant_profiled_type": "youzi",
                 "dominant_profiled_direction": "net_buy" if top_alias_net > 0 else "net_sell",
                 "dominant_profiled_net_amount": top_alias_net,
-                "youzi_alias_count": 1,
-                "youzi_aliases": [top_alias],
+                "youzi_alias_count": len(youzi_aliases or [top_alias]),
+                "youzi_aliases": youzi_aliases or [top_alias],
             },
         },
     }
