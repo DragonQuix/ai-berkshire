@@ -1529,13 +1529,19 @@ class LxrData:
         trade_date: Optional[str] = None,
         trade_id: Optional[str] = None,
         limit: int = 10,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        list_limit: int = 20,
+        page: int = 1,
         source: str = "auto",
     ) -> dict:
         """获取 A 股龙虎榜买卖席位明细。当前统一入口走东方财富免费源。"""
         if source not in ("auto", "legacy"):
             return {"_source": "none", "error": f"未知 source: {source}"}
         return self._run_chain([
-            ("legacy", lambda: self._get_lhb_detail_legacy(code, trade_date, trade_id, limit)),
+            ("legacy", lambda: self._get_lhb_detail_legacy(
+                code, trade_date, trade_id, limit, start_date, end_date, list_limit, page
+            )),
         ])
 
     def _get_lhb_detail_legacy(
@@ -1544,16 +1550,28 @@ class LxrData:
         trade_date: Optional[str],
         trade_id: Optional[str],
         limit: int,
+        start_date: Optional[str],
+        end_date: Optional[str],
+        list_limit: int,
+        page: int,
     ) -> dict:
         args = ["lhb-detail"]
         if code:
             args.append(_norm_code(code, "cn"))
         if trade_date:
             args.extend(["--date", str(trade_date)[:10]])
+        if start_date:
+            args.extend(["--start-date", str(start_date)[:10]])
+        if end_date:
+            args.extend(["--end-date", str(end_date)[:10]])
         if trade_id:
             args.extend(["--trade-id", str(trade_id)])
         if limit != 10:
             args.extend(["--limit", str(limit)])
+        if list_limit != 20:
+            args.extend(["--list-limit", str(list_limit)])
+        if page != 1:
+            args.extend(["--page", str(page)])
         args.append("--json")
         text = self._call_legacy_tool(args)
         data = json.loads(text)
@@ -1793,8 +1811,12 @@ def _cli():
     p_lhb_detail = sub.add_parser("lhb-detail", help="A股龙虎榜买卖席位明细（东方财富免费源）")
     p_lhb_detail.add_argument("code", nargs="?", default=None, help="股票代码；配合 --date 使用")
     p_lhb_detail.add_argument("--date", dest="trade_date", default=None, help="交易日期 YYYY-MM-DD")
+    p_lhb_detail.add_argument("--start-date", default=None, help="批量开始日期 YYYY-MM-DD")
+    p_lhb_detail.add_argument("--end-date", default=None, help="批量结束日期 YYYY-MM-DD")
     p_lhb_detail.add_argument("--trade-id", default=None, help="东方财富 TRADE_ID，优先使用")
     p_lhb_detail.add_argument("--limit", type=int, default=10)
+    p_lhb_detail.add_argument("--list-limit", type=int, default=20, help="区间模式下先筛选的龙虎榜记录数")
+    p_lhb_detail.add_argument("--page", type=int, default=1, help="区间模式下龙虎榜列表页码")
     p_lhb_detail.add_argument("--source", choices=["auto", "legacy"], default="auto")
     p_lhb_detail.add_argument("--quiet", action="store_true")
 
@@ -1880,6 +1902,10 @@ def _cli():
             trade_date=args.trade_date,
             trade_id=args.trade_id,
             limit=args.limit,
+            start_date=args.start_date,
+            end_date=args.end_date,
+            list_limit=args.list_limit,
+            page=args.page,
             source=args.source,
         )
     elif args.command == "datapack":

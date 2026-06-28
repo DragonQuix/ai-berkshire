@@ -215,6 +215,7 @@ python tools/lxr_data.py industry-compare 601336
 # 东方财富龙虎榜免费源
 python tools/lxr_data.py lhb 000004 --limit 1
 python tools/lxr_data.py lhb-detail --trade-id 100357777
+python tools/lxr_data.py lhb-detail 000004 --start-date 2026-06-01 --end-date 2026-06-26 --list-limit 20
 
 # Batch API
 cd tools; python -c "from lxr_client import LixingerClient; import json; c=LixingerClient(); print(json.dumps(c.post_raw('cn/company/fundamental/non_financial', {'stockCodes':['600519','601336'],'date':'2026-06-26','metricsList':['pe_ttm','pb']})['data'], ensure_ascii=False))"

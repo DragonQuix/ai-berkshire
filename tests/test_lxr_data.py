@@ -554,5 +554,41 @@ def test_get_lhb_detail_uses_legacy_ashare_json(monkeypatch):
     assert out["records"][0]["buy_seats"][0]["seat_name"] == "机构专用"
 
 
+def test_get_lhb_detail_passes_date_range_to_legacy_ashare(monkeypatch):
+    from lxr_data import LxrData
+
+    class FakeClient:
+        config = {"data_type_ttl_seconds": {}}
+        cache = _FakeCache()
+
+    d = LxrData(client=FakeClient(), verbose=False)
+    calls = []
+
+    def fake_legacy(args):
+        calls.append(args)
+        return (
+            '{"_source":"legacy","source_detail":"eastmoney:lhb-detail-range",'
+            '"code":"000004","start_date":"2026-06-01","end_date":"2026-06-26",'
+            '"records":[{"trade_id":"100357777"}]}'
+        )
+
+    monkeypatch.setattr(d, "_call_legacy_tool", fake_legacy)
+
+    out = d.get_lhb_detail(
+        code="000004",
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+        limit=7,
+    )
+
+    assert calls == [[
+        "lhb-detail", "000004", "--start-date", "2026-06-01",
+        "--end-date", "2026-06-26", "--limit", "7", "--json",
+    ]]
+    assert out["_source"] == "legacy"
+    assert out["source_detail"] == "legacy:ashare_data/lhb-detail"
+    assert out["records"][0]["trade_id"] == "100357777"
+
+
 if __name__ == "__main__":
     unittest.main()

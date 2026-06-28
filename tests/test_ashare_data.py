@@ -21,8 +21,20 @@ def test_lhb_params_filter_specific_stock():
     assert params["sortColumns"] == "TRADE_DATE,SECURITY_CODE"
 
 
+def test_lhb_params_filter_specific_stock_and_date_range():
+    params = ad._eastmoney_lhb_params(
+        "000004", limit=10, page=1, start_date="2026-06-01", end_date="2026-06-26"
+    )
+
+    assert params["filter"] == (
+        '(SECURITY_CODE="000004")(TRADE_DATE>=\'2026-06-01\')'
+        "(TRADE_DATE<='2026-06-26')"
+    )
+
+
 def test_normalize_lhb_row_keeps_core_fields():
     row = {
+        "TRADE_ID": "100357777",
         "TRADE_DATE": "2026-06-26 00:00:00",
         "SECURITY_CODE": "000004",
         "SECUCODE": "000004.SZ",
@@ -43,6 +55,7 @@ def test_normalize_lhb_row_keeps_core_fields():
     out = ad._normalize_lhb_row(row)
 
     assert out == {
+        "trade_id": "100357777",
         "trade_date": "2026-06-26",
         "code": "000004",
         "secucode": "000004.SZ",
@@ -235,4 +248,68 @@ def test_fetch_lhb_detail_groups_buy_and_sell_seats(monkeypatch):
             "unknown": 0,
             "aliases": [],
         },
+    }
+
+
+def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):
+    detail_calls = []
+
+    def fake_fetch_lhb_rows(code, limit, page, start_date=None, end_date=None):
+        assert code == "000004"
+        assert limit == 50
+        assert page == 1
+        assert start_date == "2026-06-01"
+        assert end_date == "2026-06-26"
+        return [
+            {"trade_id": "100357777", "trade_date": "2026-06-26", "code": "000004"},
+            {"trade_id": "100357666", "trade_date": "2026-06-25", "code": "000004"},
+        ]
+
+    def fake_fetch_lhb_detail(code=None, trade_date=None, trade_id=None, limit=10):
+        detail_calls.append({
+            "code": code,
+            "trade_date": trade_date,
+            "trade_id": trade_id,
+            "limit": limit,
+        })
+        return {
+            "_source": "legacy",
+            "source_detail": "eastmoney:lhb-detail",
+            "records": [{
+                "trade_id": str(trade_id),
+                "trade_date": "2026-06-26" if trade_id == "100357777" else "2026-06-25",
+                "code": "000004",
+            }],
+        }
+
+    monkeypatch.setattr(ad, "_fetch_lhb_rows", fake_fetch_lhb_rows)
+    monkeypatch.setattr(ad, "_fetch_lhb_detail", fake_fetch_lhb_detail)
+
+    out = ad._fetch_lhb_detail_range(
+        code="000004",
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+        list_limit=50,
+        page=1,
+        detail_limit=7,
+    )
+
+    assert detail_calls == [
+        {"code": None, "trade_date": None, "trade_id": "100357777", "limit": 7},
+        {"code": None, "trade_date": None, "trade_id": "100357666", "limit": 7},
+    ]
+    assert out == {
+        "_source": "legacy",
+        "source_detail": "eastmoney:lhb-detail-range",
+        "code": "000004",
+        "start_date": "2026-06-01",
+        "end_date": "2026-06-26",
+        "list_limit": 50,
+        "detail_limit": 7,
+        "page": 1,
+        "source_lhb_count": 2,
+        "records": [
+            {"trade_id": "100357777", "trade_date": "2026-06-26", "code": "000004"},
+            {"trade_id": "100357666", "trade_date": "2026-06-25", "code": "000004"},
+        ],
     }

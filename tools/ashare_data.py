@@ -308,7 +308,13 @@ def _clean_a_code(code: str) -> str:
     return code.strip().upper().replace(".SH", "").replace(".SZ", "").replace(".BJ", "")
 
 
-def _eastmoney_lhb_params(code: str | None = None, limit: int = 20, page: int = 1) -> dict:
+def _eastmoney_lhb_params(
+    code: str | None = None,
+    limit: int = 20,
+    page: int = 1,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> dict:
     """东方财富龙虎榜 datacenter 参数。"""
     params = {
         "sortColumns": "TRADE_DATE,SECURITY_CODE",
@@ -318,8 +324,15 @@ def _eastmoney_lhb_params(code: str | None = None, limit: int = 20, page: int = 
         "reportName": "RPT_DAILYBILLBOARD_DETAILS",
         "columns": "ALL",
     }
+    filters = []
     if code:
-        params["filter"] = f'(SECURITY_CODE="{_clean_a_code(code)}")'
+        filters.append(f'(SECURITY_CODE="{_clean_a_code(code)}")')
+    if start_date:
+        filters.append(f"(TRADE_DATE>='{str(start_date)[:10]}')")
+    if end_date:
+        filters.append(f"(TRADE_DATE<='{str(end_date)[:10]}')")
+    if filters:
+        params["filter"] = "".join(filters)
     return params
 
 
@@ -327,6 +340,7 @@ def _normalize_lhb_row(row: dict) -> dict:
     """规范化东方财富龙虎榜行，保留投研最常用字段。"""
     date = str(row.get("TRADE_DATE") or "")[:10]
     return {
+        "trade_id": str(row.get("TRADE_ID") or ""),
         "trade_date": date,
         "code": row.get("SECURITY_CODE"),
         "secucode": row.get("SECUCODE"),
@@ -347,9 +361,16 @@ def _normalize_lhb_row(row: dict) -> dict:
     }
 
 
-def _fetch_lhb_rows(code: str | None = None, limit: int = 20, page: int = 1) -> list[dict]:
+def _fetch_lhb_rows(
+    code: str | None = None,
+    limit: int = 20,
+    page: int = 1,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> list[dict]:
     url = "https://datacenter-web.eastmoney.com/api/data/v1/get"
-    data = _curl_json(url, _eastmoney_lhb_params(code, limit, page))
+    params = _eastmoney_lhb_params(code, limit, page, start_date, end_date)
+    data = _curl_json(url, params)
     rows = data.get("result", {}).get("data", []) if isinstance(data, dict) else []
     return [_normalize_lhb_row(row) for row in rows]
 
@@ -503,15 +524,78 @@ def _fetch_lhb_detail(
     }
 
 
-def cmd_lhb(code: str | None = None, limit: int = 20, page: int = 1, json_output: bool = False):
+def _lhb_detail_record_key(record: dict) -> str:
+    trade_id = str(record.get("trade_id") or "")
+    if trade_id:
+        return trade_id
+    return "%s:%s:%s" % (
+        record.get("trade_date") or "",
+        record.get("code") or "",
+        record.get("reason") or "",
+    )
+
+
+def _fetch_lhb_detail_range(
+    code: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    list_limit: int = 20,
+    page: int = 1,
+    detail_limit: int = 10,
+) -> dict:
+    if not start_date or not end_date:
+        raise ValueError("lhb-detail 日期区间需要 --start-date 和 --end-date")
+    rows = _fetch_lhb_rows(code, list_limit, page, start_date=start_date, end_date=end_date)
+    records = []
+    seen = set()
+    for row in rows:
+        trade_id = row.get("trade_id")
+        if trade_id:
+            detail = _fetch_lhb_detail(trade_id=trade_id, limit=detail_limit)
+        else:
+            detail = _fetch_lhb_detail(
+                code=row.get("code") or code,
+                trade_date=row.get("trade_date"),
+                limit=detail_limit,
+            )
+        for record in detail.get("records", []):
+            key = _lhb_detail_record_key(record)
+            if key in seen:
+                continue
+            seen.add(key)
+            records.append(record)
+    return {
+        "_source": "legacy",
+        "source_detail": "eastmoney:lhb-detail-range",
+        "code": _clean_a_code(code) if code else None,
+        "start_date": str(start_date)[:10],
+        "end_date": str(end_date)[:10],
+        "list_limit": list_limit,
+        "detail_limit": detail_limit,
+        "page": page,
+        "source_lhb_count": len(rows),
+        "records": records,
+    }
+
+
+def cmd_lhb(
+    code: str | None = None,
+    limit: int = 20,
+    page: int = 1,
+    json_output: bool = False,
+    start_date: str | None = None,
+    end_date: str | None = None,
+):
     """龙虎榜明细。"""
-    rows = _fetch_lhb_rows(code, limit, page)
+    rows = _fetch_lhb_rows(code, limit, page, start_date, end_date)
     payload = {
         "_source": "legacy",
         "source_detail": "eastmoney:lhb",
         "code": _clean_a_code(code) if code else None,
         "limit": limit,
         "page": page,
+        "start_date": str(start_date)[:10] if start_date else None,
+        "end_date": str(end_date)[:10] if end_date else None,
         "records": rows,
     }
     if json_output:
@@ -542,15 +626,25 @@ def cmd_lhb_detail(
     trade_id: str | None = None,
     limit: int = 10,
     json_output: bool = False,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    list_limit: int = 20,
+    page: int = 1,
 ):
     """龙虎榜买卖席位明细。"""
-    payload = _fetch_lhb_detail(code, trade_date, trade_id, limit)
+    if start_date or end_date:
+        payload = _fetch_lhb_detail_range(code, start_date, end_date, list_limit, page, limit)
+    else:
+        payload = _fetch_lhb_detail(code, trade_date, trade_id, limit)
     if json_output:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return
 
     title_code = payload.get("code") or "-"
-    title_date = payload.get("trade_date") or "-"
+    title_date = payload.get("trade_date") or (
+        f"{payload.get('start_date')}~{payload.get('end_date')}"
+        if payload.get("start_date") else "-"
+    )
     print("=" * 60)
     print(f"龙虎榜席位明细: {title_code} {title_date}")
     print("=" * 60)
@@ -685,13 +779,19 @@ def main():
     p_lhb.add_argument("code", nargs="?", default=None, help="股票代码；省略则返回全市场最新")
     p_lhb.add_argument("--limit", type=int, default=20, help="返回条数，1-100")
     p_lhb.add_argument("--page", type=int, default=1, help="页码")
+    p_lhb.add_argument("--start-date", default=None, help="开始日期 YYYY-MM-DD")
+    p_lhb.add_argument("--end-date", default=None, help="结束日期 YYYY-MM-DD")
     p_lhb.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
 
     p_lhb_detail = sub.add_parser("lhb-detail", help="龙虎榜买卖席位明细（东方财富）")
     p_lhb_detail.add_argument("code", nargs="?", default=None, help="股票代码；配合 --date 使用")
     p_lhb_detail.add_argument("--date", dest="trade_date", default=None, help="交易日期 YYYY-MM-DD")
+    p_lhb_detail.add_argument("--start-date", default=None, help="批量开始日期 YYYY-MM-DD")
+    p_lhb_detail.add_argument("--end-date", default=None, help="批量结束日期 YYYY-MM-DD")
     p_lhb_detail.add_argument("--trade-id", default=None, help="东方财富 TRADE_ID，优先使用")
     p_lhb_detail.add_argument("--limit", type=int, default=10, help="每侧席位条数，1-100")
+    p_lhb_detail.add_argument("--list-limit", type=int, default=20, help="区间模式下先筛选的龙虎榜记录数，1-100")
+    p_lhb_detail.add_argument("--page", type=int, default=1, help="区间模式下龙虎榜列表页码")
     p_lhb_detail.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
 
     args = parser.parse_args()
@@ -707,9 +807,19 @@ def main():
         "valuation": lambda: (cmd_valuation_lixinger(args.code)
                               if args.source == "lixinger" else cmd_valuation(args.code)),
         "search": lambda: cmd_search(args.keyword),
-        "lhb": lambda: cmd_lhb(args.code, args.limit, args.page, args.json),
+        "lhb": lambda: cmd_lhb(
+            args.code, args.limit, args.page, args.json, args.start_date, args.end_date
+        ),
         "lhb-detail": lambda: cmd_lhb_detail(
-            args.code, args.trade_date, args.trade_id, args.limit, args.json
+            args.code,
+            args.trade_date,
+            args.trade_id,
+            args.limit,
+            args.json,
+            args.start_date,
+            args.end_date,
+            args.list_limit,
+            args.page,
         ),
     }
     cmds[args.command]()
