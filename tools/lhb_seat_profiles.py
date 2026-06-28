@@ -258,6 +258,33 @@ def summarize_lhb_seat_amounts(buy_seats: list[dict], sell_seats: list[dict]) ->
     return summary
 
 
+def analyze_lhb_seat_flow(amount_summary: dict) -> dict:
+    net_by_type = {
+        key: (amount_summary.get(key) or {}).get("net_amount", 0)
+        for key in SUMMARY_KEYS
+    }
+    dominant_type = max(SUMMARY_KEYS, key=lambda key: abs(net_by_type[key]))
+    dominant_net = net_by_type[dominant_type]
+    if dominant_net == 0:
+        dominant_type = None
+        direction = "flat"
+        aliases = []
+    else:
+        direction = "net_buy" if dominant_net > 0 else "net_sell"
+        aliases = (amount_summary.get(dominant_type) or {}).get("aliases", [])
+    return {
+        "institution_net_amount": net_by_type["institution"],
+        "northbound_net_amount": net_by_type["northbound"],
+        "youzi_net_amount": net_by_type["youzi"],
+        "brokerage_net_amount": net_by_type["brokerage"],
+        "unknown_net_amount": net_by_type["unknown"],
+        "dominant_type": dominant_type,
+        "dominant_direction": direction,
+        "dominant_net_amount": dominant_net,
+        "dominant_aliases": aliases,
+    }
+
+
 def _empty_profile(profile_type: str) -> dict:
     return {
         "type": profile_type,

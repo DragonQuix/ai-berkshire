@@ -22,6 +22,7 @@ import sys
 from decimal import Decimal, ROUND_HALF_EVEN
 
 from lhb_seat_profiles import (
+    analyze_lhb_seat_flow,
     build_lhb_seat_profile,
     summarize_lhb_seat_amounts,
     summarize_lhb_seat_profiles,
@@ -518,6 +519,7 @@ def _fetch_lhb_detail(
         record["seat_amount_summary"] = summarize_lhb_seat_amounts(
             record["buy_seats"], record["sell_seats"]
         )
+        record["seat_flow_analysis"] = analyze_lhb_seat_flow(record["seat_amount_summary"])
     payload_code = _clean_a_code(code) if code else (records[0].get("code") if records else None)
     payload_date = str(trade_date)[:10] if trade_date else (records[0].get("trade_date") if records else None)
     return {

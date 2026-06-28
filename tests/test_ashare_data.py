@@ -265,6 +265,17 @@ def test_fetch_lhb_detail_groups_buy_and_sell_seats(monkeypatch):
         "sell_count": 1,
         "aliases": [],
     }
+    assert out["records"][0]["seat_flow_analysis"] == {
+        "institution_net_amount": 0,
+        "northbound_net_amount": 0,
+        "youzi_net_amount": 656231,
+        "brokerage_net_amount": -219258,
+        "unknown_net_amount": 0,
+        "dominant_type": "youzi",
+        "dominant_direction": "net_buy",
+        "dominant_net_amount": 656231,
+        "dominant_aliases": ["拉萨天团"],
+    }
 
 
 def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):
