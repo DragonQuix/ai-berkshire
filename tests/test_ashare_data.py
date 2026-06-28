@@ -1083,3 +1083,189 @@ def test_fetch_lhb_detail_range_filters_by_min_dominant_net(monkeypatch):
     assert [record["trade_id"] for record in out["records"]] == ["100357777"]
     assert out["range_flow_summary"]["record_count"] == 1
     assert out["range_flow_summary"]["net_amount_by_type"]["youzi"] == 656231
+
+
+def test_fetch_lhb_compare_ranks_codes_by_youzi_recognition(monkeypatch):
+    calls = []
+
+    def fake_fetch_range(
+        code,
+        start_date,
+        end_date,
+        list_limit=20,
+        page=1,
+        detail_limit=10,
+        dominant_type=None,
+        dominant_direction=None,
+        youzi_alias=None,
+        min_dominant_net=None,
+    ):
+        calls.append({
+            "code": code,
+            "start_date": start_date,
+            "end_date": end_date,
+            "list_limit": list_limit,
+            "page": page,
+            "detail_limit": detail_limit,
+            "dominant_type": dominant_type,
+            "dominant_direction": dominant_direction,
+            "youzi_alias": youzi_alias,
+            "min_dominant_net": min_dominant_net,
+        })
+        if code == "000004":
+            return _lhb_compare_payload(
+                code="000004",
+                filtered_count=2,
+                trade_dates=["2026-06-26"],
+                profiled_abs_net_amount=500000,
+                profiled_abs_net_ratio=0.5,
+                youzi_abs_net_amount=300000,
+                youzi_abs_net_ratio=0.3,
+                top_alias="拉萨天团",
+                top_alias_net=300000,
+            )
+        return _lhb_compare_payload(
+            code="000005",
+            filtered_count=1,
+            trade_dates=["2026-06-25"],
+            profiled_abs_net_amount=800000,
+            profiled_abs_net_ratio=0.8,
+            youzi_abs_net_amount=700000,
+            youzi_abs_net_ratio=0.7,
+            top_alias="章盟主",
+            top_alias_net=-700000,
+        )
+
+    monkeypatch.setattr(ad, "_fetch_lhb_detail_range", fake_fetch_range)
+
+    out = ad._fetch_lhb_compare(
+        codes=["000004", "000005"],
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+        list_limit=30,
+        page=2,
+        detail_limit=7,
+        dominant_type="youzi",
+        dominant_direction="net_buy",
+        youzi_alias="拉萨天团",
+        min_dominant_net=200000,
+    )
+
+    assert calls == [
+        {
+            "code": "000004",
+            "start_date": "2026-06-01",
+            "end_date": "2026-06-26",
+            "list_limit": 30,
+            "page": 2,
+            "detail_limit": 7,
+            "dominant_type": "youzi",
+            "dominant_direction": "net_buy",
+            "youzi_alias": "拉萨天团",
+            "min_dominant_net": 200000,
+        },
+        {
+            "code": "000005",
+            "start_date": "2026-06-01",
+            "end_date": "2026-06-26",
+            "list_limit": 30,
+            "page": 2,
+            "detail_limit": 7,
+            "dominant_type": "youzi",
+            "dominant_direction": "net_buy",
+            "youzi_alias": "拉萨天团",
+            "min_dominant_net": 200000,
+        },
+    ]
+    assert out == {
+        "_source": "legacy",
+        "source_detail": "eastmoney:lhb-compare",
+        "codes": ["000004", "000005"],
+        "start_date": "2026-06-01",
+        "end_date": "2026-06-26",
+        "list_limit": 30,
+        "detail_limit": 7,
+        "page": 2,
+        "dominant_type": "youzi",
+        "dominant_direction": "net_buy",
+        "youzi_alias": "拉萨天团",
+        "min_dominant_net": 200000,
+        "sort_by": "youzi_abs_net_amount",
+        "rows": [
+            {
+                "rank": 1,
+                "code": "000005",
+                "filtered_count": 1,
+                "trade_dates": ["2026-06-25"],
+                "profiled_abs_net_amount": 800000,
+                "profiled_abs_net_ratio": 0.8,
+                "youzi_abs_net_amount": 700000,
+                "youzi_abs_net_ratio": 0.7,
+                "dominant_profiled_type": "youzi",
+                "dominant_profiled_direction": "net_sell",
+                "dominant_profiled_net_amount": -700000,
+                "youzi_alias_count": 1,
+                "youzi_aliases": ["章盟主"],
+                "top_youzi_alias": "章盟主",
+                "top_youzi_alias_net_amount": -700000,
+                "top_youzi_alias_abs_net_amount": 700000,
+                "top_youzi_alias_direction": "net_sell",
+            },
+            {
+                "rank": 2,
+                "code": "000004",
+                "filtered_count": 2,
+                "trade_dates": ["2026-06-26"],
+                "profiled_abs_net_amount": 500000,
+                "profiled_abs_net_ratio": 0.5,
+                "youzi_abs_net_amount": 300000,
+                "youzi_abs_net_ratio": 0.3,
+                "dominant_profiled_type": "youzi",
+                "dominant_profiled_direction": "net_buy",
+                "dominant_profiled_net_amount": 300000,
+                "youzi_alias_count": 1,
+                "youzi_aliases": ["拉萨天团"],
+                "top_youzi_alias": "拉萨天团",
+                "top_youzi_alias_net_amount": 300000,
+                "top_youzi_alias_abs_net_amount": 300000,
+                "top_youzi_alias_direction": "net_buy",
+            },
+        ],
+    }
+
+
+def _lhb_compare_payload(
+    code,
+    filtered_count,
+    trade_dates,
+    profiled_abs_net_amount,
+    profiled_abs_net_ratio,
+    youzi_abs_net_amount,
+    youzi_abs_net_ratio,
+    top_alias,
+    top_alias_net,
+):
+    return {
+        "code": code,
+        "filtered_count": filtered_count,
+        "range_flow_summary": {"trade_dates": trade_dates},
+        "range_seat_profile_summary": {
+            "youzi_alias_strengths": [{
+                "alias": top_alias,
+                "net_amount": top_alias_net,
+                "abs_net_amount": abs(top_alias_net),
+                "net_direction": "net_buy" if top_alias_net > 0 else "net_sell",
+            }],
+            "recognition_summary": {
+                "profiled_abs_net_amount": profiled_abs_net_amount,
+                "profiled_abs_net_ratio": profiled_abs_net_ratio,
+                "youzi_abs_net_amount": youzi_abs_net_amount,
+                "youzi_abs_net_ratio": youzi_abs_net_ratio,
+                "dominant_profiled_type": "youzi",
+                "dominant_profiled_direction": "net_buy" if top_alias_net > 0 else "net_sell",
+                "dominant_profiled_net_amount": top_alias_net,
+                "youzi_alias_count": 1,
+                "youzi_aliases": [top_alias],
+            },
+        },
+    }

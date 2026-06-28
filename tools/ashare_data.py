@@ -31,6 +31,11 @@ from lhb_seat_profiles import (
 
 _TIMEOUT = 15
 _LHB_PROFILE_TYPES = ("institution", "northbound", "youzi", "brokerage", "unknown")
+_LHB_COMPARE_SORT_FIELDS = (
+    "youzi_abs_net_amount",
+    "profiled_abs_net_amount",
+    "profiled_abs_net_ratio",
+)
 
 
 def _curl(url):
@@ -665,6 +670,15 @@ def _public_lhb_youzi_alias_strength(bucket: dict) -> dict:
     }
 
 
+def _lhb_net_direction(net_amount: float | int | None) -> str:
+    amount = _lhb_numeric_amount(net_amount)
+    if amount > 0:
+        return "net_buy"
+    if amount < 0:
+        return "net_sell"
+    return "flat"
+
+
 def _summarize_lhb_youzi_alias_strengths(buckets: dict[str, dict]) -> list[dict]:
     alias_buckets = [
         bucket for bucket in buckets.values()
@@ -829,6 +843,95 @@ def _fetch_lhb_detail_range(
     }
 
 
+def _lhb_compare_row(payload: dict) -> dict:
+    seat_summary = payload.get("range_seat_profile_summary") or {}
+    recognition = seat_summary.get("recognition_summary") or {}
+    strengths = seat_summary.get("youzi_alias_strengths") or []
+    top_alias = strengths[0] if strengths else {}
+    top_alias_net = _lhb_numeric_amount(top_alias.get("net_amount"))
+    return {
+        "code": payload.get("code"),
+        "filtered_count": payload.get("filtered_count", 0),
+        "trade_dates": (payload.get("range_flow_summary") or {}).get("trade_dates") or [],
+        "profiled_abs_net_amount": recognition.get("profiled_abs_net_amount", 0),
+        "profiled_abs_net_ratio": recognition.get("profiled_abs_net_ratio", 0),
+        "youzi_abs_net_amount": recognition.get("youzi_abs_net_amount", 0),
+        "youzi_abs_net_ratio": recognition.get("youzi_abs_net_ratio", 0),
+        "dominant_profiled_type": recognition.get("dominant_profiled_type"),
+        "dominant_profiled_direction": recognition.get("dominant_profiled_direction"),
+        "dominant_profiled_net_amount": recognition.get("dominant_profiled_net_amount", 0),
+        "youzi_alias_count": recognition.get("youzi_alias_count", 0),
+        "youzi_aliases": recognition.get("youzi_aliases") or [],
+        "top_youzi_alias": top_alias.get("alias"),
+        "top_youzi_alias_net_amount": top_alias_net,
+        "top_youzi_alias_abs_net_amount": _lhb_numeric_amount(top_alias.get("abs_net_amount")),
+        "top_youzi_alias_direction": top_alias.get("net_direction") or _lhb_net_direction(top_alias_net),
+    }
+
+
+def _fetch_lhb_compare(
+    codes: list[str],
+    start_date: str | None = None,
+    end_date: str | None = None,
+    list_limit: int = 20,
+    page: int = 1,
+    detail_limit: int = 10,
+    dominant_type: str | None = None,
+    dominant_direction: str | None = None,
+    youzi_alias: str | None = None,
+    min_dominant_net: float | None = None,
+    sort_by: str = "youzi_abs_net_amount",
+) -> dict:
+    if not start_date or not end_date:
+        raise ValueError("lhb-compare 需要 --start-date 和 --end-date")
+    if sort_by not in _LHB_COMPARE_SORT_FIELDS:
+        raise ValueError(f"不支持的 sort_by: {sort_by}")
+    clean_codes = [_clean_a_code(code) for code in codes if code]
+    if not 2 <= len(clean_codes) <= 4:
+        raise ValueError("lhb-compare 需要 2-4 个股票代码")
+
+    rows = [
+        _lhb_compare_row(
+            _fetch_lhb_detail_range(
+                code,
+                start_date,
+                end_date,
+                list_limit,
+                page,
+                detail_limit,
+                dominant_type,
+                dominant_direction,
+                youzi_alias,
+                min_dominant_net,
+            )
+        )
+        for code in clean_codes
+    ]
+    rows = sorted(
+        rows,
+        key=lambda row: (-_lhb_numeric_amount(row.get(sort_by)), row.get("code") or ""),
+    )
+    for idx, row in enumerate(rows, start=1):
+        row["rank"] = idx
+
+    return {
+        "_source": "legacy",
+        "source_detail": "eastmoney:lhb-compare",
+        "codes": clean_codes,
+        "start_date": str(start_date)[:10],
+        "end_date": str(end_date)[:10],
+        "list_limit": list_limit,
+        "detail_limit": detail_limit,
+        "page": page,
+        "dominant_type": dominant_type,
+        "dominant_direction": dominant_direction,
+        "youzi_alias": youzi_alias,
+        "min_dominant_net": min_dominant_net,
+        "sort_by": sort_by,
+        "rows": rows,
+    }
+
+
 def cmd_lhb(
     code: str | None = None,
     limit: int = 20,
@@ -869,6 +972,50 @@ def cmd_lhb(
         print(f"  净买入:     {_fmt_yi(r['net_amount'])}")
         print(f"  成交额:     {_fmt_yi(r['deal_amount'])}")
         print(f"  交易市场:   {r['trade_market']}")
+
+
+def cmd_lhb_compare(
+    codes: list[str],
+    start_date: str | None = None,
+    end_date: str | None = None,
+    list_limit: int = 20,
+    page: int = 1,
+    limit: int = 10,
+    dominant_type: str | None = None,
+    dominant_direction: str | None = None,
+    youzi_alias: str | None = None,
+    min_dominant_net: float | None = None,
+    sort_by: str = "youzi_abs_net_amount",
+    json_output: bool = False,
+):
+    """多股票龙虎榜区间辨识度对比。"""
+    payload = _fetch_lhb_compare(
+        codes,
+        start_date,
+        end_date,
+        list_limit,
+        page,
+        limit,
+        dominant_type,
+        dominant_direction,
+        youzi_alias,
+        min_dominant_net,
+        sort_by,
+    )
+    if json_output:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return
+
+    print("=" * 60)
+    print(f"龙虎榜区间辨识度对比: {payload['start_date']}~{payload['end_date']}")
+    print("=" * 60)
+    for row in payload["rows"]:
+        print(
+            f"{row['rank']:>2}. {row['code']} "
+            f"游资净额绝对值={_fmt_yi(row['youzi_abs_net_amount'])} "
+            f"可识别净额绝对值={_fmt_yi(row['profiled_abs_net_amount'])} "
+            f"Top游资={row['top_youzi_alias'] or '-'}"
+        )
 
 
 def cmd_lhb_detail(
@@ -1079,6 +1226,30 @@ def main():
     )
     p_lhb_detail.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
 
+    p_lhb_compare = sub.add_parser("lhb-compare", help="多股票龙虎榜区间辨识度对比")
+    p_lhb_compare.add_argument("codes", nargs="+", help="2-4 个股票代码，如 000004 000005")
+    p_lhb_compare.add_argument("--start-date", required=True, help="开始日期 YYYY-MM-DD")
+    p_lhb_compare.add_argument("--end-date", required=True, help="结束日期 YYYY-MM-DD")
+    p_lhb_compare.add_argument("--limit", type=int, default=10, help="每侧席位条数，1-100")
+    p_lhb_compare.add_argument("--list-limit", type=int, default=20, help="每只股票先筛选的龙虎榜记录数")
+    p_lhb_compare.add_argument("--page", type=int, default=1, help="龙虎榜列表页码")
+    p_lhb_compare.add_argument(
+        "--dominant-type",
+        choices=["institution", "northbound", "youzi", "brokerage", "unknown"],
+        default=None,
+        help="按资金主导类型过滤",
+    )
+    p_lhb_compare.add_argument(
+        "--dominant-direction",
+        choices=["net_buy", "net_sell", "flat"],
+        default=None,
+        help="按资金主导方向过滤",
+    )
+    p_lhb_compare.add_argument("--youzi-alias", default=None, help="按游资/活跃席位别名过滤")
+    p_lhb_compare.add_argument("--min-dominant-net", type=float, default=None, help="主导资金绝对净额下限")
+    p_lhb_compare.add_argument("--sort-by", choices=_LHB_COMPARE_SORT_FIELDS, default="youzi_abs_net_amount")
+    p_lhb_compare.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -1109,6 +1280,20 @@ def main():
             args.dominant_direction,
             args.youzi_alias,
             args.min_dominant_net,
+        ),
+        "lhb-compare": lambda: cmd_lhb_compare(
+            args.codes,
+            args.start_date,
+            args.end_date,
+            args.list_limit,
+            args.page,
+            args.limit,
+            args.dominant_type,
+            args.dominant_direction,
+            args.youzi_alias,
+            args.min_dominant_net,
+            args.sort_by,
+            args.json,
         ),
     }
     cmds[args.command]()

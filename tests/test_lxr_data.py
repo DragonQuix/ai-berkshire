@@ -695,5 +695,57 @@ def test_get_lhb_detail_passes_min_dominant_net_to_legacy_ashare(monkeypatch):
     assert out["min_dominant_net"] == 500000
 
 
+def test_get_lhb_compare_passes_codes_and_filters_to_legacy_ashare(monkeypatch):
+    from lxr_data import LxrData
+
+    class FakeClient:
+        config = {"data_type_ttl_seconds": {}}
+        cache = _FakeCache()
+
+    d = LxrData(client=FakeClient(), verbose=False)
+    calls = []
+
+    def fake_legacy(args):
+        calls.append(args)
+        return (
+            '{"_source":"legacy","source_detail":"eastmoney:lhb-compare",'
+            '"codes":["000004","000005"],"rows":[{"code":"000005","rank":1}]}'
+        )
+
+    monkeypatch.setattr(d, "_call_legacy_tool", fake_legacy)
+
+    out = d.get_lhb_compare(
+        codes=["000004", "000005"],
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+        list_limit=30,
+        page=2,
+        limit=7,
+        dominant_type="youzi",
+        dominant_direction="net_buy",
+        youzi_alias="拉萨天团",
+        min_dominant_net=200000,
+        sort_by="profiled_abs_net_amount",
+    )
+
+    assert calls == [[
+        "lhb-compare", "000004", "000005",
+        "--start-date", "2026-06-01",
+        "--end-date", "2026-06-26",
+        "--limit", "7",
+        "--list-limit", "30",
+        "--page", "2",
+        "--dominant-type", "youzi",
+        "--dominant-direction", "net_buy",
+        "--youzi-alias", "拉萨天团",
+        "--min-dominant-net", "200000",
+        "--sort-by", "profiled_abs_net_amount",
+        "--json",
+    ]]
+    assert out["_source"] == "legacy"
+    assert out["source_detail"] == "legacy:ashare_data/lhb-compare"
+    assert out["rows"][0]["code"] == "000005"
+
+
 if __name__ == "__main__":
     unittest.main()

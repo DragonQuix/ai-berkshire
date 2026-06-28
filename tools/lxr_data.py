@@ -50,6 +50,7 @@ CLI：
     python tools/lxr_data.py quality-metrics 600519 --years 10
     python tools/lxr_data.py lhb 600519 --limit 5
     python tools/lxr_data.py lhb-detail --trade-id 100357777
+    python tools/lxr_data.py lhb-compare 000004 000005 --start-date 2026-06-01 --end-date 2026-06-26
     python tools/lxr_data.py mx-search "新华保险最新公告"
     python tools/lxr_data.py mx-xuangu "ROE大于15%的A股，返回前10只"
 """
@@ -1607,6 +1608,82 @@ class LxrData:
             data["_source"] = "legacy"
         return data
 
+    def get_lhb_compare(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+        limit: int = 10,
+        list_limit: int = 20,
+        page: int = 1,
+        dominant_type: Optional[str] = None,
+        dominant_direction: Optional[str] = None,
+        youzi_alias: Optional[str] = None,
+        min_dominant_net: Optional[float] = None,
+        sort_by: str = "youzi_abs_net_amount",
+        source: str = "auto",
+    ) -> dict:
+        """获取多股票 A 股龙虎榜区间辨识度对比。当前统一入口走东方财富免费源。"""
+        if source not in ("auto", "legacy"):
+            return {"_source": "none", "error": f"未知 source: {source}"}
+        return self._run_chain([(
+            "legacy",
+            lambda: self._get_lhb_compare_legacy(
+                codes,
+                start_date,
+                end_date,
+                limit,
+                list_limit,
+                page,
+                dominant_type,
+                dominant_direction,
+                youzi_alias,
+                min_dominant_net,
+                sort_by,
+            ),
+        )])
+
+    def _get_lhb_compare_legacy(
+        self,
+        codes: list[str],
+        start_date: str,
+        end_date: str,
+        limit: int,
+        list_limit: int,
+        page: int,
+        dominant_type: Optional[str],
+        dominant_direction: Optional[str],
+        youzi_alias: Optional[str],
+        min_dominant_net: Optional[float],
+        sort_by: str,
+    ) -> dict:
+        args = ["lhb-compare"]
+        args.extend(_norm_code(code, "cn") for code in codes)
+        args.extend(["--start-date", str(start_date)[:10], "--end-date", str(end_date)[:10]])
+        if limit != 10:
+            args.extend(["--limit", str(limit)])
+        if list_limit != 20:
+            args.extend(["--list-limit", str(list_limit)])
+        if page != 1:
+            args.extend(["--page", str(page)])
+        if dominant_type:
+            args.extend(["--dominant-type", str(dominant_type)])
+        if dominant_direction:
+            args.extend(["--dominant-direction", str(dominant_direction)])
+        if youzi_alias:
+            args.extend(["--youzi-alias", str(youzi_alias)])
+        if min_dominant_net is not None:
+            args.extend(["--min-dominant-net", str(min_dominant_net)])
+        if sort_by != "youzi_abs_net_amount":
+            args.extend(["--sort-by", str(sort_by)])
+        args.append("--json")
+        text = self._call_legacy_tool(args)
+        data = json.loads(text)
+        data["source_detail"] = "legacy:ashare_data/lhb-compare"
+        if "_source" not in data:
+            data["_source"] = "legacy"
+        return data
+
     # ------------------------------------------------------------------
     # 研究数据包（跨 Skill 共享，TTL 1h）
     # ------------------------------------------------------------------
@@ -1866,6 +1943,35 @@ def _cli():
     p_lhb_detail.add_argument("--source", choices=["auto", "legacy"], default="auto")
     p_lhb_detail.add_argument("--quiet", action="store_true")
 
+    p_lhb_compare = sub.add_parser("lhb-compare", help="A股龙虎榜多股票区间辨识度对比（东方财富免费源）")
+    p_lhb_compare.add_argument("codes", nargs="+", help="2-4 个股票代码，如 000004 000005")
+    p_lhb_compare.add_argument("--start-date", required=True, help="开始日期 YYYY-MM-DD")
+    p_lhb_compare.add_argument("--end-date", required=True, help="结束日期 YYYY-MM-DD")
+    p_lhb_compare.add_argument("--limit", type=int, default=10)
+    p_lhb_compare.add_argument("--list-limit", type=int, default=20, help="每只股票先筛选的龙虎榜记录数")
+    p_lhb_compare.add_argument("--page", type=int, default=1, help="龙虎榜列表页码")
+    p_lhb_compare.add_argument(
+        "--dominant-type",
+        choices=["institution", "northbound", "youzi", "brokerage", "unknown"],
+        default=None,
+        help="按资金主导类型过滤",
+    )
+    p_lhb_compare.add_argument(
+        "--dominant-direction",
+        choices=["net_buy", "net_sell", "flat"],
+        default=None,
+        help="按资金主导方向过滤",
+    )
+    p_lhb_compare.add_argument("--youzi-alias", default=None, help="按游资/活跃席位别名过滤")
+    p_lhb_compare.add_argument("--min-dominant-net", type=float, default=None, help="主导资金绝对净额下限")
+    p_lhb_compare.add_argument(
+        "--sort-by",
+        choices=["youzi_abs_net_amount", "profiled_abs_net_amount", "profiled_abs_net_ratio"],
+        default="youzi_abs_net_amount",
+    )
+    p_lhb_compare.add_argument("--source", choices=["auto", "legacy"], default="auto")
+    p_lhb_compare.add_argument("--quiet", action="store_true")
+
     for skill in _MX_SKILLS:
         p_mx = sub.add_parser(skill, help=f"调用妙想 {skill}（1h 缓存，自动 Windows 输出目录）")
         p_mx.add_argument("query", help="自然语言查询")
@@ -1956,6 +2062,21 @@ def _cli():
             dominant_direction=args.dominant_direction,
             youzi_alias=args.youzi_alias,
             min_dominant_net=args.min_dominant_net,
+            source=args.source,
+        )
+    elif args.command == "lhb-compare":
+        data = LxrData(verbose=not args.quiet).get_lhb_compare(
+            args.codes,
+            start_date=args.start_date,
+            end_date=args.end_date,
+            limit=args.limit,
+            list_limit=args.list_limit,
+            page=args.page,
+            dominant_type=args.dominant_type,
+            dominant_direction=args.dominant_direction,
+            youzi_alias=args.youzi_alias,
+            min_dominant_net=args.min_dominant_net,
+            sort_by=args.sort_by,
             source=args.source,
         )
     elif args.command == "datapack":
