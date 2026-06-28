@@ -1781,6 +1781,21 @@ def cmd_lhb_compare(
     print("=" * 60)
     print(f"龙虎榜区间辨识度对比: {payload['start_date']}~{payload['end_date']}")
     print("=" * 60)
+    summary = payload.get("comparison_summary") or {}
+    readiness = summary.get("compare_readiness_summary") or {}
+    coverage = summary.get("code_coverage_summary") or {}
+    if readiness:
+        print(
+            f"对比可用性: {readiness.get('readiness_level')} "
+            f"({readiness.get('primary_reason')})"
+        )
+        if readiness.get("interpretation"):
+            print(f"  {readiness['interpretation']}")
+    if coverage:
+        print(
+            f"命中覆盖: {coverage.get('matched_code_count', 0)}/"
+            f"{coverage.get('code_count', 0)} {coverage.get('coverage_level')}"
+        )
     for row in payload["rows"]:
         print(
             f"{row['rank']:>2}. {row['code']} "

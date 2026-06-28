@@ -1921,6 +1921,63 @@ def test_fetch_lhb_compare_summarizes_compare_readiness(monkeypatch):
     }
 
 
+def test_cmd_lhb_compare_prints_readiness_summary(monkeypatch, capsys):
+    def fake_fetch_compare(
+        codes,
+        start_date,
+        end_date,
+        list_limit=20,
+        page=1,
+        detail_limit=10,
+        dominant_type=None,
+        dominant_direction=None,
+        youzi_alias=None,
+        min_dominant_net=None,
+        sort_by="youzi_abs_net_amount",
+    ):
+        return {
+            "_source": "legacy",
+            "source_detail": "eastmoney:lhb-compare",
+            "codes": codes,
+            "start_date": start_date,
+            "end_date": end_date,
+            "comparison_summary": {
+                "compare_readiness_summary": {
+                    "readiness_level": "use_with_caution",
+                    "primary_reason": "partial_coverage",
+                    "interpretation": "仅2/3个代码命中龙虎榜，排序可参考但需补齐未命中代码000006",
+                },
+                "code_coverage_summary": {
+                    "matched_code_count": 2,
+                    "code_count": 3,
+                    "coverage_level": "partial",
+                },
+            },
+            "rows": [
+                {
+                    "rank": 1,
+                    "code": "000004",
+                    "youzi_abs_net_amount": 700000,
+                    "profiled_abs_net_amount": 800000,
+                    "top_youzi_alias": "章盟主",
+                },
+            ],
+        }
+
+    monkeypatch.setattr(ad, "_fetch_lhb_compare", fake_fetch_compare)
+
+    ad.cmd_lhb_compare(
+        ["000004", "000005", "000006"],
+        start_date="2026-06-01",
+        end_date="2026-06-26",
+    )
+
+    out = capsys.readouterr().out
+    assert "对比可用性: use_with_caution (partial_coverage)" in out
+    assert "命中覆盖: 2/3 partial" in out
+    assert "仅2/3个代码命中龙虎榜，排序可参考但需补齐未命中代码000006" in out
+
+
 def _lhb_compare_payload(
     code,
     filtered_count,
