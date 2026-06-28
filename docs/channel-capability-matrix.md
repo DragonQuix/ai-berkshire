@@ -227,7 +227,7 @@ python C:\Users\admin\.claude\skills\mx-xuangu\mx_xuangu.py "ROE大于15%的A股
 python C:\Users\admin\.claude\skills\mx-data\mx_data.py "腾讯控股近三年净利润 营业收入" $env:TEMP\mx_skills
 ```
 
-`lhb-detail` 记录中的 `buy_seats` / `sell_seats` 已包含 `seat_category` 与 `seat_profile`；记录层包含 `seat_profile_summary`、`seat_amount_summary` 与 `seat_flow_analysis`，用于区分机构、北向、普通营业部与已知游资/活跃席位，按类型聚合买入/卖出/净额，并标注资金主导方。
+`lhb-detail` 记录中的 `buy_seats` / `sell_seats` 已包含 `seat_category` 与 `seat_profile`；记录层包含 `seat_profile_summary`、`seat_amount_summary` 与 `seat_flow_analysis`，用于区分机构、北向、普通营业部与已知游资/活跃席位，按类型聚合买入/卖出/净额，并标注资金主导方。区间模式额外返回 `range_flow_summary`，汇总多日主导类型、方向、类型净额和游资别名。
 
 ---
 

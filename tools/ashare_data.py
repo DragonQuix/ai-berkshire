@@ -26,6 +26,7 @@ from lhb_seat_profiles import (
     build_lhb_seat_profile,
     summarize_lhb_seat_amounts,
     summarize_lhb_seat_profiles,
+    summarize_lhb_range_flow,
 )
 
 _TIMEOUT = 15
@@ -584,6 +585,7 @@ def _fetch_lhb_detail_range(
         "page": page,
         "source_lhb_count": len(rows),
         "records": records,
+        "range_flow_summary": summarize_lhb_range_flow(records),
     }
 
 

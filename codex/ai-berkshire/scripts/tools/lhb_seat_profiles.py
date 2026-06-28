@@ -285,6 +285,42 @@ def analyze_lhb_seat_flow(amount_summary: dict) -> dict:
     }
 
 
+def summarize_lhb_range_flow(records: list[dict]) -> dict:
+    dominant_type_counts = {key: 0 for key in SUMMARY_KEYS}
+    dominant_direction_counts = {"net_buy": 0, "net_sell": 0, "flat": 0}
+    net_amount_by_type = {key: 0 for key in SUMMARY_KEYS}
+    trade_dates = []
+    youzi_aliases = []
+    for record in records:
+        date = record.get("trade_date")
+        if date and date not in trade_dates:
+            trade_dates.append(date)
+        flow = record.get("seat_flow_analysis") or {}
+        dominant_type = flow.get("dominant_type")
+        if dominant_type in dominant_type_counts:
+            dominant_type_counts[dominant_type] += 1
+        direction = flow.get("dominant_direction") or "flat"
+        if direction not in dominant_direction_counts:
+            direction = "flat"
+        dominant_direction_counts[direction] += 1
+        net_amount_by_type["institution"] += _numeric_amount(flow.get("institution_net_amount"))
+        net_amount_by_type["northbound"] += _numeric_amount(flow.get("northbound_net_amount"))
+        net_amount_by_type["youzi"] += _numeric_amount(flow.get("youzi_net_amount"))
+        net_amount_by_type["brokerage"] += _numeric_amount(flow.get("brokerage_net_amount"))
+        net_amount_by_type["unknown"] += _numeric_amount(flow.get("unknown_net_amount"))
+        for alias in flow.get("dominant_aliases") or []:
+            if alias and alias not in youzi_aliases:
+                youzi_aliases.append(alias)
+    return {
+        "record_count": len(records),
+        "trade_dates": sorted(trade_dates),
+        "dominant_type_counts": dominant_type_counts,
+        "dominant_direction_counts": dominant_direction_counts,
+        "net_amount_by_type": net_amount_by_type,
+        "youzi_aliases": youzi_aliases,
+    }
+
+
 def _empty_profile(profile_type: str) -> dict:
     return {
         "type": profile_type,

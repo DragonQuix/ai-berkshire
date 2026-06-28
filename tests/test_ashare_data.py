@@ -299,6 +299,30 @@ def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):
             "trade_id": trade_id,
             "limit": limit,
         })
+        if trade_id == "100357777":
+            flow = {
+                "institution_net_amount": 0,
+                "northbound_net_amount": 0,
+                "youzi_net_amount": 656231,
+                "brokerage_net_amount": -219258,
+                "unknown_net_amount": 0,
+                "dominant_type": "youzi",
+                "dominant_direction": "net_buy",
+                "dominant_net_amount": 656231,
+                "dominant_aliases": ["拉萨天团"],
+            }
+        else:
+            flow = {
+                "institution_net_amount": 300000,
+                "northbound_net_amount": 0,
+                "youzi_net_amount": 0,
+                "brokerage_net_amount": -100000,
+                "unknown_net_amount": 0,
+                "dominant_type": "institution",
+                "dominant_direction": "net_buy",
+                "dominant_net_amount": 300000,
+                "dominant_aliases": [],
+            }
         return {
             "_source": "legacy",
             "source_detail": "eastmoney:lhb-detail",
@@ -306,6 +330,7 @@ def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):
                 "trade_id": str(trade_id),
                 "trade_date": "2026-06-26" if trade_id == "100357777" else "2026-06-25",
                 "code": "000004",
+                "seat_flow_analysis": flow,
             }],
         }
 
@@ -336,7 +361,61 @@ def test_fetch_lhb_detail_range_uses_lhb_trade_ids(monkeypatch):
         "page": 1,
         "source_lhb_count": 2,
         "records": [
-            {"trade_id": "100357777", "trade_date": "2026-06-26", "code": "000004"},
-            {"trade_id": "100357666", "trade_date": "2026-06-25", "code": "000004"},
+            {
+                "trade_id": "100357777",
+                "trade_date": "2026-06-26",
+                "code": "000004",
+                "seat_flow_analysis": {
+                    "institution_net_amount": 0,
+                    "northbound_net_amount": 0,
+                    "youzi_net_amount": 656231,
+                    "brokerage_net_amount": -219258,
+                    "unknown_net_amount": 0,
+                    "dominant_type": "youzi",
+                    "dominant_direction": "net_buy",
+                    "dominant_net_amount": 656231,
+                    "dominant_aliases": ["拉萨天团"],
+                },
+            },
+            {
+                "trade_id": "100357666",
+                "trade_date": "2026-06-25",
+                "code": "000004",
+                "seat_flow_analysis": {
+                    "institution_net_amount": 300000,
+                    "northbound_net_amount": 0,
+                    "youzi_net_amount": 0,
+                    "brokerage_net_amount": -100000,
+                    "unknown_net_amount": 0,
+                    "dominant_type": "institution",
+                    "dominant_direction": "net_buy",
+                    "dominant_net_amount": 300000,
+                    "dominant_aliases": [],
+                },
+            },
         ],
+        "range_flow_summary": {
+            "record_count": 2,
+            "trade_dates": ["2026-06-25", "2026-06-26"],
+            "dominant_type_counts": {
+                "institution": 1,
+                "northbound": 0,
+                "youzi": 1,
+                "brokerage": 0,
+                "unknown": 0,
+            },
+            "dominant_direction_counts": {
+                "net_buy": 2,
+                "net_sell": 0,
+                "flat": 0,
+            },
+            "net_amount_by_type": {
+                "institution": 300000,
+                "northbound": 0,
+                "youzi": 656231,
+                "brokerage": -319258,
+                "unknown": 0,
+            },
+            "youzi_aliases": ["拉萨天团"],
+        },
     }
