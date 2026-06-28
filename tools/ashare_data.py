@@ -983,6 +983,49 @@ def _summarize_lhb_compare_shared_code_strengths(alias_strengths: list[dict]) ->
     return sorted(out, key=lambda item: (-item["shared_abs_net_amount"], item["code"]))
 
 
+def _summarize_lhb_compare_unique_code_strengths(alias_strengths: list[dict]) -> list[dict]:
+    buckets: dict[str, dict] = {}
+    for alias_item in alias_strengths:
+        alias = alias_item.get("alias")
+        is_unique = alias_item.get("code_count", 0) == 1
+        for code_item in alias_item.get("codes") or []:
+            code = code_item.get("code")
+            if not code:
+                continue
+            abs_net_amount = _lhb_numeric_amount(code_item.get("abs_net_amount"))
+            bucket = buckets.setdefault(code, {
+                "total_abs_net_amount": 0,
+                "unique_abs_net_amount": 0,
+                "unique_aliases": [],
+            })
+            bucket["total_abs_net_amount"] += abs_net_amount
+            if is_unique and alias:
+                bucket["unique_abs_net_amount"] += abs_net_amount
+                bucket["unique_aliases"].append({
+                    "alias": alias,
+                    "abs_net_amount": abs_net_amount,
+                })
+
+    out = []
+    for code, bucket in buckets.items():
+        unique_aliases = sorted(
+            bucket["unique_aliases"],
+            key=lambda item: (-item["abs_net_amount"], item["alias"]),
+        )
+        total_abs_net = bucket["total_abs_net_amount"]
+        unique_abs_net = bucket["unique_abs_net_amount"]
+        out.append({
+            "code": code,
+            "unique_alias_count": len(unique_aliases),
+            "unique_abs_net_amount": unique_abs_net,
+            "total_abs_net_amount": total_abs_net,
+            "unique_abs_net_ratio": round(unique_abs_net / total_abs_net, 4) if total_abs_net else 0,
+            "unique_aliases": [item["alias"] for item in unique_aliases],
+            "top_unique_alias": unique_aliases[0]["alias"] if unique_aliases else None,
+        })
+    return sorted(out, key=lambda item: (-item["unique_abs_net_amount"], item["code"]))
+
+
 def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[dict]) -> dict:
     alias_codes: dict[str, set[str]] = {}
     for row in rows:
@@ -1029,6 +1072,7 @@ def _summarize_lhb_compare(rows: list[dict], codes: list[str], payloads: list[di
         ],
         "shared_youzi_strength_summary": _summarize_lhb_compare_shared_strength(alias_strengths),
         "shared_youzi_code_strengths": _summarize_lhb_compare_shared_code_strengths(alias_strengths),
+        "unique_youzi_code_strengths": _summarize_lhb_compare_unique_code_strengths(alias_strengths),
         "same_direction_youzi_aliases": same_direction_aliases,
         "mixed_direction_youzi_aliases": mixed_direction_aliases,
         "youzi_alias_frequency": alias_frequency,
