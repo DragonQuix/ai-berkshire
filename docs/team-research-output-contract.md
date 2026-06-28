@@ -38,6 +38,13 @@ python tools/team_research_outputs.py validate reports/{公司名}
 
 结构校验会检查最终报告中出现的显式来源 ref（如 `S1`、`E2`、`P3`、`A4`）是否存在于 `source-index.md` 的 ref 列。若最终报告引用未定义来源 ref，校验必须失败。
 
+结构校验同时检查 JSON 产物中的来源字段：
+
+- `data-pack.json` 任意层级的 `source_refs` 列表。
+- `audit-results.json.items[*].source_ref` 字段。
+
+上述字段引用的 ref 也必须存在于 `source-index.md` 的 ref 列；出现未定义来源 ref 时，必须补齐来源索引或修正引用。
+
 ## `data-pack.json` 最小结构
 
 ```json
@@ -166,3 +173,4 @@ python tools/team_research_outputs.py validate reports/{公司名}
 - 最终报告包含关键数据溯源和冲突仲裁小节。
 - `python tools/team_research_outputs.py validate reports/{公司名}` 返回 `pass`。
 - 最终报告没有引用未定义来源 ref。
+- `data-pack.json.source_refs` 与 `audit-results.json.items[*].source_ref` 没有引用未定义来源 ref。

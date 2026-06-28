@@ -69,3 +69,7 @@ def test_contract_and_investment_team_define_ref_consistency_gate() -> None:
     for text in (docs, root, codex):
         assert "未定义来源 ref" in text
         assert "source-index.md" in text
+        assert "data-pack.json" in text
+        assert "audit-results.json" in text
+        assert "source_refs" in text
+        assert "source_ref" in text

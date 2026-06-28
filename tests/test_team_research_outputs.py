@@ -198,3 +198,66 @@ def test_validate_team_research_outputs_reports_undefined_report_refs(tmp_path: 
         "file": "最终报告.md",
         "reason": "undefined source refs: S404",
     } in result["invalid_files"]
+
+
+def test_validate_team_research_outputs_reports_undefined_data_pack_refs(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path,
+        company="腾讯",
+        ticker="00700",
+        market="hk",
+        generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    data_pack_path = company_dir / "data-pack.json"
+    data_pack = json.loads(data_pack_path.read_text(encoding="utf-8"))
+    data_pack["financials"]["source_refs"] = ["S1", "S404"]
+    data_pack_path.write_text(json.dumps(data_pack, ensure_ascii=False), encoding="utf-8")
+    (company_dir / "source-index.md").write_text(
+        "# 腾讯 来源索引\n\n"
+        "| ref | 来源 | 标题 | 日期 | 链接/路径 | _source | 用途 | 可信度 |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| S1 | 年报 | 2025 年报 | 2026-03-20 | https://example.com | web | 财务口径核对 | 高 |\n",
+        encoding="utf-8",
+    )
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert result["undefined_refs"] == ["S404"]
+    assert {
+        "file": "data-pack.json",
+        "reason": "undefined source refs: S404",
+    } in result["invalid_files"]
+
+
+def test_validate_team_research_outputs_reports_undefined_audit_refs(tmp_path: Path) -> None:
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path,
+        company="腾讯",
+        ticker="00700",
+        market="hk",
+        generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    audit_path = company_dir / "audit-results.json"
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    audit["items"] = [{
+        "claim": "收入 6600 亿",
+        "report_location": "核心数据速览",
+        "source_ref": "S404",
+        "expected_value": "6600亿",
+        "verified_value": "",
+        "status": "pending",
+        "note": "",
+    }]
+    audit_path.write_text(json.dumps(audit, ensure_ascii=False), encoding="utf-8")
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert result["undefined_refs"] == ["S404"]
+    assert {
+        "file": "audit-results.json",
+        "reason": "undefined source refs: S404",
+    } in result["invalid_files"]

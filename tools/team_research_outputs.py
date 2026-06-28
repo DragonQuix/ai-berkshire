@@ -258,6 +258,37 @@ def extract_report_refs(text: str) -> set[str]:
     return set(SOURCE_REF_RE.findall(text))
 
 
+def extract_json_source_refs(value: Any) -> set[str]:
+    refs: set[str] = set()
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key == "source_ref" and isinstance(item, str) and SOURCE_REF_RE.fullmatch(item):
+                refs.add(item)
+            elif key == "source_refs" and isinstance(item, list):
+                refs.update(ref for ref in item if isinstance(ref, str) and SOURCE_REF_RE.fullmatch(ref))
+            else:
+                refs.update(extract_json_source_refs(item))
+    elif isinstance(value, list):
+        for item in value:
+            refs.update(extract_json_source_refs(item))
+    return refs
+
+
+def _add_undefined_ref_error(
+    filename: str,
+    refs: set[str],
+    source_refs: set[str],
+    invalid_files: list[dict[str, str]],
+) -> list[str]:
+    undefined = sorted(refs - source_refs)
+    if undefined:
+        invalid_files.append({
+            "file": filename,
+            "reason": f"undefined source refs: {', '.join(undefined)}",
+        })
+    return undefined
+
+
 def validate_team_research_outputs(company_dir: str | Path) -> dict[str, Any]:
     root = Path(company_dir)
     missing_files: list[str] = []
@@ -275,21 +306,31 @@ def validate_team_research_outputs(company_dir: str | Path) -> dict[str, Any]:
             missing_files.append(rel)
 
     data_pack_path = root / "data-pack.json"
+    data_pack_refs: set[str] = set()
     if data_pack_path.exists():
         data_pack = _load_json(data_pack_path, invalid_files)
-        if data_pack is not None and data_pack.get("meta", {}).get("owner") != "Team Lead":
-            invalid_files.append({"file": "data-pack.json", "reason": "meta.owner must be Team Lead"})
+        if data_pack is not None:
+            if data_pack.get("meta", {}).get("owner") != "Team Lead":
+                invalid_files.append({"file": "data-pack.json", "reason": "meta.owner must be Team Lead"})
+            data_pack_refs = extract_json_source_refs(data_pack)
 
     audit_path = root / "audit-results.json"
+    audit_refs: set[str] = set()
     if audit_path.exists():
         audit = _load_json(audit_path, invalid_files)
-        if audit is not None and audit.get("verdict") not in {"pass", "reject"}:
-            invalid_files.append({"file": "audit-results.json", "reason": "verdict must be pass or reject"})
+        if audit is not None:
+            if audit.get("verdict") not in {"pass", "reject"}:
+                invalid_files.append({"file": "audit-results.json", "reason": "verdict must be pass or reject"})
+            audit_refs = extract_json_source_refs(audit)
 
     source_refs: set[str] = set()
     source_index_path = root / "source-index.md"
     if source_index_path.exists():
         source_refs = extract_source_index_refs(source_index_path.read_text(encoding="utf-8"))
+
+    undefined_all: set[str] = set()
+    undefined_all.update(_add_undefined_ref_error("data-pack.json", data_pack_refs, source_refs, invalid_files))
+    undefined_all.update(_add_undefined_ref_error("audit-results.json", audit_refs, source_refs, invalid_files))
 
     report_path = root / "最终报告.md"
     if report_path.exists():
@@ -298,12 +339,9 @@ def validate_team_research_outputs(company_dir: str | Path) -> dict[str, Any]:
             if section not in report:
                 invalid_files.append({"file": "最终报告.md", "reason": f"missing section: {section}"})
         report_refs = extract_report_refs(report)
-        undefined_refs = sorted(report_refs - source_refs)
-        if undefined_refs:
-            invalid_files.append({
-                "file": "最终报告.md",
-                "reason": f"undefined source refs: {', '.join(undefined_refs)}",
-            })
+        undefined_all.update(_add_undefined_ref_error("最终报告.md", report_refs, source_refs, invalid_files))
+
+    undefined_refs = sorted(undefined_all)
 
     status = "pass" if not missing_files and not invalid_files else "fail"
     return {
