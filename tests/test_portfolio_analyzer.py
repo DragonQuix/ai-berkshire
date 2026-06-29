@@ -11,6 +11,7 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 TOOLS_DIR = REPO / "tools"
+SAMPLE_FILE = REPO / "examples" / "portfolio-holdings.sample.json"
 sys.path.insert(0, str(TOOLS_DIR))
 
 import portfolio_analyzer as pa  # noqa: E402
@@ -182,6 +183,57 @@ def test_cli_outputs_json_from_holdings_file(tmp_path: Path) -> None:
     assert payload["_source"] == "portfolio_analyzer"
     assert payload["overall_health"]["rating"] == "需要调整"
     assert payload["concentration"]["top1_weight"] == pytest.approx(0.35)
+
+
+def test_sample_portfolio_file_runs_through_cli() -> None:
+    sample = json.loads(SAMPLE_FILE.read_text(encoding="utf-8"))
+    codex_sample = REPO / "codex" / "ai-berkshire" / "examples" / "portfolio-holdings.sample.json"
+    assert codex_sample.read_bytes() == SAMPLE_FILE.read_bytes()
+    assert len(sample["holdings"]) >= 5
+    assert all(
+        "expected_return" in row and "conviction" in row
+        for row in sample["holdings"]
+        if row.get("asset_type") != "cash"
+    )
+
+    markdown = subprocess.run(
+        [
+            sys.executable,
+            str(TOOLS_DIR / "portfolio_analyzer.py"),
+            "analyze",
+            str(SAMPLE_FILE),
+            "--format",
+            "markdown",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        check=False,
+    )
+    json_result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOLS_DIR / "portfolio_analyzer.py"),
+            "analyze",
+            str(SAMPLE_FILE),
+            "--format",
+            "json",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        check=False,
+    )
+
+    assert markdown.returncode == 0, markdown.stderr
+    assert "## 机会成本" in markdown.stdout
+    assert "## 压力测试" in markdown.stdout
+    assert json_result.returncode == 0, json_result.stderr
+    payload = json.loads(json_result.stdout)
+    assert payload["opportunity_cost"]["ranked_holdings"]
+    assert payload["stress_tests"]
 
 
 def test_codex_tool_copy_stays_in_sync() -> None:

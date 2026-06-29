@@ -1,0 +1,56 @@
+{
+  "description": "portfolio_analyzer smoke-test sample; figures are illustrative, not investment advice",
+  "holdings": [
+    {
+      "name": "腾讯",
+      "code": "00700.HK",
+      "weight": 35,
+      "industry": "互联网",
+      "region": "中国",
+      "currency": "HKD",
+      "themes": ["中国互联网", "AI应用"],
+      "expected_return": 0.12,
+      "conviction": 0.8
+    },
+    {
+      "name": "阿里巴巴",
+      "code": "09988.HK",
+      "weight": 18,
+      "industry": "互联网",
+      "region": "中国",
+      "currency": "HKD",
+      "themes": ["中国互联网", "云计算"],
+      "expected_return": 0.08,
+      "conviction": 0.65
+    },
+    {
+      "name": "台积电",
+      "code": "TSM",
+      "weight": 15,
+      "industry": "半导体",
+      "region": "台湾",
+      "currency": "USD",
+      "themes": ["AI算力", "半导体"],
+      "expected_return": 0.14,
+      "conviction": 0.75
+    },
+    {
+      "name": "英伟达",
+      "code": "NVDA",
+      "weight": 12,
+      "industry": "半导体",
+      "region": "美国",
+      "currency": "USD",
+      "themes": ["AI算力", "半导体"],
+      "expected_return": 0.10,
+      "conviction": 0.55
+    },
+    {
+      "name": "现金",
+      "weight": 20,
+      "asset_type": "cash",
+      "region": "现金",
+      "currency": "CNY"
+    }
+  ]
+}

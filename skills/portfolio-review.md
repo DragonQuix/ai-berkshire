@@ -41,6 +41,12 @@ python tools/portfolio_analyzer.py analyze portfolio-holdings.json --format mark
 python tools/portfolio_analyzer.py analyze portfolio-holdings.json --format json
 ```
 
+如果需要先验证工具链，可直接运行仓库内样例：
+
+```bash
+python tools/portfolio_analyzer.py analyze examples/portfolio-holdings.sample.json --format markdown
+```
+
 输入 JSON 示例：
 
 ```json

@@ -49,6 +49,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "tools/financial_rigor.py verify-valuation",
     ],
     "portfolio-review.md": [
+        "examples/portfolio-holdings.sample.json",
         "reports/portfolio-latest.md",
         "python tools/portfolio_analyzer.py analyze",
         "opportunity_cost",
