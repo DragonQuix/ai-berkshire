@@ -61,6 +61,8 @@
 ## P2：长期（6个月+）
 
 ### 测试覆盖
+> 2026-06-29 已启动第一切片：`financial_rigor.py` 回归测试从 2 个扩展到 14 个，覆盖股息率口径、市值偏差阈值、估值比率、交叉验证、Benford 小样本/异常分布、`calc` 安全白名单，以及 Windows GBK stdio 下 CLI 不因 emoji 输出触发 `UnicodeEncodeError` 的回归场景。同日修复 `financial_rigor.py` CLI 入口的 stdout/stderr UTF-8 重配，并同步 Codex 工具副本。
+
 - 为核心工具（financial_rigor.py 等）增加单元测试
 - 为 Skill 输出增加回归测试
 - 确保迭代不破坏已有功能

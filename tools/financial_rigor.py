@@ -20,6 +20,19 @@ import math
 import sys
 from decimal import Decimal, Context, ROUND_HALF_EVEN, InvalidOperation
 
+
+def _configure_utf8_stdio():
+    """Ensure CLI output works in Windows shells with legacy code pages."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (TypeError, ValueError, OSError):
+            pass
+
+
 # ---------------------------------------------------------------------------
 # Exact Decimal Engine (no floating-point drift)
 # ---------------------------------------------------------------------------
@@ -396,6 +409,8 @@ def _lxr_verification_inputs(code):
 # ---------------------------------------------------------------------------
 
 def main():
+    _configure_utf8_stdio()
+
     parser = argparse.ArgumentParser(
         description="Financial Rigor Toolkit — 金融数据严谨性验证工具",
         formatter_class=argparse.RawDescriptionHelpFormatter,
