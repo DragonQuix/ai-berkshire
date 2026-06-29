@@ -108,3 +108,29 @@ def test_contract_documents_audit_extract_resets_verdict() -> None:
     # 重新抽取抽检清单必须把 verdict 重置为 reject
     assert "reject" in docs
     assert "pending" in docs
+
+
+def test_contract_requires_role_briefs_content_validation() -> None:
+    docs = read_text("docs/team-research-output-contract.md")
+    root = read_text("skills/investment-team.md")
+    codex = read_text("codex/ai-berkshire/references/skills/investment-team.md")
+
+    required_sections = [
+        "角色输入范围",
+        "核心结论与评分",
+        "使用的证据",
+        "反面证据",
+        "不确定性",
+        "补数请求",
+        "与其他角色可能冲突的判断",
+    ]
+
+    # contract 必须明确每份 role-brief 含全部 7 个必需小节
+    for section in required_sections:
+        assert section in docs
+
+    # contract 与 skill 必须写明 role-brief 内容校验由 validate 把关
+    for text in (docs, root, codex):
+        assert "role-briefs" in text
+        assert "反面证据" in text
+        assert "不确定性" in text

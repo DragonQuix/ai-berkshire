@@ -123,6 +123,8 @@ python tools/team_research_outputs.py validate reports/{公司名}
 - 补数请求
 - 与其他角色可能冲突的判断
 
+`validate` 会检查每份 role-brief 是否含全部上述小节的 `## ` 标题；缺失任一小节即记入 `invalid_files` 打回，不得发布最终报告。校验只保证小节齐全，不替代 Team Lead 对内容质量（如反面证据是否具体、不确定性是否诚实）的判断。
+
 ## `audit-results.json` 最小结构
 
 ```json
@@ -179,6 +181,7 @@ python tools/team_research_outputs.py validate reports/{公司名}
 - 必需产物均已生成或明确说明为何不适用。
 - `data-pack.json` 与 `source-index.md` 中的来源 ref 可被最终报告引用。
 - `role-briefs/` 中四个角色均有独立结论、反面证据和不确定性。
+- 每份 role-brief 含全部 7 个必需小节标题（角色输入范围、核心结论与评分、使用的证据、反面证据、不确定性、补数请求、与其他角色可能冲突的判断）；`validate` 缺失即打回。
 - `audit-results.json` verdict 为 `pass`。
 - `audit-results.json.items[*].status` 为 `pass`、`fail` 或 `pending`；`claim`、`report_location`、`expected_value` 非空；`status` 为 `pass`/`fail` 的 item 必须携带非空 `verified_value` 与 `source_ref`，且 `source_ref` 在 `source-index.md` 中已定义。
 - `audit-results.json` verdict 为 `pass` 时，`items` 必须非空且全部 `status == pass`。
