@@ -15,7 +15,7 @@ A) `/quality-screen` 精确复核层（full 模式，需理杏仁 token / 网络
 B) 增强 Skill 的 `_source` 标注覆盖 + 根/Codex reference 同步（`--quick` 即执行，纯静态）
      - skills/news-pulse.md | earnings-review.md | bottleneck-hunter.md
      - 必含 `_source: mx-search`（三者均要求）；news-pulse / earnings-review 另要求 `_source: mx-data`
-     - 18 个 root skills 与 codex/ai-berkshire/references/skills/*.md 副本 SHA256 一致
+     - root skills 与 codex/ai-berkshire/references/skills/*.md 副本 SHA256 一致（数量由 EXPECTED_SKILL_COUNT 维护）
 
 C) 权限安全多 Agent 静态校验（`--quick` 即执行，纯静态）
      - 调用 tools/verify_multi_agent_permissions.py
@@ -252,7 +252,7 @@ def check_skills_source_and_sync() -> int:
 
 
 def check_all_skill_sync() -> int:
-    print("\n-- B2) 18 个 Skill 根/Codex reference SHA256 同步 --")
+    print(f"\n-- B2) {EXPECTED_SKILL_COUNT} 个 Skill 根/Codex reference SHA256 同步 --")
     rc = 0
     root_dir = REPO / "skills"
     codex_dir = REPO / "codex" / "ai-berkshire" / "references" / "skills"
@@ -284,7 +284,7 @@ def check_all_skill_sync() -> int:
         codex_rel = f"codex/ai-berkshire/references/skills/{name}"
         rc |= check_sync(root_rel, codex_rel)
     if rc == 0:
-        _pass(f"18 个 Skill 同步一致 ({len(common)} pairs)")
+        _pass(f"{EXPECTED_SKILL_COUNT} 个 Skill 同步一致 ({len(common)} pairs)")
     return rc
 
 
