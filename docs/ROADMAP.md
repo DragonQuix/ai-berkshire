@@ -72,6 +72,8 @@
 - 确保迭代不破坏已有功能
 
 ### 组合级分析
+> 2026-06-29 已启动第一切片：新增 `tools/portfolio_analyzer.py`，提供离线组合结构诊断。工具接受 JSON 持仓，自动归一化百分数/小数权重，输出 `overall_health`、`concentration`、`exposures`、`risk_flags` 与 `correlation_risks`，覆盖非现金持仓数、现金占比、第一大/前三大持仓、HHI/有效持仓数、行业/地域/货币/主题暴露和基于同业/同地区/同货币/共同主题的相关性风险。`/portfolio-review` 已加入该工具作为组合层面分析底稿，Codex 工具副本与 reference 同步，并新增回归测试锁定 CLI、Markdown/JSON 输出和双平台同步。
+
 - 持仓组合健康度评估
 - 行业/地域集中度分析
 - 相关性风险检测

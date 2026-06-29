@@ -50,6 +50,7 @@ REPORT_OUTPUT_CONTRACTS = {
     ],
     "portfolio-review.md": [
         "reports/portfolio-latest.md",
+        "python tools/portfolio_analyzer.py analyze",
         "tools/financial_rigor.py verify-valuation",
         "tools/financial_rigor.py three-scenario",
     ],
