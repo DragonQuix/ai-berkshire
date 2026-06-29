@@ -4,6 +4,10 @@
 
 ## 执行流程
 
+### 深度模式选择
+
+执行前确认研究深度：`--depth lite`（5-10 分钟快速评估）、`--depth standard`（完整研究，默认）或 `--depth deep`（机构级深度）。lite 模式报告目录加 `-lite` 后缀（如 `reports/拼多多-lite/`）。本技能三档行为差异详见 `docs/depth-profiles.md`「investment-team」小节。
+
 ### 第一步：展示团队框架
 
 向用户展示以下团队结构，然后进入数据包准备：

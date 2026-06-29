@@ -4,6 +4,10 @@
 
 ## 研究框架
 
+### 深度模式选择
+
+执行前确认研究深度：`--depth lite`（5-10 分钟快速评估）、`--depth standard`（完整研究，默认）或 `--depth deep`（机构级深度）。lite 模式报告文件名加 `-lite` 后缀（如 `腾讯-research-lite-20260629.md`）。本技能三档行为差异详见 `docs/depth-profiles.md`「investment-research」小节。
+
 基于巴菲特、芒格、段永平、李录四位投资大师的方法论，按以下七个模块顺序执行研究：
 
 ### 前置步骤：权限安全分工（必须执行）

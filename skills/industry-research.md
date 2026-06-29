@@ -4,6 +4,10 @@
 
 ## 研究目标
 
+### 深度模式选择
+
+执行前确认研究深度：`--depth lite`（5-10 分钟快速评估）、`--depth standard`（完整研究，默认）或 `--depth deep`（机构级深度）。lite 模式报告文件名加 `-lite` 后缀（如 `核电-industry-lite-20260629.md`）。本技能三档行为差异详见 `docs/depth-profiles.md`「industry-research」小节。
+
 从一个投资主题/逻辑链出发，完成：
 1. 验证投资逻辑链的每一个环节
 2. 绘制完整产业链全景图
