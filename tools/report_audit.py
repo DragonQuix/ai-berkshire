@@ -31,6 +31,19 @@ from random import Random
 
 _CTX = Context(prec=28, rounding=ROUND_HALF_EVEN)
 
+
+def _configure_utf8_stdio():
+    """Ensure CLI output works in Windows shells with legacy code pages."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (TypeError, ValueError, OSError):
+            pass
+
+
 # ---------------------------------------------------------------------------
 # 数据点提取：从 Markdown 报告中识别财务数字
 # ---------------------------------------------------------------------------
@@ -309,14 +322,14 @@ def render_verdict(results: list, report_name: str = "") -> dict:
 
         # 判断
         pass1 = diff1 <= _TOLERANCE
-        pass2 = (diff2 is None) or (diff2 <= _TOLERANCE)
+        pass2 = None if diff2 is None else diff2 <= _TOLERANCE
 
-        if pass1 and pass2:
+        if pass1 and (pass2 is None or pass2):
             status = f'{GREEN}✅ 通过{RESET}'
             detail = f'{source}: {fetched:.2f} (偏差 {diff1*100:.2f}%)'
             if diff2 is not None:
                 detail += f'  |  {source2}: {fetched2:.2f} (偏差 {diff2*100:.2f}%)'
-        elif not pass1 and not pass2:
+        elif not pass1 and (pass2 is None or not pass2):
             status = f'{RED}❌ 不通过{RESET}'
             detail = f'{source}: {fetched:.2f} (偏差 {diff1*100:.2f}%)'
             if diff2 is not None:
@@ -402,6 +415,8 @@ def render_verdict(results: list, report_name: str = "") -> dict:
 # ---------------------------------------------------------------------------
 
 def main():
+    _configure_utf8_stdio()
+
     parser = argparse.ArgumentParser(
         description='Report Audit Tool — 研究报告数据抽检工具',
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -64,6 +64,8 @@
 > 2026-06-29 已启动第一切片：`financial_rigor.py` 回归测试从 2 个扩展到 14 个，覆盖股息率口径、市值偏差阈值、估值比率、交叉验证、Benford 小样本/异常分布、`calc` 安全白名单，以及 Windows GBK stdio 下 CLI 不因 emoji 输出触发 `UnicodeEncodeError` 的回归场景。同日修复 `financial_rigor.py` CLI 入口的 stdout/stderr UTF-8 重配，并同步 Codex 工具副本。
 >
 > 2026-06-29 继续推进第二切片：新增 `tests/test_skill_output_regressions.py`，锁定 12 个报告类 Skill 的输出路径、报告命名、数据抽检/估值验算关键命令，并同时覆盖 root skill 与 Codex reference。同步修正 6 个旧输出路径漂移：`investment-research`、`earnings-review`、`industry-research`、`investment-checklist`、`management-deep-dive`、`thesis-tracker` 不再指向 `~/...` 或 reports 根目录旧格式，统一回到 `AGENTS.md` 约定的 `reports/` 公司目录或行业根目录命名规范。
+>
+> 2026-06-29 继续推进第三切片：新增 `tests/test_report_audit.py`，直接覆盖 `report_audit.py` 的 Markdown 表格/KV 数据点抽取、抽样比例/种子/行号排序、准出/打回/警告判决、CLI extract/verdict 退出码和 root/Codex 工具副本同步。期间修复两个准出链路缺陷：CLI 在 Windows GBK stdio 下输出中文/emoji 会乱码或触发 `UnicodeEncodeError`，以及单一核验来源超出 2% 容差时被误判为警告并返回 exit 0；现在单来源超阈值会打回并返回非 0，双来源一过一不过才保留为警告。
 
 - 为核心工具（financial_rigor.py 等）增加单元测试
 - 为 Skill 输出增加回归测试
