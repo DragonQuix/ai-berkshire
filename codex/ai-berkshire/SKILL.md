@@ -42,7 +42,7 @@ If the user names a slash command, use the matching reference file. If not, infe
 | Bottleneck / scarcity map | `references/skills/bottleneck-hunter.md` |
 | 2-4 stock head-to-head comparison | `references/skills/compare.md` |
 
-For depth-tier selection (lite/standard/deep), read `references/depth-profiles.md`. It defines depth behavior for 8 core workflows. If the user does not specify a depth tier, default to `standard`.
+Read only the selected reference file first. Read `references/skills/financial-data.md` when the workflow requires financial data sourcing or cross-validation.
 
 ## Codex adaptation
 
