@@ -48,6 +48,21 @@ REPORT_REF_CUE_RE = re.compile(r"(引用|source-index|source_refs?)", re.IGNOREC
 AUDIT_ITEM_STATUSES = ("pass", "fail", "pending")
 AUDIT_REQUIRED_FIELDS = ("claim", "report_location", "expected_value")
 
+# 每份 role-brief 必须包含的 `## ` 小节标题（与 docs/team-research-output-contract.md
+# "role-briefs/ 最小结构" 一致）。缺失任一小节意味着角色分析漏掉反面证据、
+# 不确定性或冲突判断等关键维度，违反"呈现正反两面""对不确定的事诚实说不确定"。
+ROLE_REQUIRED_SECTION_TITLES = [
+    "## 角色输入范围",
+    "## 核心结论与评分",
+    "## 使用的证据",
+    "## 反面证据",
+    "## 不确定性",
+    "## 补数请求",
+    "## 与其他角色可能冲突的判断",
+]
+# 小节标题去掉 `## ` 前缀，用于在 invalid_files reason 里清晰列出缺失项名称。
+ROLE_REQUIRED_SECTION_LABELS = [t.replace("## ", "") for t in ROLE_REQUIRED_SECTION_TITLES]
+
 
 def build_data_pack(company: str, ticker: str, market: str, generated_at: str) -> dict[str, Any]:
     return {
@@ -387,6 +402,28 @@ def _validate_audit_items(audit: dict[str, Any], invalid_files: list[dict[str, s
             })
 
 
+def _validate_role_brief(
+    filename: str,
+    text: str,
+    invalid_files: list[dict[str, str]],
+) -> None:
+    """校验单份 role-brief 是否包含全部必需小节标题。
+
+    只检查 `## ` 二级标题是否齐全，不检查小节内容质量；缺失任一标题即记入
+    invalid_files，按 contract 顺序列出缺失的小节名称。
+    """
+    missing = [
+        label
+        for title, label in zip(ROLE_REQUIRED_SECTION_TITLES, ROLE_REQUIRED_SECTION_LABELS)
+        if title not in text
+    ]
+    if missing:
+        invalid_files.append({
+            "file": f"role-briefs/{filename}",
+            "reason": f"missing required sections: {', '.join(missing)}",
+        })
+
+
 def _format_expected_value(value: Any, unit: str) -> str:
     """把抽检数据点的数值+单位格式化为 contract 中的 expected_value 字符串。"""
     if isinstance(value, (int, float)) and isinstance(value, float) and value.is_integer():
@@ -476,8 +513,11 @@ def validate_team_research_outputs(company_dir: str | Path) -> dict[str, Any]:
     role_dir = root / "role-briefs"
     for filename in ROLE_FILES:
         rel = f"role-briefs/{filename}"
-        if not (role_dir / filename).exists():
+        path = role_dir / filename
+        if not path.exists():
             missing_files.append(rel)
+            continue
+        _validate_role_brief(filename, path.read_text(encoding="utf-8"), invalid_files)
 
     data_pack_path = root / "data-pack.json"
     data_pack_refs: set[str] = set()

@@ -638,3 +638,119 @@ def test_team_research_outputs_importable_as_package() -> None:
         errors="replace",
     )
     assert proc.returncode == 0, proc.stderr
+
+
+ROLE_REQUIRED_SECTIONS = [
+    "## 角色输入范围",
+    "## 核心结论与评分",
+    "## 使用的证据",
+    "## 反面证据",
+    "## 不确定性",
+    "## 补数请求",
+    "## 与其他角色可能冲突的判断",
+]
+
+
+def _strip_role_brief_section(company_dir: Path, filename: str, section: str) -> None:
+    """删除某份 role-brief 中的指定小节（含其标题行及到下一个 ## 之前的内容）。"""
+    path = company_dir / "role-briefs" / filename
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    out: list[str] = []
+    skipping = False
+    for line in lines:
+        if line.startswith("## "):
+            skipping = line.startswith(section)
+            if skipping:
+                continue
+        if skipping:
+            continue
+        out.append(line)
+    # 去掉末尾多余空行
+    while out and out[-1].strip() == "":
+        out.pop()
+    out.append("")
+    path.write_text("\n".join(out), encoding="utf-8")
+
+
+def test_validate_rejects_role_brief_missing_required_section(tmp_path: Path) -> None:
+    """role-brief 缺任一必需小节时 validate 必须打回。"""
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _strip_role_brief_section(company_dir, "business-analyst.md", "## 反面证据")
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert {
+        "file": "role-briefs/business-analyst.md",
+        "reason": "missing required sections: 反面证据",
+    } in result["invalid_files"]
+
+
+def test_validate_reports_all_missing_role_brief_section_names(tmp_path: Path) -> None:
+    """一份 role-brief 缺多个小节时应一次性列出全部缺失项。"""
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _strip_role_brief_section(company_dir, "financial-analyst.md", "## 反面证据")
+    _strip_role_brief_section(company_dir, "financial-analyst.md", "## 不确定性")
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    reason = next(
+        (r for r in result["invalid_files"]
+         if r["file"] == "role-briefs/financial-analyst.md"),
+        None,
+    )
+    assert reason is not None
+    # 缺失项按 contract 顺序列出
+    assert "反面证据" in reason["reason"]
+    assert "不确定性" in reason["reason"]
+
+
+def test_validate_rejects_multiple_role_briefs_with_missing_sections(tmp_path: Path) -> None:
+    """多份 role-brief 缺小节时，每份都应单独列入 invalid_files。"""
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _strip_role_brief_section(company_dir, "industry-researcher.md", "## 补数请求")
+    _strip_role_brief_section(company_dir, "risk-assessor.md", "## 不确定性")
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    files = {r["file"] for r in result["invalid_files"]}
+    assert "role-briefs/industry-researcher.md" in files
+    assert "role-briefs/risk-assessor.md" in files
+
+
+def test_validate_accepts_role_briefs_with_all_required_sections(tmp_path: Path) -> None:
+    """脚手架生成的 role-brief 含全部必需小节，应通过内容校验。"""
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    # 用脚手架生成的 role-brief，故意补全空内容、确认每个小节标题都在
+    for filename in tro.ROLE_FILES:
+        path = company_dir / "role-briefs" / filename
+        text = path.read_text(encoding="utf-8")
+        for section in ROLE_REQUIRED_SECTIONS:
+            assert section in text
+
+    result = tro.validate_team_research_outputs(company_dir)
+    assert result["status"] == "pass"
+    role_brief_issues = [
+        r for r in result["invalid_files"]
+        if r["file"].startswith("role-briefs/")
+    ]
+    assert role_brief_issues == []
