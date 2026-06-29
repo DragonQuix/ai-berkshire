@@ -44,6 +44,8 @@ If the user names a slash command, use the matching reference file. If not, infe
 
 Read only the selected reference file first. Read `references/skills/financial-data.md` when the workflow requires financial data sourcing or cross-validation.
 
+For depth-tier selection (`--depth lite|standard|deep`), read `references/depth-profiles.md`. It defines depth behavior (data window, cross-validation rounds, agent parallelism, DCF scenarios, etc.) for the 8 core workflows. If the user does not specify a depth tier, default to `standard`; in `lite` mode the report filename gets a `-lite` suffix.
+
 ## Codex adaptation
 
 The reference files were originally written as Claude Code slash commands. Apply these translations in Codex:

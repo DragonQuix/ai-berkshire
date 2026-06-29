@@ -298,6 +298,15 @@ def check_multi_agent_permissions() -> int:
     return check_permissions(repo=REPO, verbose=True)
 
 
+def check_depth_profile_sync() -> int:
+    print("\n-- E) depth-profiles.md 根/Codex reference SHA256 同步 --")
+    rc = check_sync(
+        "docs/depth-profiles.md",
+        "codex/ai-berkshire/references/depth-profiles.md",
+    )
+    return rc
+
+
 def check_global_static_markers() -> int:
     print("\n-- C) 全量静态规范检查 --")
     rc = 0
@@ -336,6 +345,7 @@ def main() -> int:
     rc |= check_all_skill_sync()
     rc |= check_global_static_markers()
     rc |= check_multi_agent_permissions()
+    rc |= check_depth_profile_sync()
     if not args.quick:
         rc |= check_quality_metrics_json()
 

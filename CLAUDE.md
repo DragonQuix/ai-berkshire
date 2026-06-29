@@ -123,6 +123,16 @@ git push origin main
 - PE/ROE等指标用 tools/financial_rigor.py 精确计算
 - 报告写完后主动询问是否推送到GitHub
 
+## 多档深度模式
+
+核心分析技能（investment-research、earnings-review、industry-research、investment-team、earnings-team、quality-screen、industry-funnel、compare）支持三档研究深度，用户可通过 `--depth lite|standard|deep` 参数选择：
+
+- **`--depth lite`**：5-10 分钟快速评估，适合初步扫描或已有持仓巡检。合并或跳过非核心环节，仅保留核心判断和估值区间。报告文件名加 `-lite` 后缀（如 `腾讯-research-lite-20260629.md`）。
+- **`--depth standard`**：完整研究流程（默认）。当前各技能的默认行为不变。
+- **`--depth deep`**：45-90+ 分钟机构级深度。追加交叉验证轮次、历史类比、压力测试、额外 Agent，抽检比率提升至 25%。
+
+档位行为全景与各技能三档差异矩阵参见 `docs/depth-profiles.md`。各技能头部"深度模式选择"小节仅引用该文档对应小节，不重复速览表（单一事实源）。
+
 ## 开发收尾汇报
 
 - 每次项目开发工作完成后，最终回复必须补充一段路线图进度摘要。
