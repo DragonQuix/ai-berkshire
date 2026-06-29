@@ -947,5 +947,224 @@ def test_lhb_industry_compare_cli_prints_text_by_default(monkeypatch, capsys):
     assert not out.lstrip().startswith("{")
 
 
+# ---------------------------------------------------------------------------
+# 多股横向对比纯计算层（compare）—— 纯 mock，不联网
+# ---------------------------------------------------------------------------
+
+def _fs_record(date: str, np=None, toit=None, ta=None, toe=None, npatoshopc=None,
+               tetoshopc=None, oc=None, beps=None, mc=None, tsc=None, cabb=None,
+               ocf=None, icf=None, oi=None, op=None, ie=None):
+    """构造单条年报记录，结构与 _get_financials_lixinger 一致：q.ps/q.bs/q.cfs 三段。"""
+    ps = {}
+    if toit is not None: ps["toi"] = {"t": toit}
+    if oi is not None: ps["oi"] = {"t": oi}
+    if np is not None: ps["np"] = {"t": np}
+    if npatoshopc is not None: ps["npatoshopc"] = {"t": npatoshopc}
+    if oc is not None: ps["oc"] = {"t": oc}
+    if op is not None: ps["op"] = {"t": op}
+    if ie is not None: ps["ie"] = {"t": ie}
+    if beps is not None: ps["beps"] = {"t": beps}
+    bs = {}
+    if ta is not None: bs["ta"] = {"t": ta}
+    if toe is not None: bs["toe"] = {"t": toe}
+    if tetoshopc is not None: bs["tetoshopc"] = {"t": tetoshopc}
+    if mc is not None: bs["mc"] = {"t": mc}
+    if tsc is not None: bs["tsc"] = {"t": tsc}
+    if cabb is not None: bs["cabb"] = {"t": cabb}
+    cfs = {}
+    if ocf is not None: cfs["ncffoa"] = {"t": ocf}
+    if icf is not None: cfs["ncffia"] = {"t": icf}
+    return {"date": date, "q": {"ps": ps, "bs": bs, "cfs": cfs}}
+
+
+def _val_latest(pe_ttm=18.0, pe_pct=45.0, pb=3.0, pb_pct=40.0, ps_ttm=5.0,
+                dyr=0.02, sp=100.0, mc=None):
+    """构造 valuation latest 扁平 dict，结构与 _flatten_latest 输出一致。"""
+    return {
+        "date": "2025-12-31",
+        "stockCode": "MOCK",
+        "pe_ttm": pe_ttm, "pe_ttm.y10.cvpos": pe_pct,
+        "pb": pb, "pb.y10.cvpos": pb_pct,
+        "ps_ttm": ps_ttm, "dyr": dyr, "sp": sp, "mc": mc,
+    }
+
+
+def _stock_pack(code, annual, valuation_latest, market="cn", source="lixinger"):
+    """构造 compare 层输入：data_pack 形态的 min dict。"""
+    return {
+        "code": code, "market": market, "_source": source,
+        "financials": {"_source": source, "records": annual,
+                       "report_type": "non_financial"},
+        "valuation": {"_source": source, "latest": valuation_latest},
+    }
+
+
+def test__align_compare_dimensions_extracts_latest_period():
+    stock_a = _stock_pack("600519", [
+        _fs_record("2023-12-31", npatoshopc=6.7e10, toit=1.5e11, oc=1.2e10),
+        _fs_record("2024-12-31", npatoshopc=8.2e10, toit=1.7e11, oc=1.3e10),
+    ], _val_latest())
+    stock_b = _stock_pack("000858", [
+        _fs_record("2024-12-31", npatoshopc=9.0e9, toit=4.0e10, oc=9.0e9),
+    ], _val_latest(pe_ttm=15.0))
+
+    aligned = lxd.align_compare_dimensions([stock_a, stock_b])
+
+    assert aligned["period"] == "2024-12-31"
+    assert [s["code"] for s in aligned["stocks"]] == ["600519", "000858"]
+    # 最新期对齐：A 用 2024、B 用 2024；缺失期不影响
+    assert aligned["stocks"][0]["period"] == "2024-12-31"
+    assert aligned["stocks"][1]["period"] == "2024-12-31"
+    # 关键财务指标已按 contract 维度抽取
+    assert aligned["stocks"][0]["metrics"]["归母净利润"] == 8.2e10
+    assert aligned["stocks"][0]["metrics"]["营业收入"] == 1.7e11
+    assert aligned["stocks"][1]["metrics"]["归母净利润"] == 9.0e9
+
+
+def test__align_compare_dimensions_handles_missing_period_for_stock():
+    # B 只有 2023，对齐期取所有股票最新公共期 → 2023
+    stock_a = _stock_pack("600519", [
+        _fs_record("2023-12-31", npatoshopc=6.7e10, toit=1.5e11),
+        _fs_record("2024-12-31", npatoshopc=8.2e10, toit=1.7e11),
+    ], _val_latest())
+    stock_b = _stock_pack("000858", [
+        _fs_record("2023-12-31", npatoshopc=9.0e9, toit=4.0e10),
+    ], _val_latest())
+
+    aligned = lxd.align_compare_dimensions([stock_a, stock_b])
+
+    # 公共最新期 = 2023；A 也只取 2023 数据对齐
+    assert aligned["period"] == "2023-12-31"
+    assert aligned["stocks"][0]["metrics"]["归母净利润"] == 6.7e10
+    assert aligned["stocks"][1]["metrics"]["归母净利润"] == 9.0e9
+
+
+def test__build_compare_matrix_produces_dimension_rows_with_leader():
+    aligned = {
+        "period": "2024-12-31",
+        "stocks": [
+            {"code": "600519", "name": "贵州茅台",
+             "metrics": {"营业收入": 1.7e11, "归母净利润": 8.2e10, "净利率": 0.48}},
+            {"code": "000858", "name": "五粮液",
+             "metrics": {"营业收入": 4.0e10, "归母净利润": 9.0e9, "净利率": 0.22}},
+        ],
+    }
+
+    matrix = lxd.build_compare_matrix(aligned)
+
+    assert matrix["period"] == "2024-12-31"
+    assert [c["code"] for c in matrix["stocks"]] == ["600519", "000858"]
+    # 每个维度行含每股数值 + leader 标记
+    row = next(r for r in matrix["rows"] if r["dimension"] == "归母净利润")
+    assert row["values"]["600519"] == 8.2e10
+    assert row["values"]["000858"] == 9.0e9
+    assert row["leader"] == "600519"
+    assert row["better"] == "higher"  # 净利润越大越好
+
+
+def test__build_compare_matrix_marks_lower_is_better_dimensions():
+    aligned = {
+        "period": "2024-12-31",
+        "stocks": [
+            {"code": "600519", "name": "贵州茅台",
+             "metrics": {"PE": 25.0, "PB": 8.0}},
+            {"code": "000858", "name": "五粮液",
+             "metrics": {"PE": 15.0, "PB": 3.0}},
+        ],
+    }
+    matrix = lxd.build_compare_matrix(aligned, lower_is_better={"PE", "PB"})
+
+    pe_row = next(r for r in matrix["rows"] if r["dimension"] == "PE")
+    assert pe_row["leader"] == "000858"  # PE 越低越好 → 五粮液领先
+    assert pe_row["better"] == "lower"
+
+
+def test__build_compare_matrix_skips_dimensions_without_any_value():
+    aligned = {
+        "period": "2024-12-31",
+        "stocks": [
+            {"code": "600519", "name": "茅台",
+             "metrics": {"营业收入": 1.7e11, "缺失维度": None}},
+            {"code": "000858", "name": "五粮液",
+             "metrics": {"营业收入": 4.0e10, "缺失维度": None}},
+        ],
+    }
+    matrix = lxd.build_compare_matrix(aligned)
+
+    dims = {r["dimension"] for r in matrix["rows"]}
+    assert "营业收入" in dims
+    assert "缺失维度" not in dims  # 全空维度不进矩阵
+
+
+def test__pick_compare_leader_counts_leader_wins_per_stock():
+    matrix = {
+        "period": "2024-12-31",
+        "stocks": [{"code": "600519"}, {"code": "000858"}],
+        "rows": [
+            {"dimension": "归母净利润", "leader": "600519", "better": "higher"},
+            {"dimension": "营业收入", "leader": "600519", "better": "higher"},
+            {"dimension": "净利率", "leader": "000858", "better": "higher"},
+            {"dimension": "PE", "leader": "000858", "better": "lower"},
+        ],
+    }
+
+    summary = lxd.pick_compare_leader(matrix)
+
+    assert summary["leader_wins"]["600519"] == 2
+    assert summary["leader_wins"]["000858"] == 2
+    # 平局（2:2）必须标记 is_tie，leader_code 任选其一中可解释的一个
+    assert summary["is_tie"] is True
+    assert summary["leader_code"] in ("600519", "000858")
+
+
+def test__pick_compare_leader_resolves_clear_winner():
+    matrix = {
+        "period": "2024-12-31",
+        "stocks": [{"code": "600519"}, {"code": "000858"}],
+        "rows": [
+            {"dimension": "归母净利润", "leader": "600519", "better": "higher"},
+            {"dimension": "营业收入", "leader": "600519", "better": "higher"},
+            {"dimension": "净利率", "leader": "600519", "better": "higher"},
+            {"dimension": "PE", "leader": "000858", "better": "lower"},
+        ],
+    }
+    summary = lxd.pick_compare_leader(matrix)
+    assert summary["leader_code"] == "600519"
+    assert summary["is_tie"] is False
+
+
+def test__render_compare_markdown_contains_matrix_and_summary():
+    payload = {
+        "period": "2024-12-31",
+        "stocks": [{"code": "600519", "name": "贵州茅台", "_source": "lixinger"},
+                   {"code": "000858", "name": "五粮液", "_source": "lixinger"}],
+        "matrix": {
+            "period": "2024-12-31",
+            "stocks": [{"code": "600519"}, {"code": "000858"}],
+            "rows": [
+                {"dimension": "归母净利润", "values": {"600519": 8.2e10, "000858": 9.0e9},
+                 "leader": "600519", "better": "higher", "unit": "元"},
+                {"dimension": "PE", "values": {"600519": 25.0, "000858": 15.0},
+                 "leader": "000858", "better": "lower", "unit": ""},
+            ],
+        },
+        "leader": {"leader_code": "600519", "leader_wins": {"600519": 1, "000858": 1},
+                   "is_tie": True},
+    }
+
+    text = lxd.render_compare_markdown(payload)
+
+    assert "横向对决" in text or "横向对比" in text
+    assert "2024-12-31" in text
+    assert "贵州茅台" in text and "五粮液" in text
+    assert "归母净利润" in text
+    assert "PE" in text
+    assert "综合领先" in text or "领先" in text
+    # 领先标记应体现在矩阵中
+    assert "600519" in text
+    # 来源标注行应出现（stocks 携带 _source）
+    assert "_source" in text
+
+
 if __name__ == "__main__":
     unittest.main()

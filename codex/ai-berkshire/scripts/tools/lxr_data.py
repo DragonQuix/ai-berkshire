@@ -2040,6 +2040,283 @@ def format_lhb_industry_compare_text(payload: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
+# 多股横向对比（compare）纯计算层 —— 不联网，输入 data_pack 形态 min dict
+# ---------------------------------------------------------------------------
+
+# 对比维度定义：(标签, better方向, unit, 取值函数)
+# better: "higher"=越高越好, "lower"=越低越好
+# 财务维度取自最新年报记录的 _fs_metric；估值维度取自 valuation.latest 扁平 dict。
+# 净利率/毛利率/ROE 由两条原始指标派生（比值），单位按 percentage 显示。
+
+COMPARE_FINANCIAL_DIMENSIONS = [
+    # (label, better, unit, fs_path 或 派生函数名)
+    ("营业收入", "higher", "元", ("fs", "ps.toi.t")),
+    ("归母净利润", "higher", "元", ("fs", "ps.npatoshopc.t")),
+    ("净利率", "higher", "%", ("derived", "net_margin")),
+    ("毛利率", "higher", "%", ("derived", "gross_margin")),
+    ("ROE", "higher", "%", ("derived", "roe")),
+    ("经营现金流", "higher", "元", ("fs", "cfs.ncffoa.t")),
+    ("货币资金", "higher", "元", ("fs", "bs.cabb.t")),
+    ("EPS", "higher", "元/股", ("fs", "ps.beps.t")),
+]
+
+COMPARE_VALUATION_DIMENSIONS = [
+    # (label, better, unit, valuation.latest 扁平 key)
+    ("PE(TTM)", "lower", "", "pe_ttm"),
+    ("PB", "lower", "", "pb"),
+    ("PE分位(10y)", "lower", "%", "pe_ttm.y10.cvpos"),
+    ("PB分位(10y)", "lower", "%", "pb.y10.cvpos"),
+    ("股息率", "higher", "%", "dyr"),
+]
+
+LOWER_IS_BETTER_DIMENSIONS = {
+    label for label, better, _u, _k in COMPARE_VALUATION_DIMENSIONS if better == "lower"
+}
+
+
+def _safe_pct_ratio(num, den) -> Any:
+    if num is None or den is None or float(den) == 0:
+        return None
+    return round(float(num) / float(den) * 100.0, 2)
+
+
+def _derive_financial_ratio(label: str, record: dict) -> Any:
+    """派生净利率/毛利率/ROE。"""
+    if label == "净利率":
+        return _safe_pct_ratio(_fs_metric(record, "q.ps.npatoshopc.t"),
+                               _fs_metric(record, "q.ps.toi.t"))
+    if label == "毛利率":
+        toi = _fs_metric(record, "q.ps.toi.t")
+        oc = _fs_metric(record, "q.ps.oc.t")
+        if toi is None:
+            return None
+        gross = (float(toi) - float(oc)) if oc is not None else float(toi)
+        if float(toi) == 0:
+            return None
+        return round(gross / float(toi) * 100.0, 2)
+    if label == "ROE":
+        return _safe_pct_ratio(_fs_metric(record, "q.ps.npatoshopc.t"),
+                               _fs_metric(record, "q.bs.tetoshopc.t"))
+    return None
+
+
+def _stock_value_dim(label: str, better: str, kind: tuple, record: dict | None,
+                     val_latest: dict) -> Any:
+    """从一条年报记录或 valuation.latest 取一个维度值。"""
+    if kind[0] == "fs":
+        return _fs_metric(record, f"q.{kind[1]}") if record is not None else None
+    if kind[0] == "derived":
+        return _derive_financial_ratio(label, record) if record is not None else None
+    # valuation
+    key = kind[0] if len(kind) == 1 else kind[1]
+    v = val_latest.get(key)
+    return v
+
+
+def align_compare_dimensions(stock_packs: list) -> dict:
+    """对齐多股到统一维度集，取最新公共年报期。
+
+    stock_packs: [{"code","market","_source","financials":{"records":[...]},
+                   "valuation":{"latest":{...}}}, ...]
+    返回 {"period", "stocks":[{"code","market","_source","name","period","metrics"}]}
+    metrics 按 COMPARE_*_DIMENSIONS 顺序填充；缺失维度为 None。
+    """
+    # 每只股票最新年报期
+    per_latest = []
+    for pack in stock_packs:
+        records = pack.get("financials", {}).get("records", []) or []
+        annual = _annual_fs_records(records)
+        per_latest.append(annual[-1] if annual else None)
+
+    # 公共最新期 = 所有有年报的股票中，最新期的最小值（保证每个都被覆盖）
+    periods = [r.get("date", "")[:10] if r else None for r in per_latest]
+    periods_have = [p for p in periods if p]
+    common_period = min(periods_have) if periods_have else None
+
+    stocks_out: list[dict] = []
+    for pack, latest_record in zip(stock_packs, per_latest):
+        code = pack.get("code", "")
+        # 找该股票 common_period 那条记录；若 common_period 为其最新期，则用 latest_record
+        record = None
+        records = pack.get("financials", {}).get("records", []) or []
+        annual = _annual_fs_records(records)
+        if common_period:
+            for r in annual:
+                if r.get("date", "")[:10] == common_period:
+                    record = r
+                    break
+        if record is None and latest_record is not None and common_period and \
+                latest_record.get("date", "")[:10] == common_period:
+            record = latest_record
+
+        val_latest = pack.get("valuation", {}).get("latest", {}) or {}
+        metrics: dict[str, Any] = {}
+        for label, _better, _unit, kind in COMPARE_FINANCIAL_DIMENSIONS:
+            metrics[label] = _stock_value_dim(label, _better, kind, record, val_latest)
+        for label, _better, _unit, key in COMPARE_VALUATION_DIMENSIONS:
+            metrics[label] = _stock_value_dim(label, _better, (key,), record, val_latest)
+
+        stocks_out.append({
+            "code": code,
+            "market": pack.get("market", ""),
+            "_source": pack.get("_source", ""),
+            "name": pack.get("name", code),  # 名称由 CLI 注入时填充
+            "period": common_period,
+            "metrics": metrics,
+        })
+
+    return {"period": common_period, "stocks": stocks_out}
+
+
+def build_compare_matrix(aligned: dict, lower_is_better: set | None = None) -> dict:
+    """把对齐结果转成维度行 × 股票列的对比矩阵，每行标注 leader。
+
+    lower_is_better: 显式指定“越低越好”的维度集合，默认用 LOWER_IS_BETTER_DIMENSIONS。
+    每个维度行：{"dimension","values":{"code":v,...},"leader","better","unit"}。
+    全空维度不进矩阵。
+    """
+    lib = lower_is_better if lower_is_better is not None else LOWER_IS_BETTER_DIMENSIONS
+    stocks = aligned.get("stocks", [])
+    all_labels: list[str] = []
+    for s in stocks:
+        for k in s.get("metrics", {}):
+            if k not in all_labels:
+                all_labels.append(k)
+
+    # 单位表
+    unit_of = {}
+    for label, _b, unit, _k in COMPARE_FINANCIAL_DIMENSIONS:
+        unit_of[label] = unit
+    for label, _b, unit, _k in COMPARE_VALUATION_DIMENSIONS:
+        unit_of[label] = unit
+
+    rows: list[dict] = []
+    for label in all_labels:
+        values = {s["code"]: s.get("metrics", {}).get(label) for s in stocks}
+        if all(v is None for v in values.values()):
+            continue  # 全空维度跳过
+        better = "lower" if label in lib else "higher"
+        # leader = 最值对应的 code
+        valid = {c: v for c, v in values.items() if v is not None}
+        leader = None
+        if valid:
+            if better == "higher":
+                leader = max(valid.items(), key=lambda kv: kv[1])[0]
+            else:
+                leader = min(valid.items(), key=lambda kv: kv[1])[0]
+        rows.append({
+            "dimension": label,
+            "values": values,
+            "leader": leader,
+            "better": better,
+            "unit": unit_of.get(label, ""),
+        })
+
+    return {
+        "period": aligned.get("period"),
+        "stocks": [{"code": s["code"]} for s in stocks],
+        "rows": rows,
+    }
+
+
+def pick_compare_leader(matrix: dict) -> dict:
+    """统计每股在矩阵行的 leader 次数，判定综合领先股；平局标记 is_tie。"""
+    wins: dict[str, int] = {s["code"]: 0 for s in matrix.get("stocks", [])}
+    for row in matrix.get("rows", []):
+        ld = row.get("leader")
+        if ld and ld in wins:
+            wins[ld] += 1
+    if not wins:
+        return {"leader_code": None, "leader_wins": {}, "is_tie": False}
+    max_wins = max(wins.values())
+    top = [c for c, w in wins.items() if w == max_wins]
+    is_tie = len(top) > 1
+    # 平局时按字典序选第一个作为代表，但 is_tie 为 True 供报告明确标注
+    leader_code = sorted(top)[0] if is_tie else top[0]
+    return {"leader_code": leader_code, "leader_wins": wins, "is_tie": is_tie}
+
+
+def _fmt_dim_value(v: Any, unit: str) -> str:
+    if v is None:
+        return "-"
+    if isinstance(v, (int, float)):
+        # 元：转亿；百分比：保留两位；倍数：保留两位
+        if unit == "元":
+            try:
+                return f"{float(v) / 1e8:.2f}亿"
+            except (TypeError, ValueError):
+                return str(v)
+        if unit == "元/股":
+            return f"{float(v):.2f}"
+        if unit == "%":
+            return f"{float(v):.2f}%"
+        return f"{float(v):.2f}"
+    return str(v)
+
+
+def render_compare_markdown(payload: dict) -> str:
+    """渲染对比矩阵 + 综合领先摘要为可读 Markdown。
+
+    payload: {"period","stocks":[{"code","name"}],"matrix","leader"}
+    """
+    period = payload.get("period") or "-"
+    stocks = payload.get("stocks", [])
+    matrix = payload.get("matrix", {})
+    leader = payload.get("leader", {})
+
+    lines: list[str] = []
+    lines.append(f"# 多股横向对决（{period}）")
+    lines.append("")
+    names = [f"{s.get('name', s['code'])}（{s['code']}）" for s in stocks]
+    lines.append(f"对比标的：{ ' vs '.join(names) }")
+    lines.append("")
+
+    # 对比矩阵表
+    header = "| 维度 | " + " | ".join(
+        f"{s.get('name', s['code'])}" for s in stocks
+    ) + " | 领先 | 方向 |"
+    sep = "|---|" + "|".join(["---:"] * len(stocks)) + "|---|---|"
+    lines.append(header)
+    lines.append(sep)
+    for row in matrix.get("rows", []):
+        ld_cells = []
+        for s in stocks:
+            v = row["values"].get(s["code"])
+            mark = " ★" if row.get("leader") == s["code"] else ""
+            ld_cells.append(_fmt_dim_value(v, row["unit"]) + mark)
+        leader_name = next((s.get("name", s["code"]) for s in stocks
+                            if s["code"] == row.get("leader")), row.get("leader") or "-")
+        lines.append("| " + row["dimension"] + " | " +
+                     " | ".join(ld_cells) + " | " + leader_name + " | " +
+                     ("越低越好" if row["better"] == "lower" else "越高越好") + " |")
+    lines.append("")
+
+    # 综合领先摘要
+    lw = leader.get("leader_wins", {})
+    wins_str = " / ".join(
+        f"{s.get('name', s['code'])} {lw.get(s['code'], 0)}项" for s in stocks
+    )
+    lines.append("## 综合领先")
+    if leader.get("is_tie"):
+        lines.append(f"**综合领先出现平局**（{wins_str}）。需结合护城河、确定性、治理等定性维度进一步裁决，本表只覆盖财务与估值结构化维度。")
+    else:
+        ld_code = leader.get("leader_code")
+        ld_name = next((s.get("name", s["code"]) for s in stocks
+                        if s["code"] == ld_code), ld_code or "-")
+        lines.append(f"**综合领先：{ld_name}（{ld_code}）**，在 {len(matrix.get('rows', []))} 个对比维度中领先 {lw.get(ld_code, 0)} 项。结构化维度领先不等于投资结论，仍需结合护城河、确定性、治理定性裁决。")
+    lines.append("")
+    lines.append("> 注：★标记该维度领先股；全空维度不进矩阵；元单位已换算为亿。")
+
+    # 来源标注
+    src_parts = [f"{s['code']}:{s.get('_source', '?')}" for s in
+                 payload.get("stocks", [])]
+    if src_parts:
+        lines.append("")
+        lines.append(f"_source：{', '.join(src_parts)}（理杏仁 lixinger 为首选，自动降级）")
+    return "\n".join(lines) + "\n"
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
