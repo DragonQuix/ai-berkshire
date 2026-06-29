@@ -5,7 +5,7 @@
 > 状态：P0 已关闭。后续开发重心转入 P1。以下能力作为当前基线维护，不再把席位画像库持续扩展、更多免费 A 股财务/行情源覆盖、真实题材板块龙虎榜对比列为近期目标。
 
 ### 权限安全多 Agent 架构加固
-> 2026-06-28 已落地：`docs/source-pack-templates.md` 标准化 5 类 source pack；`tools/verify_multi_agent_permissions.py` 扫描高风险后台 Agent 旧句式；`tools/verify_channel_capability.py --quick` 已覆盖 18 个 root/Codex reference SHA256 同步检查。
+> 2026-06-28 已落地：`docs/source-pack-templates.md` 标准化 5 类 source pack；`tools/verify_multi_agent_permissions.py` 扫描高风险后台 Agent 旧句式；`tools/verify_channel_capability.py --quick` 已覆盖 root/Codex reference SHA256 同步检查（数量随 skill 增减由 `EXPECTED_SKILL_COUNT` 维护，2026-06-29 起 19）。
 
 - 已完成团队类 Skill 的 source pack 模板标准化，覆盖上市公司、财报、未上市公司、新闻异动和公众号文章
 - 已新增静态校验脚本，扫描 `skills/*.md` 与 Codex reference 中的高风险后台 Agent 取数/写文件句式
@@ -35,6 +35,8 @@
 - `deep`：增加更多交叉验证和历史类比，机构级深度
 
 ### 多股横向对比
+> 2026-06-29 已落地：新增 `tools/lxr_data.py compare` 子命令与 `/compare` skill（root+codex）。`compare` 复用 `get_financials` + `get_valuation`（理杏仁首选自动降级），把 2-4 只股票对齐到最新公共年报期，输出 8 财务 + 5 估值维度的对比矩阵（★领先标记、越低/越高越好方向、平局提示、`_source` 来源标注）与综合领先摘要；纯计算层（`align_compare_dimensions` / `build_compare_matrix` / `pick_compare_leader` / `render_compare_markdown`）与 CLI 拼装层分离，全部可 mock 测试。`/compare` skill 固化"工具只覆盖结构化维度、护城河/管理层/确定性由分析者裁决、结构化领先不等于投资结论、便宜背后有代价、跨期防统计幻觉"等约束，对齐 AGENTS.md 核心原则。`verify_channel_capability.py` 的 `EXPECTED_SKILL_COUNT` 同步 18→19。
+
 - 支持 2-4 只股票同维度横向对决
 - 同行业公司估值对标
 - 输出对比矩阵和择优建议

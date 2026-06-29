@@ -50,7 +50,7 @@ def _find_repo_root(start: Path) -> Path:
 
 REPO = _find_repo_root(Path(__file__).resolve())
 LXR = REPO / "tools" / "lxr_data.py"
-EXPECTED_SKILL_COUNT = 18
+EXPECTED_SKILL_COUNT = 19
 
 # /quality-screen 的 7 条去劣指标（与 skills/quality-screen.md 一致）
 EXPECTED_CHECK_KEYS = [
