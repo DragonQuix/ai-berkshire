@@ -8,6 +8,9 @@ from itertools import combinations
 from pathlib import Path
 from typing import Any
 
+from portfolio_render import render_markdown
+from portfolio_stress import build_stress_tests
+
 
 UNKNOWN = "未知"
 CASH_NAMES = {"现金", "cash", "CASH"}
@@ -209,6 +212,7 @@ def analyze_portfolio(holdings: list[dict[str, Any]]) -> dict[str, Any]:
     exposures = _build_exposures(rows)
     flags = _build_risk_flags(exposures)
     pairs = _build_correlation_risks(rows)
+    stress_tests = build_stress_tests(rows)
     return {
         "_source": "portfolio_analyzer",
         "holdings": rows,
@@ -216,60 +220,9 @@ def analyze_portfolio(holdings: list[dict[str, Any]]) -> dict[str, Any]:
         "exposures": exposures,
         "risk_flags": flags,
         "correlation_risks": pairs,
+        "stress_tests": stress_tests,
         "overall_health": _overall_health(concentration, flags, pairs),
     }
-
-def _pct(value: float) -> str:
-    return f"{value * 100:.1f}%"
-
-def _render_group(title: str, groups: dict[str, float]) -> list[str]:
-    lines = [f"### {title}", "", "| 分类 | 占比 |", "|---|---:|"]
-    lines.extend(f"| {name} | {_pct(weight)} |" for name, weight in groups.items())
-    return lines + [""]
-
-def render_markdown(analysis: dict[str, Any]) -> str:
-    c = analysis["concentration"]
-    lines = [
-        "# 组合级分析",
-        "",
-        f"整体健康度：**{analysis['overall_health']['rating']}**",
-        "",
-        "## 组合集中度",
-        "",
-        "| 指标 | 当前值 |",
-        "|---|---:|",
-        f"| 非现金持仓数 | {c['holding_count']} |",
-        f"| 第一大持仓占比 | {_pct(c['top1_weight'])} |",
-        f"| 前三大持仓占比 | {_pct(c['top3_weight'])} |",
-        f"| 现金占比 | {_pct(c['cash_weight'])} |",
-        f"| 有效持仓数 | {c['effective_holding_count']:.2f} |",
-        f"| 集中度判断 | {c['assessment']} |",
-        "",
-        "## 行业/地域/货币暴露",
-        "",
-    ]
-    labels = {"industry": "行业", "region": "地域", "currency": "货币", "theme": "主题"}
-    for key, title in labels.items():
-        lines.extend(_render_group(title, analysis["exposures"][key]))
-    lines.extend(["## 相关性风险", ""])
-    if analysis["correlation_risks"]:
-        lines.extend(["| 持仓组合 | 合计占比 | 等级 | 驱动因素 |", "|---|---:|---|---|"])
-        for pair in analysis["correlation_risks"]:
-            lines.append(
-                "| "
-                + " / ".join(pair["names"])
-                + f" | {_pct(pair['combined_weight'])} | {pair['risk_level']} | "
-                + ", ".join(pair["drivers"])
-                + " |"
-            )
-    else:
-        lines.append("未发现至少两个风险驱动重叠的持仓组合。")
-    lines.extend(["", "## 风险提示", ""])
-    if analysis["risk_flags"]:
-        lines.extend(f"- {flag['message']}（{flag['level']}）" for flag in analysis["risk_flags"])
-    else:
-        lines.append("- 未发现超过 50% 的单一暴露。")
-    return "\n".join(lines) + "\n"
 
 def _load_holdings(path: Path) -> list[dict[str, Any]]:
     payload = json.loads(path.read_text(encoding="utf-8"))

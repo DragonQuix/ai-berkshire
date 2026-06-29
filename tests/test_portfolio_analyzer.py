@@ -100,6 +100,21 @@ def test_correlation_analysis_identifies_overlapping_risk_pairs() -> None:
     assert "shared_theme:中国互联网" in china_internet["drivers"]
 
 
+def test_stress_tests_estimate_scenario_level_drawdowns() -> None:
+    analysis = pa.analyze_portfolio(SAMPLE_HOLDINGS)
+
+    scenarios = {item["scenario"]: item for item in analysis["stress_tests"]}
+    china = scenarios["china_geopolitical"]
+    assert china["portfolio_impact"] == pytest.approx(-0.275)
+    assert china["risk_level"] == "high"
+    assert china["largest_impacts"][0]["name"] == "腾讯"
+    assert china["largest_impacts"][0]["contribution"] == pytest.approx(-0.14)
+
+    ai_cycle = scenarios["ai_capex_downcycle"]
+    assert ai_cycle["portfolio_impact"] == pytest.approx(-0.21)
+    assert ai_cycle["risk_level"] == "high"
+
+
 def test_render_markdown_outputs_portfolio_level_sections() -> None:
     analysis = pa.analyze_portfolio(SAMPLE_HOLDINGS)
     markdown = pa.render_markdown(analysis)
@@ -108,6 +123,7 @@ def test_render_markdown_outputs_portfolio_level_sections() -> None:
     assert "## 组合集中度" in markdown
     assert "## 行业/地域/货币暴露" in markdown
     assert "## 相关性风险" in markdown
+    assert "## 压力测试" in markdown
     assert "互联网" in markdown
 
 
@@ -139,7 +155,7 @@ def test_cli_outputs_json_from_holdings_file(tmp_path: Path) -> None:
 
 
 def test_codex_tool_copy_stays_in_sync() -> None:
-    root_tool = TOOLS_DIR / "portfolio_analyzer.py"
-    codex_tool = REPO / "codex" / "ai-berkshire" / "scripts" / "tools" / "portfolio_analyzer.py"
-
-    assert codex_tool.read_bytes() == root_tool.read_bytes()
+    for filename in ["portfolio_analyzer.py", "portfolio_render.py", "portfolio_stress.py"]:
+        root_tool = TOOLS_DIR / filename
+        codex_tool = REPO / "codex" / "ai-berkshire" / "scripts" / "tools" / filename
+        assert codex_tool.read_bytes() == root_tool.read_bytes()
