@@ -25,6 +25,8 @@
 > 状态：准备启动。P1 优先目标应选择一个能端到端提升投研产物质量的切片，避免同时推进多个方向。
 
 ### HTML 报告输出
+> 2026-06-29 已落地：新增 `tools/md2html.py`，将 Markdown 投研报告转为单文件自包含 HTML。纯渲染层（`parse_markdown` → AST → `render_html`）与 CLI 拼装层分离，全部可 mock 测试。特性：暗色/浅色双主题一键切换（localStorage 记忆，默认暗色）、左侧导航栏由 H1-H3 自动生成并滚动高亮、表格数值列渲染为内嵌 CSS 条形图（正绿负红、百分比列以 0 为中点）、纯 Python 标准库零外部依赖、输出完全自包含无外链可离线传播。CLI 支持 `--no-sidebar`/`--light`/`--stdin`/`-o` 选项。新增 68 个单元测试（`tests/test_md2html.py`）覆盖解析、渲染、CLI 三层。codex 副本同步至 `codex/ai-berkshire/scripts/tools/`。`EXPECTED_SKILL_COUNT` 不变（19，未新增 skill）。
+
 - 在 Markdown 基础上增加 HTML 报告格式
 - 支持暗色模式、导航栏、图表可视化
 - 提升报告传播性和阅读体验
