@@ -115,8 +115,37 @@ def test_stress_tests_estimate_scenario_level_drawdowns() -> None:
     assert ai_cycle["risk_level"] == "high"
 
 
+def test_opportunity_cost_ranks_holdings_against_cash_hurdle() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
+        {**SAMPLE_HOLDINGS[1], "expected_return": 0.05, "conviction": 0.6},
+        {**SAMPLE_HOLDINGS[2], "expected_return": 0.18, "conviction": 0.5},
+        {**SAMPLE_HOLDINGS[3], "expected_return": 0.07, "conviction": 0.4},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    opportunity = analysis["opportunity_cost"]
+    assert opportunity["cash_hurdle"] == pytest.approx(0.04)
+    assert [row["name"] for row in opportunity["ranked_holdings"]] == [
+        "腾讯",
+        "台积电",
+        "阿里巴巴",
+        "英伟达",
+    ]
+    assert opportunity["ranked_holdings"][0]["risk_adjusted_return"] == pytest.approx(0.096)
+    assert opportunity["weakest_holding"]["name"] == "英伟达"
+    assert [row["name"] for row in opportunity["below_cash_hurdle"]] == ["阿里巴巴", "英伟达"]
+
+
 def test_render_markdown_outputs_portfolio_level_sections() -> None:
-    analysis = pa.analyze_portfolio(SAMPLE_HOLDINGS)
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
+        {**SAMPLE_HOLDINGS[1], "expected_return": 0.05, "conviction": 0.6},
+        *SAMPLE_HOLDINGS[2:],
+    ]
+    analysis = pa.analyze_portfolio(holdings)
     markdown = pa.render_markdown(analysis)
 
     assert "# 组合级分析" in markdown
@@ -124,6 +153,7 @@ def test_render_markdown_outputs_portfolio_level_sections() -> None:
     assert "## 行业/地域/货币暴露" in markdown
     assert "## 相关性风险" in markdown
     assert "## 压力测试" in markdown
+    assert "## 机会成本" in markdown
     assert "互联网" in markdown
 
 
@@ -155,7 +185,12 @@ def test_cli_outputs_json_from_holdings_file(tmp_path: Path) -> None:
 
 
 def test_codex_tool_copy_stays_in_sync() -> None:
-    for filename in ["portfolio_analyzer.py", "portfolio_render.py", "portfolio_stress.py"]:
+    for filename in [
+        "portfolio_analyzer.py",
+        "portfolio_opportunity.py",
+        "portfolio_render.py",
+        "portfolio_stress.py",
+    ]:
         root_tool = TOOLS_DIR / filename
         codex_tool = REPO / "codex" / "ai-berkshire" / "scripts" / "tools" / filename
         assert codex_tool.read_bytes() == root_tool.read_bytes()

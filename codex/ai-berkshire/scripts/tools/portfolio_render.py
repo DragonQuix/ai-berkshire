@@ -41,6 +41,34 @@ def _append_stress(lines: list[str], analysis: dict[str, Any]) -> None:
         )
 
 
+def _append_opportunity(lines: list[str], analysis: dict[str, Any]) -> None:
+    opportunity = analysis["opportunity_cost"]
+    lines.extend(
+        [
+            "",
+            "## 机会成本",
+            "",
+            f"现金门槛：{_pct(opportunity['cash_hurdle'])}",
+            "",
+        ]
+    )
+    ranked = opportunity["ranked_holdings"]
+    if ranked:
+        lines.extend(["| 排名 | 标的 | 占比 | 预期年化 | 确定性 | 风险调整后 |", "|---:|---|---:|---:|---:|---:|"])
+        for idx, row in enumerate(ranked, start=1):
+            lines.append(
+                f"| {idx} | {row['name']} | {_pct(row['weight'])} | "
+                f"{_pct(row['expected_return'])} | {_pct(row['conviction'])} | "
+                f"{_pct(row['risk_adjusted_return'])} |"
+            )
+    if opportunity["below_cash_hurdle"]:
+        names = "、".join(row["name"] for row in opportunity["below_cash_hurdle"])
+        lines.append(f"\n低于现金门槛：{names}")
+    if opportunity["missing_inputs"]:
+        names = "、".join(opportunity["missing_inputs"])
+        lines.append(f"\n缺少预期收益输入：{names}")
+
+
 def _append_flags(lines: list[str], analysis: dict[str, Any]) -> None:
     lines.extend(["", "## 风险提示", ""])
     flags = analysis["risk_flags"]
@@ -76,5 +104,6 @@ def render_markdown(analysis: dict[str, Any]) -> str:
         lines.extend(_render_group(title, analysis["exposures"][key]))
     _append_correlation(lines, analysis)
     _append_stress(lines, analysis)
+    _append_opportunity(lines, analysis)
     _append_flags(lines, analysis)
     return "\n".join(lines) + "\n"

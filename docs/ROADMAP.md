@@ -75,6 +75,8 @@
 > 2026-06-29 已启动第一切片：新增 `tools/portfolio_analyzer.py`，提供离线组合结构诊断。工具接受 JSON 持仓，自动归一化百分数/小数权重，输出 `overall_health`、`concentration`、`exposures`、`risk_flags` 与 `correlation_risks`，覆盖非现金持仓数、现金占比、第一大/前三大持仓、HHI/有效持仓数、行业/地域/货币/主题暴露和基于同业/同地区/同货币/共同主题的相关性风险。`/portfolio-review` 已加入该工具作为组合层面分析底稿，Codex 工具副本与 reference 同步，并新增回归测试锁定 CLI、Markdown/JSON 输出和双平台同步。
 >
 > 2026-06-29 继续推进第二切片：`portfolio_analyzer` 新增 `stress_tests`，按持仓行业、地域、货币与主题标签估算全球衰退、中美/地缘风险、利率飙升和 AI Capex 下行四类结构化压力情景，输出组合影响、风险等级和前三大拖累项；渲染层拆分为 `tools/portfolio_render.py`，压力测试计算拆分为 `tools/portfolio_stress.py`，保持单文件规模约束。`/portfolio-review` 已要求报告引用 `stress_tests`，并新增回归测试锁定 root/Codex 工具副本同步。
+>
+> 2026-06-29 继续推进第三切片：`portfolio_analyzer` 新增 `opportunity_cost`，读取持仓级 `expected_return` 与 `conviction`，计算 `risk_adjusted_return = expected_return × conviction`，按风险调整后预期年化排序，并输出低于 4% 现金门槛的持仓、最弱持仓与缺失输入列表；机会成本计算拆分为 `tools/portfolio_opportunity.py`，Markdown 报告新增“机会成本”章节。`/portfolio-review` 已要求输入和报告引用 `opportunity_cost`，并继续用回归测试锁定 root/Codex 同步。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析

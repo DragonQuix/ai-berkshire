@@ -8,6 +8,7 @@ from itertools import combinations
 from pathlib import Path
 from typing import Any
 
+from portfolio_opportunity import build_opportunity_cost
 from portfolio_render import render_markdown
 from portfolio_stress import build_stress_tests
 
@@ -68,6 +69,8 @@ def _normalize_holdings(holdings: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "currency": str(raw.get("currency") or UNKNOWN).strip(),
                 "themes": _as_themes(raw.get("themes")),
                 "is_cash": _is_cash(raw),
+                "expected_return": raw.get("expected_return"),
+                "conviction": raw.get("conviction"),
             }
         )
 
@@ -213,6 +216,7 @@ def analyze_portfolio(holdings: list[dict[str, Any]]) -> dict[str, Any]:
     flags = _build_risk_flags(exposures)
     pairs = _build_correlation_risks(rows)
     stress_tests = build_stress_tests(rows)
+    opportunity_cost = build_opportunity_cost(rows)
     return {
         "_source": "portfolio_analyzer",
         "holdings": rows,
@@ -221,6 +225,7 @@ def analyze_portfolio(holdings: list[dict[str, Any]]) -> dict[str, Any]:
         "risk_flags": flags,
         "correlation_risks": pairs,
         "stress_tests": stress_tests,
+        "opportunity_cost": opportunity_cost,
         "overall_health": _overall_health(concentration, flags, pairs),
     }
 
