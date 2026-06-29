@@ -754,3 +754,109 @@ def test_validate_accepts_role_briefs_with_all_required_sections(tmp_path: Path)
         if r["file"].startswith("role-briefs/")
     ]
     assert role_brief_issues == []
+
+
+def _replace_role_brief_heading(
+    company_dir: Path, filename: str, section: str, replacement: str
+) -> None:
+    """把 role-brief 中某小节的 `## xxx` 标题行整体替换为 replacement 行。
+
+    replacement 可以是三级标题、正文提及或代码块内文本，用于构造绕过场景。
+    """
+    path = company_dir / "role-briefs" / filename
+    lines = path.read_text(encoding="utf-8").splitlines()
+    out: list[str] = []
+    replaced = False
+    for line in lines:
+        if not replaced and line.strip() == section:
+            out.append(replacement)
+            replaced = True
+            continue
+        out.append(line)
+    out.append("")
+    path.write_text("\n".join(out), encoding="utf-8")
+
+
+def test_validate_rejects_role_brief_three_level_heading(tmp_path: Path) -> None:
+    """`### 反面证据`（三级标题）不得满足二级标题要求。"""
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _replace_role_brief_heading(
+        company_dir, "business-analyst.md", "## 反面证据", "### 反面证据"
+    )
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert {
+        "file": "role-briefs/business-analyst.md",
+        "reason": "missing required sections: 反面证据",
+    } in result["invalid_files"]
+
+
+def test_validate_rejects_role_brief_prose_mention_of_heading(tmp_path: Path) -> None:
+    """正文中提及 `## 反面证据` 文本（不是标题行）不得满足小节要求。"""
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _replace_role_brief_heading(
+        company_dir,
+        "business-analyst.md",
+        "## 反面证据",
+        "详见 ## 反面证据 小节。",
+    )
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert {
+        "file": "role-briefs/business-analyst.md",
+        "reason": "missing required sections: 反面证据",
+    } in result["invalid_files"]
+
+
+def test_validate_rejects_role_brief_heading_inside_code_block(tmp_path: Path) -> None:
+    """代码块内出现 `## 反面证据` 行不得满足小节要求。"""
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _replace_role_brief_heading(
+        company_dir,
+        "business-analyst.md",
+        "## 反面证据",
+        "```\n## 反面证据\n```",
+    )
+
+    result = tro.validate_team_research_outputs(company_dir)
+
+    assert result["status"] == "fail"
+    assert {
+        "file": "role-briefs/business-analyst.md",
+        "reason": "missing required sections: 反面证据",
+    } in result["invalid_files"]
+
+
+def test_validate_accepts_role_brief_heading_with_trailing_whitespace(tmp_path: Path) -> None:
+    """标题行带尾随空格仍属合法小节标题（容错）。"""
+    tro.init_team_research_outputs(
+        reports_dir=tmp_path, company="腾讯", ticker="00700",
+        market="hk", generated_at="2026-06-28",
+    )
+    company_dir = tmp_path / "腾讯"
+    _replace_role_brief_heading(
+        company_dir, "business-analyst.md", "## 反面证据", "## 反面证据   "
+    )
+
+    result = tro.validate_team_research_outputs(company_dir)
+    role_brief_issues = [
+        r for r in result["invalid_files"]
+        if r["file"] == "role-briefs/business-analyst.md"
+    ]
+    assert role_brief_issues == []

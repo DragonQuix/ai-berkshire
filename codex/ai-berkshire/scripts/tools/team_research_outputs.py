@@ -411,11 +411,27 @@ def _validate_role_brief(
 
     只检查 `## ` 二级标题是否齐全，不检查小节内容质量；缺失任一标题即记入
     invalid_files，按 contract 顺序列出缺失的小节名称。
+
+    按行精确匹配标题行（`line.strip() == title`），避免子串匹配被三级标题
+    `### 反面证据`、正文提及 `详见 ## 反面证据 小节` 或代码块内的标题文本绕过；
+    代码围栏 ``` 之间的行不参与匹配。
     """
+    required = set(ROLE_REQUIRED_SECTION_TITLES)
+    seen: set[str] = set()
+    in_code = False
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if stripped.startswith("```"):
+            in_code = not in_code
+            continue
+        if in_code:
+            continue
+        if stripped in required:
+            seen.add(stripped)
     missing = [
         label
         for title, label in zip(ROLE_REQUIRED_SECTION_TITLES, ROLE_REQUIRED_SECTION_LABELS)
-        if title not in text
+        if title not in seen
     ]
     if missing:
         invalid_files.append({
