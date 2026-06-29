@@ -22,7 +22,7 @@
 
 ## P1：下一阶段
 
-> 状态：准备启动。P1 优先目标应选择一个能端到端提升投研产物质量的切片，避免同时推进多个方向。
+> 状态：多项已落地。HTML 报告、多档深度模式、多股横向对比、团队研究产物结构升级均已落地；剩余 P1 项与 P2 长期目标待启动。后续优先目标应选择一个能端到端提升投研产物质量的切片，避免同时推进多个方向。
 
 ### HTML 报告输出
 > 2026-06-29 已落地：新增 `tools/md2html.py`，将 Markdown 投研报告转为单文件自包含 HTML。纯渲染层（`parse_markdown` → AST → `render_html`）与 CLI 拼装层分离，全部可 mock 测试。特性：暗色/浅色双主题一键切换（localStorage 记忆，默认暗色）、左侧导航栏由 H1-H3 自动生成并滚动高亮、表格数值列渲染为内嵌 CSS 条形图（正绿负红、百分比列以 0 为中点）、纯 Python 标准库零外部依赖、输出完全自包含无外链可离线传播。CLI 支持 `--no-sidebar`/`--light`/`--stdin`/`-o` 选项。新增 68 个单元测试（`tests/test_md2html.py`）覆盖解析、渲染、CLI 三层。codex 副本同步至 `codex/ai-berkshire/scripts/tools/`。`EXPECTED_SKILL_COUNT` 不变（19，未新增 skill）。
@@ -32,6 +32,8 @@
 - 提升报告传播性和阅读体验
 
 ### 多档深度模式
+> 2026-06-29 已落地：新增 `docs/depth-profiles.md`（三档定义表 + 通用杠杆表 + 8 个核心技能各 lite/standard/deep 行为矩阵），codex 副本同步至 `codex/ai-berkshire/references/depth-profiles.md`（SHA256 一致）。8 个核心技能（investment-research/earnings-review/industry-research/investment-team/earnings-team/quality-screen/industry-funnel/compare）头部加"深度模式选择"小节，采用纯引用形态指向中心文档对应小节（DRY，单一事实源，不重复速览表）。`verify_channel_capability.py` 新增 `check_depth_profile_sync()` 校验 root/codex 的 depth-profiles.md SHA256 一致（--quick 即执行）。CLAUDE.md 与 AGENTS.md 同步追加"多档深度模式"小节（两文件逐字一致），约定 `--depth lite|standard|deep` 参数与 lite 报告加 `-lite` 后缀。codex/ai-berkshire/SKILL.md 追加深度模式引用行（保留原有工作流指引）。`EXPECTED_SKILL_COUNT` 不变（19，深度模式是现有 skill 的参数化，不新增 skill 文件）。本次重新落地规避了上次被 revert 撤销方案的 3 个缺陷：A) CLAUDE.md 改动原子化、不与双平台化捆绑且同步 AGENTS.md；B) codex SKILL.md 追加而非替换原有指引；C) skill 头部纯引用避免与中心文档内容重复漂移。
+
 - `lite`：5分钟速判，快速给出估值区间和核心结论
 - `standard`：当前默认模式，完整多Agent研究
 - `deep`：增加更多交叉验证和历史类比，机构级深度
