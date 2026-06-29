@@ -1274,5 +1274,84 @@ def test__compare_cli_rejects_code_count_out_of_range(monkeypatch, capsys):
     assert "2-4" in err
 
 
+def test__get_compare_payload_reflects_mixed_financial_and_valuation_sources():
+    """financials=lixinger + valuation=mx-data 时，_source 须反映 mx-data 降级，不能虚标 lixinger。"""
+    class FakeLxr:
+        def __init__(self, verbose=True):
+            self.verbose = verbose
+
+        def get_financials(self, code, years=5, source="auto", name=None, report_type=None):
+            return {"_source": "lixinger", "code": code, "records": [
+                _fs_record("2024-12-31", npatoshopc=8.2e10, toit=1.7e11)],
+                "report_type": "non_financial"}
+
+        def get_valuation(self, code, source="auto", name=None, report_type=None):
+            # 估值走妙想降级
+            return {"_source": "mx-data", "code": code, "latest": _val_latest()}
+
+    payload = lxd.get_compare_payload(FakeLxr(), ["600519", "000858"], years=5)
+
+    # 单股源须同时体现 financials 与 valuation 两个来源
+    assert "lixinger" in payload["stocks"][0]["_source"]
+    assert "mx-data" in payload["stocks"][0]["_source"]
+    # 聚合 _source 不能虚标纯 lixinger
+    assert payload["_source"] != "lixinger"
+    assert "mx-data" in payload["_source"]
+
+
+def test__pick_compare_leader_ignores_tied_dimensions():
+    """完全相等的维度不应判给任一股票，pick_compare_leader 只统计非平局维度。"""
+    # 两股所有维度完全相等：PE 相同、归母净利润相同
+    matrix = {
+        "period": "2024-12-31",
+        "stocks": [{"code": "600519"}, {"code": "000858"}],
+        "rows": [
+            {"dimension": "归母净利润", "values": {"600519": 5.0e9, "000858": 5.0e9},
+             "leader": None, "better": "higher", "unit": "元"},  # 平局，无 leader
+            {"dimension": "PE", "values": {"600519": 20.0, "000858": 20.0},
+             "leader": None, "better": "lower", "unit": ""},  # 平局，无 leader
+        ],
+    }
+    summary = lxd.pick_compare_leader(matrix)
+    assert summary["leader_wins"] == {"600519": 0, "000858": 0}
+    # 全平局：没有维度领先任一方
+    assert summary["is_tie"] is True
+
+
+def test__build_compare_matrix_marks_tied_dimension_without_single_leader():
+    """两股某维度值完全相等时，leader 应为 None（平局），不得判给第一个股票。"""
+    aligned = {
+        "period": "2024-12-31",
+        "stocks": [
+            {"code": "600519", "metrics": {"PE": 20.0, "归母净利润": 8.2e10}},
+            {"code": "000858", "metrics": {"PE": 20.0, "归母净利润": 9.0e9}},
+        ],
+    }
+    matrix = lxd.build_compare_matrix(aligned, lower_is_better={"PE"})
+
+    pe_row = next(r for r in matrix["rows"] if r["dimension"] == "PE")
+    # PE 完全相等 → 平局，无单一 leader
+    assert pe_row["leader"] is None
+    # 归母净利润有明确差异 → leader = 600519
+    np_row = next(r for r in matrix["rows"] if r["dimension"] == "归母净利润")
+    assert np_row["leader"] == "600519"
+
+
+def test_verify_channel_capability_output_uses_expected_skill_count_not_hardcoded():
+    """verify_channel_capability 输出文案不得硬编码 18，须随 EXPECTED_SKILL_COUNT 动态变化。"""
+    import re
+    repo_root = os.path.dirname(TOOLS_DIR)
+    vcc_text = open(os.path.join(repo_root, "tools", "verify_channel_capability.py"),
+                    encoding="utf-8").read()
+    m = re.search(r"EXPECTED_SKILL_COUNT\s*=\s*(\d+)", vcc_text)
+    assert m
+    expected = m.group(1)
+    # 任何形如 "18 个 Skill" 的硬编码都应改为引用 EXPECTED_SKILL_COUNT
+    hardcoded = re.findall(r'"(\d+) 个 Skill', vcc_text) + re.findall(r"'(\d+) 个 Skill", vcc_text)
+    assert hardcoded == [], f"verify_channel_capability 仍硬编码 skill 数量: {hardcoded}"
+    # 标题与 pass 文案应使用 EXPECTED_SKILL_COUNT（如 f-string 或占位）
+    assert "EXPECTED_SKILL_COUNT" in vcc_text.replace("EXPECTED_SKILL_COUNT = ", "", 1)
+
+
 if __name__ == "__main__":
     unittest.main()

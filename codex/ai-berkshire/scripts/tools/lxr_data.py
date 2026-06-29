@@ -2211,14 +2211,13 @@ def build_compare_matrix(aligned: dict, lower_is_better: set | None = None) -> d
         if all(v is None for v in values.values()):
             continue  # 全空维度跳过
         better = "lower" if label in lib else "higher"
-        # leader = 最值对应的 code
+        # leader = 最值对应的 code；多个 code 取得相同最值时为平局，leader=None
         valid = {c: v for c, v in values.items() if v is not None}
         leader = None
         if valid:
-            if better == "higher":
-                leader = max(valid.items(), key=lambda kv: kv[1])[0]
-            else:
-                leader = min(valid.items(), key=lambda kv: kv[1])[0]
+            best_val = max(valid.values()) if better == "higher" else min(valid.values())
+            top = [c for c, v in valid.items() if v == best_val]
+            leader = top[0] if len(top) == 1 else None  # 平局不给单一 leader
         rows.append({
             "dimension": label,
             "values": values,
@@ -2331,6 +2330,32 @@ def render_compare_markdown(payload: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _merge_sources(*srcs: str) -> str:
+    """合并多个数据块来源，保留降级链信息。
+
+    输入可以是原子来源（lixinger/mx-data/legacy/none）或已合并形式
+    （lixinger+mx-data）。先拆开所有 "+" 段再聚合：
+    - 全 lixinger → lixinger
+    - lixinger + mx-data → lixinger+mx-data
+    - 含 legacy / none → multi
+    - 全 none → none
+    """
+    atoms: list[str] = []
+    for s in srcs:
+        s = s if s else "none"
+        for seg in s.split("+"):
+            seg = seg.strip()
+            if seg and seg not in atoms:
+                atoms.append(seg)
+    if not atoms or all(a == "none" for a in atoms):
+        return "none"
+    if all(a == "lixinger" for a in atoms):
+        return "lixinger"
+    if all(a in ("lixinger", "mx-data") for a in atoms) and "mx-data" in atoms:
+        return "lixinger+mx-data"
+    return "multi"
+
+
 def get_compare_payload(data, codes: list, years: int = 5) -> dict:
     """编排：对每个 code 取 financials + valuation，组装后交纯计算层。
 
@@ -2348,10 +2373,11 @@ def get_compare_payload(data, codes: list, years: int = 5) -> dict:
         norm = _norm_code(code, market)
         fin = data.get_financials(norm, years=years, source="auto")
         val = data.get_valuation(norm, source="auto")
-        src = fin.get("_source") if isinstance(fin, dict) else "none"
-        if src in (None, "", "none"):
-            src = val.get("_source") if isinstance(val, dict) else "none"
-        sources.append(src or "none")
+        # 同时收 financials 与 valuation 两个来源，避免静默漏掉 valuation 降级
+        fin_src = fin.get("_source") if isinstance(fin, dict) else "none"
+        val_src = val.get("_source") if isinstance(val, dict) else "none"
+        src = _merge_sources(fin_src, val_src)
+        sources.append(src)
         stock_packs.append({
             "code": norm, "market": market, "_source": src, "name": norm,
             "financials": fin if isinstance(fin, dict) else {"_source": "none", "records": []},
@@ -2362,13 +2388,8 @@ def get_compare_payload(data, codes: list, years: int = 5) -> dict:
     matrix = build_compare_matrix(aligned)
     leader = pick_compare_leader(matrix)
 
-    # 聚合 _source：全部 lixinger 则 lixinger，否则标 multi
-    if sources and all(s == "lixinger" for s in sources):
-        agg_source = "lixinger"
-    elif all(s in ("lixinger", "mx-data") for s in sources) and any(s == "mx-data" for s in sources):
-        agg_source = "lixinger+mx-data"
-    else:
-        agg_source = "multi"
+    # 聚合 _source：复用 _merge_sources 合并所有股票的来源
+    agg_source = _merge_sources(*sources) if sources else "none"
 
     stocks_out = [
         {"code": s["code"], "name": s.get("name", s["code"]), "_source": s.get("_source", "")}
