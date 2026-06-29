@@ -40,6 +40,7 @@ If the user names a slash command, use the matching reference file. If not, infe
 | Public-account article rewrite | `references/skills/wechat-article.md` |
 | Long company article series | `references/skills/deep-company-series.md` |
 | Bottleneck / scarcity map | `references/skills/bottleneck-hunter.md` |
+| 2-4 stock head-to-head comparison | `references/skills/compare.md` |
 
 Read only the selected reference file first. Read `references/skills/financial-data.md` when the workflow requires financial data sourcing or cross-validation.
 
