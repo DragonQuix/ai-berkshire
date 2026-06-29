@@ -51,6 +51,8 @@ CLI：
     python tools/lxr_data.py lhb 600519 --limit 5
     python tools/lxr_data.py lhb-detail --trade-id 100357777
     python tools/lxr_data.py lhb-compare 000004 000005 --start-date 2026-06-01 --end-date 2026-06-26
+    python tools/lxr_data.py compare 600519 000858          # 默认输出对比矩阵 Markdown
+    python tools/lxr_data.py compare 600519 000858 --json  # JSON 供上层工具解析
     python tools/lxr_data.py mx-search "新华保险最新公告"
     python tools/lxr_data.py mx-xuangu "ROE大于15%的A股，返回前10只"
 """
@@ -1874,6 +1876,19 @@ class LxrData:
         return pack
 
     # ------------------------------------------------------------------
+    # 多股横向对比（compare）
+    # ------------------------------------------------------------------
+
+    def get_compare(self, codes: list, years: int = 5) -> dict:
+        """拉取多股 financials + valuation 并输出横向对比 payload。
+
+        对每个 code 调用 get_financials + get_valuation（理杏仁首选，自动降级），
+        组装为 data_pack 形态 min dict 列表后交由纯计算层对齐+矩阵+leader，
+        返回 {"codes","period","stocks","matrix","leader","_source"}。
+        """
+        return get_compare_payload(self, codes, years=years)
+
+    # ------------------------------------------------------------------
     # 子进程调用妙想 mx-data（兼容旧路径）
     # ------------------------------------------------------------------
 
@@ -2316,6 +2331,59 @@ def render_compare_markdown(payload: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def get_compare_payload(data, codes: list, years: int = 5) -> dict:
+    """编排：对每个 code 取 financials + valuation，组装后交纯计算层。
+
+    data: 暴露 get_financials / get_valuation 的对象（通常 LxrData 实例，
+    测试中为 FakeLxr）。返回供 render_compare_markdown 与 JSON 输出的 payload。
+    """
+    codes = list(codes)
+    if len(codes) < 2 or len(codes) > 4:
+        raise ValueError("compare 需 2-4 个代码")
+
+    stock_packs: list[dict] = []
+    sources: list[str] = []
+    for code in codes:
+        market = _detect_market(code)
+        norm = _norm_code(code, market)
+        fin = data.get_financials(norm, years=years, source="auto")
+        val = data.get_valuation(norm, source="auto")
+        src = fin.get("_source") if isinstance(fin, dict) else "none"
+        if src in (None, "", "none"):
+            src = val.get("_source") if isinstance(val, dict) else "none"
+        sources.append(src or "none")
+        stock_packs.append({
+            "code": norm, "market": market, "_source": src, "name": norm,
+            "financials": fin if isinstance(fin, dict) else {"_source": "none", "records": []},
+            "valuation": val if isinstance(val, dict) else {"_source": "none", "latest": {}},
+        })
+
+    aligned = align_compare_dimensions(stock_packs)
+    matrix = build_compare_matrix(aligned)
+    leader = pick_compare_leader(matrix)
+
+    # 聚合 _source：全部 lixinger 则 lixinger，否则标 multi
+    if sources and all(s == "lixinger" for s in sources):
+        agg_source = "lixinger"
+    elif all(s in ("lixinger", "mx-data") for s in sources) and any(s == "mx-data" for s in sources):
+        agg_source = "lixinger+mx-data"
+    else:
+        agg_source = "multi"
+
+    stocks_out = [
+        {"code": s["code"], "name": s.get("name", s["code"]), "_source": s.get("_source", "")}
+        for s in aligned.get("stocks", [])
+    ]
+    return {
+        "codes": codes,
+        "period": aligned.get("period"),
+        "stocks": stocks_out,
+        "matrix": matrix,
+        "leader": leader,
+        "_source": agg_source,
+    }
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -2527,6 +2595,12 @@ def _cli():
     p_lhb_industry.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
     p_lhb_industry.add_argument("--quiet", action="store_true")
 
+    p_cmp = sub.add_parser("compare", help="多股横向对比（2-4 只同维度对决，财务+估值矩阵+择优摘要）")
+    p_cmp.add_argument("codes", nargs="+", help="2-4 个代码，如 600519 000858")
+    p_cmp.add_argument("--years", type=int, default=5, help="财报回溯年数，默认 5")
+    p_cmp.add_argument("--json", action="store_true", help="输出 JSON，供上层工具解析")
+    p_cmp.add_argument("--quiet", action="store_true")
+
     for skill in _MX_SKILLS:
         p_mx = sub.add_parser(skill, help=f"调用妙想 {skill}（1h 缓存，自动 Windows 输出目录）")
         p_mx.add_argument("query", help="自然语言查询")
@@ -2660,6 +2734,13 @@ def _cli():
         data = LxrData(verbose=not args.quiet).get_research_datapack(
             args.code, years=args.years, name=args.name, include_mx=not args.no_mx,
         )
+    elif args.command == "compare":
+        if len(args.codes) < 2 or len(args.codes) > 4:
+            parser.error("compare 需 2-4 个代码")
+        data = LxrData(verbose=not args.quiet).get_compare(args.codes, years=args.years)
+        if not args.json:
+            print(render_compare_markdown(data))
+            return
     elif args.command in _MX_SKILLS:
         d = LxrData(verbose=not args.quiet)
         data = d.call_mx(args.command, args.query, ttl_seconds=args.ttl)

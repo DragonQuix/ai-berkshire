@@ -1166,5 +1166,113 @@ def test__render_compare_markdown_contains_matrix_and_summary():
     assert "_source" in text
 
 
+# ---------------------------------------------------------------------------
+# compare CLI 拼装层 —— mock LxrData，不联网
+# ---------------------------------------------------------------------------
+
+def _compare_fake_lxr(records_factory=None, latest_factory=None):
+    """构造带 get_compare 的 FakeLxr；records_factory(code)->list, latest_factory(code)->dict。"""
+    class FakeLxr:
+        def __init__(self, verbose=True):
+            self.verbose = verbose
+
+        def get_financials(self, code, years=5, source="auto", name=None, report_type=None):
+            recs = records_factory(code) if records_factory else [
+                _fs_record("2024-12-31", npatoshopc=8.2e10)]
+            return {"_source": "lixinger", "code": code, "records": recs,
+                    "report_type": "non_financial"}
+
+        def get_valuation(self, code, source="auto", name=None, report_type=None):
+            latest = latest_factory(code) if latest_factory else _val_latest()
+            return {"_source": "lixinger", "code": code, "latest": latest}
+
+        def get_compare(self, codes, years=5):
+            return lxd.get_compare_payload(self, codes, years=years)
+    return FakeLxr
+
+
+def test__get_compare_calls_financials_and_valuation_per_code_and_returns_payload():
+    """get_compare 对每个 code 各调用一次 financials + valuation，返回含矩阵+leader 的 payload。"""
+    calls = {"fin": [], "val": []}
+
+    def rec_factory(code):
+        return [_fs_record("2024-12-31",
+                           npatoshopc=8.2e10 if code == "600519" else 9.0e9,
+                           toit=1.7e11 if code == "600519" else 4.0e10)]
+
+    class FakeLxr:
+        def __init__(self, verbose=True):
+            self.verbose = verbose
+
+        def get_financials(self, code, years=5, source="auto", name=None, report_type=None):
+            calls["fin"].append(code)
+            return {"_source": "lixinger", "code": code, "records": rec_factory(code),
+                    "report_type": "non_financial"}
+
+        def get_valuation(self, code, source="auto", name=None, report_type=None):
+            calls["val"].append(code)
+            return {"_source": "lixinger", "code": code, "latest": _val_latest()}
+
+        def get_compare(self, codes, years=5):
+            return lxd.get_compare_payload(self, codes, years=years)
+
+    d = FakeLxr()
+    payload = d.get_compare(["600519", "000858"], years=5)
+
+    assert calls["fin"] == ["600519", "000858"]
+    assert calls["val"] == ["600519", "000858"]
+    assert payload["codes"] == ["600519", "000858"]
+    assert payload["period"] == "2024-12-31"
+    assert payload["matrix"]["period"] == "2024-12-31"
+    assert payload["leader"]["leader_code"] in ("600519", "000858")
+    # 派生数据 _source 聚合
+    assert payload["_source"] == "lixinger"
+
+
+def test__compare_cli_prints_markdown_by_default(monkeypatch, capsys):
+    FakeLxr = _compare_fake_lxr(
+        records_factory=lambda code: [_fs_record(
+            "2024-12-31",
+            npatoshopc=8.2e10 if code == "600519" else 9.0e9,
+            toit=1.7e11 if code == "600519" else 4.0e10)])
+
+    monkeypatch.setattr(lxd, "LxrData", FakeLxr)
+    monkeypatch.setattr(sys, "argv", ["lxr_data.py", "compare", "600519", "000858"])
+    lxd._cli()
+
+    out = capsys.readouterr().out
+    assert "横向对决" in out or "横向对比" in out
+    assert "2024-12-31" in out
+    assert "归母净利润" in out
+    assert not out.lstrip().startswith("{")  # 默认 Markdown 而非 JSON
+
+
+def test__compare_cli_prints_json_with_json_flag(monkeypatch, capsys):
+    FakeLxr = _compare_fake_lxr(
+        records_factory=lambda code: [_fs_record(
+            "2024-12-31",
+            npatoshopc=8.2e10 if code == "600519" else 9.0e9)])
+
+    monkeypatch.setattr(lxd, "LxrData", FakeLxr)
+    monkeypatch.setattr(sys, "argv", ["lxr_data.py", "compare", "600519", "000858", "--json"])
+    lxd._cli()
+
+    out = capsys.readouterr().out.lstrip()
+    assert out.startswith("{")
+    data = __import__("json").loads(out)
+    assert data["codes"] == ["600519", "000858"]
+    assert "matrix" in data and "leader" in data
+
+
+def test__compare_cli_rejects_code_count_out_of_range(monkeypatch, capsys):
+    import pytest
+    # 只给1个代码：argparse nargs="+" 不限制数量，需在分发前显式校验 2-4
+    monkeypatch.setattr(sys, "argv", ["lxr_data.py", "compare", "000001"])
+    with pytest.raises(SystemExit):
+        lxd._cli()
+    err = capsys.readouterr().err
+    assert "2-4" in err
+
+
 if __name__ == "__main__":
     unittest.main()
