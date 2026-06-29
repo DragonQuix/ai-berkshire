@@ -42,12 +42,18 @@
 ### 团队研究产物结构升级
 > 2026-06-28 已启动第一切片：新增 `docs/team-research-output-contract.md`，将团队研究必需产物、关键数据溯源、角色冲突仲裁与准出规则固化为可测试 contract，并要求 `/investment-team` 遵循。同日继续新增 `tools/team_research_outputs.py`，可初始化 `data-pack.json`、`source-index.md`、`role-briefs/`、`audit-results.json` 和 `最终报告.md` 空模板；`audit-results.json` 初始 `verdict` 为 `reject`，防止未抽检即发布。随后追加 `validate` 子命令，用于准出前检查必需产物、JSON 结构、最终报告溯源/仲裁小节、未定义来源 ref，并继续覆盖 `data-pack.json.source_refs` 与 `audit-results.json.items[*].source_ref`。
 >
+### 团队研究产物结构升级
+> 2026-06-28 已启动第一切片：新增 `docs/team-research-output-contract.md`，将团队研究必需产物、关键数据溯源、角色冲突仲裁与准出规则固化为可测试 contract，并要求 `/investment-team` 遵循。同日继续新增 `tools/team_research_outputs.py`，可初始化 `data-pack.json`、`source-index.md`、`role-briefs/`、`audit-results.json` 和 `最终报告.md` 空模板；`audit-results.json` 初始 `verdict` 为 `reject`，防止未抽检即发布。随后追加 `validate` 子命令，用于准出前检查必需产物、JSON 结构、最终报告溯源/仲裁小节、未定义来源 ref，并继续覆盖 `data-pack.json.source_refs` 与 `audit-results.json.items[*].source_ref`。
+>
 > 2026-06-28 继续推进第二切片（抽检闭环）：`tools/team_research_outputs.py` 新增 `audit-extract` 子命令，从最终报告采样（复用 `tools/report_audit.py` 的抽取与采样逻辑）直接生成 `audit-results.json.items[*]` 的 contract 结构（`status=pending`、`verdict` 重置为 `reject`），打通 `report_audit` 输出与 contract 格式之间需要手工翻译的鸿沟；`validate` 同步强化为校验 `items[*].status` 取值（`pass`/`fail`/`pending`）、必填字段、`pass`/`fail` 项须携带 `verified_value` 与 `source_ref`、`verdict` 为 `pass` 时 `items` 非空且全部 `status==pass`。`docs/team-research-output-contract.md` 与 `skills/investment-team.md`（root+codex）已固化抽检闭环流程。
+>
+> 2026-06-29 推进第三切片（role-briefs 内容校验）：`validate` 强化检查每份 `role-briefs/` 简报是否含全部 7 个必需小节标题（角色输入范围、核心结论与评分、使用的证据、反面证据、不确定性、补数请求、与其他角色可能冲突的判断），缺失即记入 `invalid_files` 打回，防止缺反面证据或不确定性小节的角色简报蒙混准出；校验只保证小节齐全，不替代 Team Lead 的内容质量判断。`docs/team-research-output-contract.md` 与 `skills/investment-team.md`（root+codex）同步固化。期间还修复独立审核发现的两个缺陷：`source_ref` 非标准格式绕过准出校验、`from report_audit import` 破坏包式导入。
 
 - 默认生成 `data-pack.json`、`source-index.md`、`role-briefs/`、`audit-results.json` 与最终报告
 - 最终报告中的关键数据能追溯到资料包或来源索引
 - 角色结论与最终结论冲突时，必须写明 Team Lead 的仲裁理由
 - `audit-results.json` 抽检清单可由 `audit-extract` 从最终报告自动生成，`validate` 把关 item 结构与 verdict/status 一致性
+- 每份 role-brief 含全部 7 个必需小节标题，`validate` 缺失即打回
 
 ## P2：长期（6个月+）
 
