@@ -9,7 +9,7 @@
 
 - 已完成团队类 Skill 的 source pack 模板标准化，覆盖上市公司、财报、未上市公司、新闻异动和公众号文章
 - 已新增静态校验脚本，扫描 `skills/*.md` 与 Codex reference 中的高风险后台 Agent 取数/写文件句式
-- 已扩展同步校验，覆盖全部 18 个 Skill 的 root/codex reference SHA256 一致性
+- 已扩展同步校验，覆盖全部 19 个 Skill 的 root/codex reference SHA256 一致性
 - 参考 ADR：`docs/adr/2026-06-28-permission-safe-multi-agent.md`
 
 ### A股数据源接入

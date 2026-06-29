@@ -19,8 +19,9 @@ from md2html import (
     _strip_md_inline,
     _is_numeric_cell,
     _parse_table_aligns,
+    _safe_url,
+    _assign_heading_ids,
 )
-
 
 # ============================================================
 # 解析层测试
@@ -250,6 +251,74 @@ class TestParseTableAligns:
 # ============================================================
 # 端到端转换测试
 # ============================================================
+
+    def test_link_url_quote_escaped(self):
+        """链接 URL 含引号时应被转义，防止属性注入。"""
+        html_out = convert_md_to_html('[文本](http://ex.com/" onmouseover="alert(1))')
+        # 引号必须被转义为 &quot;，不能出现裸 " 突破 href 属性
+        assert '&quot; onmouseover=' in html_out
+        # 不应出现未转义的 " 紧跟 onmouseover 形成真正的新属性
+        assert '" onmouseover="' not in html_out
+
+    def test_link_javascript_scheme_blocked(self):
+        """javascript: scheme 必须被净化为 #。"""
+        html_out = convert_md_to_html('[点击](javascript:alert(1))')
+        assert 'href="#"' in html_out
+        assert 'javascript:' not in html_out
+
+    def test_image_javascript_scheme_blocked(self):
+        """图片 src 的 javascript:/data: scheme 必须被净化。"""
+        html_out = convert_md_to_html('![alt](data:text/html,<script>alert(1)</script>))')
+        assert 'src="#"' in html_out
+
+    def test_link_normal_preserved(self):
+        """正常 URL 不应被误杀。"""
+        html_out = convert_md_to_html('[文本](https://example.com/path?q=1)')
+        assert 'href="https://example.com/path?q=1"' in html_out
+
+
+class TestHeadingIdConsistency:
+    """P2 修复：blockquote 内标题 id 应与正文一致。"""
+
+    def test_blockquote_heading_gets_id(self):
+        nodes = parse_markdown('> ### 引用内标题\n引用内容')
+        _assign_heading_ids(nodes)
+        bq = nodes[0]
+        headings = [c for c in bq["children"] if c.get("type") == "heading"]
+        assert len(headings) == 1
+        assert headings[0].get("_id") == "h-1"
+
+    def test_toplevel_and_blockquote_ids_sequential(self):
+        nodes = parse_markdown('# 顶层标题\n\n> ### 引用内标题')
+        _assign_heading_ids(nodes)
+        top = nodes[0]
+        bq = nodes[1]
+        bq_h = [c for c in bq["children"] if c.get("type") == "heading"][0]
+        assert top.get("_id") == "h-1"
+        assert bq_h.get("_id") == "h-2"
+
+    def test_blockquote_heading_anchor_matches_body(self):
+        """导航锚点与正文渲染的 id 应一致。"""
+        md = "# 顶层\n\n> ### 引用内标题\n> 内容"
+        html_out = convert_md_to_html(md, sidebar=True)
+        # 正文和 sidebar 应使用同一套 id
+        # 正文中 blockquote 内 h3 应有 id="h-2"
+        assert 'id="h-2"' in html_out
+        # sidebar 应有指向 h-2 的链接（如果展示）或至少 h-1
+        assert 'href="#h-1"' in html_out
+
+
+class TestTableWrapClass:
+    """P3 修复：.table-wrap CSS 选择器需带点号。"""
+
+    def test_table_wrap_css_has_dot(self):
+        from md2html import _CSS
+        assert ".table-wrap{" in _CSS
+
+    def test_table_rendered_with_wrap_div(self):
+        html_out = convert_md_to_html("| A | B |\n|---|---|\n| 1 | 2 |")
+        assert '<div class="table-wrap">' in html_out
+
 
 class TestConvertMdToHtml:
     def test_basic_output(self):

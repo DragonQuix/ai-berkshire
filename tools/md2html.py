@@ -318,19 +318,49 @@ _INLINE_MAP: List[Tuple[re.Pattern, str, str]] = [
 ]
 
 
+def _safe_url(url: str) -> str:
+    """转义 URL 属性值并净化危险 scheme。
+
+    - html.escape(quote=True) 封堵引号注入（防 ``" onmouseover="...`` ）
+    - 拒绝 javascript:/vbscript:/data: 等危险 scheme，替换为 ``#``
+    """
+    cleaned = url.strip()
+    lower = cleaned.lower()
+    for scheme in ("javascript:", "vbscript:", "data:", "file:"):
+        if lower.startswith(scheme):
+            return "#"
+    return html.escape(cleaned, quote=True)
+
+
 def _render_inline(text: str) -> str:
-    """渲染 Markdown 行内格式（粗体、斜体、链接、代码、图片）为 HTML。"""
-    # 先 HTML 转义
+    """渲染 Markdown 行内格式（粗体、斜体、链接、代码、图片）为 HTML。
+
+    安全策略：先对全文做 ``html.escape(quote=False)``，再按语法逐段替换。
+    链接/图片的 URL 属性经 ``_safe_url`` 二次转义（quote=True）+ scheme 净化，
+    防止引号注入和危险协议。文本部分沿用首次转义结果。
+    """
+    # 先 HTML 转义（不转引号，后续 regex 仍可匹配 []() 语法）
     out = html.escape(text, quote=False)
-    # 图片
+
+    # 图片：![alt](url) → <img src="_safe_url(url)" alt="escaped alt">
+    def _img_repl(m: re.Match) -> str:
+        alt = m.group(1)
+        url = _safe_url(m.group(2))
+        return f'<img src="{url}" alt="{alt}">'
     out = re.sub(
         r"!\[([^\]]*)\]\(([^)]+)\)",
-        r'<img src="\2" alt="\1">',
+        _img_repl,
         out,
     )
-    # 链接
-    out = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2" target="_blank" rel="noopener">\1</a>', out)
-    # 代码块标记需在转义后但注意避免冲突
+
+    # 链接：[text](url) → <a href="_safe_url(url)">text</a>
+    def _link_repl(m: re.Match) -> str:
+        link_text = m.group(1)
+        url = _safe_url(m.group(2))
+        return f'<a href="{url}" target="_blank" rel="noopener">{link_text}</a>'
+    out = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", _link_repl, out)
+
+    # 去残留围栏标记
     out = re.sub(r"```", "", out)
     # 粗体+斜体
     out = re.sub(r"\*\*\*([^*]+)\*\*\*", r"<strong><em>\1</em></strong>", out)
@@ -478,13 +508,31 @@ def _render_list(node: Dict) -> str:
     return "\n".join(parts)
 
 
-def _render_node(node: Dict, heading_counter: List[int]) -> str:
+def _assign_heading_ids(nodes: AST) -> None:
+    """深度优先遍历 AST，给每个 heading 节点统一分配唯一 id。
+
+    正文渲染与 sidebar 共用同一套 id，避免 blockquote 内标题打偏导航锚点。
+    原地修改节点，写入 ``node["_id"]``。
+    """
+    counter = [0]
+
+    def _walk(ns: AST) -> None:
+        for node in ns:
+            if node.get("type") == "heading":
+                counter[0] += 1
+                node["_id"] = f"h-{counter[0]}"
+            elif node.get("type") == "blockquote":
+                _walk(node.get("children", []))
+
+    _walk(nodes)
+
+
+def _render_node(node: Dict) -> str:
     t = node["type"]
     if t == "heading":
         level = node["level"]
         text = node["text"]
-        heading_counter[0] += 1
-        hid = f"h-{heading_counter[0]}"
+        hid = node.get("_id", "")
         return f'<h{level} id="{hid}">{_render_inline(text)}</h{level}>'
     if t == "table":
         return _render_table(node)
@@ -497,7 +545,7 @@ def _render_node(node: Dict, heading_counter: List[int]) -> str:
         )
     if t == "blockquote":
         inner = "".join(
-            _render_node(c, heading_counter) for c in node.get("children", [])
+            _render_node(c) for c in node.get("children", [])
         )
         return f'<blockquote>{inner}</blockquote>'
     if t == "list":
@@ -510,16 +558,19 @@ def _render_node(node: Dict, heading_counter: List[int]) -> str:
 
 
 def _build_sidebar(nodes: AST) -> str:
-    """从 AST 提取 H1-H3 标题构建导航 HTML。"""
+    """从 AST 提取 H1-H3 标题构建导航 HTML。
+
+    使用 ``_assign_heading_ids`` 预分配的 ``_id``，与正文渲染一致。
+    blockquote 内标题已在预分配时计入，但 sidebar 默认只展示顶层标题；
+    如需展示引用块内标题，可扩展遍历策略，但 id 已保证一致。
+    """
     items: List[str] = []
-    counter = [0]
     for node in nodes:
         if node.get("type") == "heading":
             level = node["level"]
             if level > 3:
                 continue
-            counter[0] += 1
-            hid = f"h-{counter[0]}"
+            hid = node.get("_id", "")
             text = html.escape(_strip_md_inline(node["text"]))
             indent = (level - 1) * 16
             items.append(
@@ -568,7 +619,7 @@ code{background:var(--code-bg);padding:2px 6px;border-radius:4px;font-family:"SF
 pre code{background:none;padding:0}
 .code-block{background:var(--code-bg);border:1px solid var(--border);border-radius:6px;margin:12px 0}
 .code-block pre{margin:12px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
-table-wrap{display:block;overflow-x:auto}
+.table-wrap{display:block;overflow-x:auto}
 table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14px;position:relative}
 th,td{padding:8px 12px;border:1px solid var(--border);text-align:left}
 th{background:var(--surface);font-weight:600;color:var(--text-strong)}
@@ -635,10 +686,11 @@ def render_html(
     default_theme: str = "dark",
 ) -> str:
     """把 AST 渲染为自包含 HTML 字符串。"""
-    counter = [0]
+    # 预分配 heading id，确保正文与 sidebar 锚点一致
+    _assign_heading_ids(nodes)
     body_parts: List[str] = []
     for node in nodes:
-        body_parts.append(_render_node(node, counter))
+        body_parts.append(_render_node(node))
 
     sidebar_html = _build_sidebar(nodes) if sidebar else ""
     content_cls = "content no-sidebar" if not sidebar else "content"
