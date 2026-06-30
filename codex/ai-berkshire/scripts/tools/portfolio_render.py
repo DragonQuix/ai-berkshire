@@ -71,6 +71,17 @@ def _risk_level_label(level: str) -> str:
     return labels.get(level, level)
 
 
+def _correlation_driver_label(driver: str) -> str:
+    labels = {
+        "same_industry": "同行业",
+        "same_region": "同地区",
+        "same_currency": "同货币",
+    }
+    if driver.startswith("shared_theme:"):
+        return f"共同主题：{driver.split(':', 1)[1]}"
+    return labels.get(driver, driver)
+
+
 def _render_group(title: str, groups: dict[str, float]) -> list[str]:
     lines = [f"### {title}", "", "| 分类 | 占比 |", "|---|---:|"]
     lines.extend(f"| {name} | {_pct(weight)} |" for name, weight in groups.items())
@@ -85,11 +96,12 @@ def _append_correlation(lines: list[str], analysis: dict[str, Any]) -> None:
         return
     lines.extend(["| 持仓组合 | 合计占比 | 等级 | 驱动因素 |", "|---|---:|---|---|"])
     for pair in risks:
+        drivers = ", ".join(_correlation_driver_label(driver) for driver in pair["drivers"])
         lines.append(
             "| "
             + " / ".join(pair["names"])
             + f" | {_pct(pair['combined_weight'])} | {_risk_level_label(pair['risk_level'])} | "
-            + ", ".join(pair["drivers"])
+            + drivers
             + " |"
         )
 

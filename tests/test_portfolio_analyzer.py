@@ -548,6 +548,18 @@ def test_render_markdown_localizes_risk_levels() -> None:
         assert "（low）" not in section
 
 
+def test_render_markdown_localizes_correlation_drivers() -> None:
+    markdown = pa.render_markdown(pa.analyze_portfolio(SAMPLE_HOLDINGS))
+    correlation_section = markdown.split("## 相关性风险", 1)[1].split("\n## ", 1)[0]
+
+    assert "同行业, 同地区, 同货币, 共同主题：中国互联网" in correlation_section
+    assert "共同主题：AI算力, 共同主题：半导体" in correlation_section
+    assert "same_industry" not in correlation_section
+    assert "same_region" not in correlation_section
+    assert "same_currency" not in correlation_section
+    assert "shared_theme:" not in correlation_section
+
+
 def test_cli_outputs_json_from_holdings_file(tmp_path: Path) -> None:
     input_path = tmp_path / "holdings.json"
     input_path.write_text(json.dumps({"holdings": SAMPLE_HOLDINGS}, ensure_ascii=False), encoding="utf-8")

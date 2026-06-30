@@ -60,6 +60,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "目标差额：未配置",
         "状态列使用中文",
         "风险等级使用中文",
+        "相关性驱动因素使用中文",
         "再平衡表的优先级列和动作列使用中文",
         "turnover_to_target",
         "turnover_to_band",
