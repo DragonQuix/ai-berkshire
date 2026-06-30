@@ -471,6 +471,8 @@ def test_cli_rejects_invalid_holding_without_traceback(tmp_path: Path) -> None:
     )
 
     assert completed.returncode != 0
+    assert "输入持仓字段错误" in completed.stderr
+    assert str(input_path) in completed.stderr
     assert "腾讯.conviction 不能超过 100%" in completed.stderr
     assert "Traceback" not in completed.stderr
 

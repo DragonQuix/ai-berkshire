@@ -111,6 +111,8 @@
 > 2026-06-30 继续推进第十九切片：`portfolio_analyzer analyze` 对 malformed JSON 追加友好解析错误，输出 `错误: 输入 JSON 解析失败 ... 第 N 行第 M 列` 并返回 exit 2，不再只暴露 Python `JSONDecodeError` 英文信息；新增回归测试锁定损坏 JSON 文件路径、行列提示、无 traceback 和 root/Codex 工具副本同步。
 >
 > 2026-06-30 继续推进第二十切片：`portfolio_analyzer analyze` 对 JSON 语法合法但结构不符合契约的输入追加文件上下文，输出 `错误: 输入 JSON 结构错误 <path>: 必须是持仓数组，或包含 holdings 数组的对象` 并返回 exit 2；新增回归测试锁定错误文件路径、结构错误前缀、无 traceback 和 root/Codex 工具副本同步。
+>
+> 2026-06-30 继续推进第二十一切片：`portfolio_analyzer analyze` 对合法 JSON 但持仓字段不符合契约的输入追加文件上下文，输出 `错误: 输入持仓字段错误 <path>: ...` 并返回 exit 2；`--cash-hurdle` 等 CLI 参数错误仍保持参数级提示，不混入文件路径。新增回归测试锁定字段错误路径、错误前缀、无 traceback，并同步 `/portfolio-review` 文档契约与 Codex 工具副本。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析

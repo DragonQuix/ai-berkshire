@@ -217,12 +217,19 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "analyze":
         try:
-            analysis = analyze_portfolio(
-                _load_holdings(args.input),
-                cash_hurdle=as_ratio(args.cash_hurdle, "--cash-hurdle"),
-            )
+            cash_hurdle = as_ratio(args.cash_hurdle, "--cash-hurdle")
         except ValueError as exc:
             print(f"错误: {exc}", file=sys.stderr)
+            return 2
+        try:
+            holdings = _load_holdings(args.input)
+        except ValueError as exc:
+            print(f"错误: {exc}", file=sys.stderr)
+            return 2
+        try:
+            analysis = analyze_portfolio(holdings, cash_hurdle=cash_hurdle)
+        except ValueError as exc:
+            print(f"错误: 输入持仓字段错误 {args.input}: {exc}", file=sys.stderr)
             return 2
         if args.format == "json":
             print(json.dumps(analysis, ensure_ascii=False, indent=2))
