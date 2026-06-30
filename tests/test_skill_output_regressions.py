@@ -65,6 +65,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "turnover_to_target",
         "turnover_to_band",
         "opportunity_cost",
+        "最弱持仓",
         "rebalance_suggestions",
         "stress_tests",
         "输入持仓字段错误",
