@@ -53,6 +53,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "reports/portfolio-latest.md",
         "python tools/portfolio_analyzer.py analyze",
         "--cash-hurdle",
+        "allocation_drift",
         "opportunity_cost",
         "rebalance_suggestions",
         "stress_tests",

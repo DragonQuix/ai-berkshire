@@ -69,6 +69,31 @@ def _append_opportunity(lines: list[str], analysis: dict[str, Any]) -> None:
         lines.append(f"\n缺少预期收益输入：{names}")
 
 
+def _append_allocation_drift(lines: list[str], analysis: dict[str, Any]) -> None:
+    drift = analysis["allocation_drift"]
+    lines.extend(["", "## 目标仓位偏离", ""])
+    if not drift["has_targets"]:
+        lines.append("未提供 `target_weight`、`min_weight` 或 `max_weight`，跳过目标仓位偏离诊断。")
+        return
+    lines.extend(
+        [
+            f"容差：{_pct(drift['tolerance'])}",
+            "",
+            "| 标的 | 当前占比 | 目标占比 | 下限 | 上限 | 偏离 | 状态 |",
+            "|---|---:|---:|---:|---:|---:|---|",
+        ]
+    )
+    for item in drift["items"]:
+        target = "-" if item["target_weight"] is None else _pct(item["target_weight"])
+        min_weight = "-" if item["min_weight"] is None else _pct(item["min_weight"])
+        max_weight = "-" if item["max_weight"] is None else _pct(item["max_weight"])
+        drift_value = "-" if item["drift_to_target"] is None else _pct(item["drift_to_target"])
+        lines.append(
+            f"| {item['name']} | {_pct(item['current_weight'])} | {target} | "
+            f"{min_weight} | {max_weight} | {drift_value} | {item['status']} |"
+        )
+
+
 def _append_rebalance(lines: list[str], analysis: dict[str, Any]) -> None:
     suggestions = analysis["rebalance_suggestions"]
     lines.extend(
@@ -130,6 +155,7 @@ def render_markdown(analysis: dict[str, Any]) -> str:
     _append_correlation(lines, analysis)
     _append_stress(lines, analysis)
     _append_opportunity(lines, analysis)
+    _append_allocation_drift(lines, analysis)
     _append_rebalance(lines, analysis)
     _append_flags(lines, analysis)
     return "\n".join(lines) + "\n"

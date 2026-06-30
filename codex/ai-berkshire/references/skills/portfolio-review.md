@@ -61,6 +61,8 @@ python tools/portfolio_analyzer.py analyze examples/portfolio-holdings.sample.js
       "region": "中国",
       "currency": "HKD",
       "themes": ["中国互联网", "AI应用"],
+      "target_weight": 0.30,
+      "max_weight": 0.40,
       "expected_return": 0.12,
       "conviction": 0.8
     },
@@ -74,7 +76,7 @@ python tools/portfolio_analyzer.py analyze examples/portfolio-holdings.sample.js
 }
 ```
 
-`weight` 可用百分数或小数，工具会自动归一化。`expected_return` 为预期年化收益，`conviction` 为确定性/置信度，均可用小数或百分数。`--cash-hurdle` 可用小数或百分数覆盖默认 4% 现金门槛，用于利率环境明显变化时的机会成本判断。报告中必须引用 `portfolio_analyzer` 输出的 `overall_health`、`concentration`、`exposures`、`risk_flags`、`correlation_risks`、`stress_tests`、`opportunity_cost` 与 `rebalance_suggestions`。该工具只做组合结构诊断和机械再平衡提示，不替代后续个股估值、新闻核验和最终调仓判断。
+`weight` 可用百分数或小数，工具会自动归一化。`target_weight`、`min_weight`、`max_weight` 可选，用于 `allocation_drift` 目标仓位偏离诊断；三者同样可用小数或百分数。`expected_return` 为预期年化收益，`conviction` 为确定性/置信度，均可用小数或百分数。`--cash-hurdle` 可用小数或百分数覆盖默认 4% 现金门槛，用于利率环境明显变化时的机会成本判断。报告中必须引用 `portfolio_analyzer` 输出的 `overall_health`、`concentration`、`exposures`、`risk_flags`、`correlation_risks`、`stress_tests`、`allocation_drift`、`opportunity_cost` 与 `rebalance_suggestions`。该工具只做组合结构诊断和机械再平衡提示，不替代后续个股估值、新闻核验和最终调仓判断。
 
 ### 第二步：获取最新数据
 

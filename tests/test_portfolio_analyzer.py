@@ -178,6 +178,30 @@ def test_rebalance_suggestions_turn_diagnostics_into_actions() -> None:
     assert ali["suggested_weight"] == pytest.approx(0.0)
 
 
+def test_allocation_drift_flags_target_weight_deviations() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "weight": 45, "target_weight": 35, "max_weight": 40},
+        {**SAMPLE_HOLDINGS[1], "weight": 12, "target_weight": 20, "min_weight": 15},
+        {**SAMPLE_HOLDINGS[2], "weight": 15, "target_weight": 15, "min_weight": 10, "max_weight": 20},
+        {**SAMPLE_HOLDINGS[3], "weight": 8},
+        {**SAMPLE_HOLDINGS[4], "weight": 20, "target_weight": 20},
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    drift = analysis["allocation_drift"]
+    assert drift["has_targets"] is True
+    assert drift["primary_drift"]["name"] == "腾讯"
+    rows = {row["name"]: row for row in drift["items"]}
+    assert rows["腾讯"]["status"] == "overweight"
+    assert rows["腾讯"]["drift_to_target"] == pytest.approx(0.10)
+    assert rows["腾讯"]["max_weight"] == pytest.approx(0.40)
+    assert rows["阿里巴巴"]["status"] == "underweight"
+    assert rows["阿里巴巴"]["drift_to_target"] == pytest.approx(-0.08)
+    assert rows["台积电"]["status"] == "within_band"
+    assert [row["name"] for row in drift["needs_attention"]] == ["腾讯", "阿里巴巴"]
+
+
 def test_render_markdown_outputs_portfolio_level_sections() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
@@ -193,6 +217,7 @@ def test_render_markdown_outputs_portfolio_level_sections() -> None:
     assert "## 相关性风险" in markdown
     assert "## 压力测试" in markdown
     assert "## 机会成本" in markdown
+    assert "## 目标仓位偏离" in markdown
     assert "## 再平衡建议" in markdown
     assert "互联网" in markdown
 
@@ -306,11 +331,13 @@ def test_sample_portfolio_file_runs_through_cli() -> None:
     payload = json.loads(json_result.stdout)
     assert payload["opportunity_cost"]["ranked_holdings"]
     assert payload["stress_tests"]
+    assert "allocation_drift" in payload
     assert "rebalance_suggestions" in payload
 
 
 def test_codex_tool_copy_stays_in_sync() -> None:
     for filename in [
+        "portfolio_allocation.py",
         "portfolio_analyzer.py",
         "portfolio_opportunity.py",
         "portfolio_rebalance.py",

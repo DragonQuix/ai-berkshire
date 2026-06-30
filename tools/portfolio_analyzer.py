@@ -8,6 +8,7 @@ from itertools import combinations
 from pathlib import Path
 from typing import Any
 
+from portfolio_allocation import build_allocation_drift
 from portfolio_opportunity import DEFAULT_CASH_HURDLE, build_opportunity_cost
 from portfolio_rebalance import build_rebalance_suggestions
 from portfolio_render import render_markdown
@@ -35,6 +36,11 @@ def _as_float(value: Any, field: str) -> float:
 def _as_ratio(value: Any, field: str) -> float:
     number = _as_float(value, field)
     return number / 100.0 if number > 1 else number
+
+def _optional_ratio(value: Any, field: str) -> float | None:
+    if value is None or value == "":
+        return None
+    return _as_ratio(value, field)
 
 def _as_themes(value: Any) -> list[str]:
     if value is None:
@@ -76,6 +82,9 @@ def _normalize_holdings(holdings: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "is_cash": _is_cash(raw),
                 "expected_return": raw.get("expected_return"),
                 "conviction": raw.get("conviction"),
+                "target_weight": _optional_ratio(raw.get("target_weight"), f"{name}.target_weight"),
+                "min_weight": _optional_ratio(raw.get("min_weight"), f"{name}.min_weight"),
+                "max_weight": _optional_ratio(raw.get("max_weight"), f"{name}.max_weight"),
             }
         )
 
@@ -224,6 +233,7 @@ def analyze_portfolio(
     flags = _build_risk_flags(exposures)
     pairs = _build_correlation_risks(rows)
     stress_tests = build_stress_tests(rows)
+    allocation_drift = build_allocation_drift(rows)
     opportunity_cost = build_opportunity_cost(rows, cash_hurdle=cash_hurdle)
     rebalance = build_rebalance_suggestions(rows, concentration, flags, opportunity_cost)
     return {
@@ -234,6 +244,7 @@ def analyze_portfolio(
         "risk_flags": flags,
         "correlation_risks": pairs,
         "stress_tests": stress_tests,
+        "allocation_drift": allocation_drift,
         "opportunity_cost": opportunity_cost,
         "rebalance_suggestions": rebalance,
         "overall_health": _overall_health(concentration, flags, pairs),
