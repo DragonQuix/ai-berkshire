@@ -409,6 +409,22 @@ def test_render_markdown_outputs_portfolio_level_sections() -> None:
     assert "互联网" in markdown
 
 
+def test_render_markdown_labels_over_allocated_target_gap_as_positive_excess() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "weight": 35, "target_weight": 45},
+        {**SAMPLE_HOLDINGS[1], "weight": 20, "target_weight": 25},
+        {**SAMPLE_HOLDINGS[2], "weight": 15, "target_weight": 20},
+        {**SAMPLE_HOLDINGS[3], "weight": 10, "target_weight": 10},
+        {**SAMPLE_HOLDINGS[4], "weight": 20, "target_weight": 10},
+    ]
+
+    markdown = pa.render_markdown(pa.analyze_portfolio(holdings))
+
+    assert "目标覆盖状态：目标合计超过 100%" in markdown
+    assert "目标超配：10.0%" in markdown
+    assert "未分配目标：-10.0%" not in markdown
+
+
 def test_cli_outputs_json_from_holdings_file(tmp_path: Path) -> None:
     input_path = tmp_path / "holdings.json"
     input_path.write_text(json.dumps({"holdings": SAMPLE_HOLDINGS}, ensure_ascii=False), encoding="utf-8")

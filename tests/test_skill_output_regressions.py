@@ -56,6 +56,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "allocation_drift",
         "target_weight_sum",
         "target_allocation_status",
+        "目标超配",
         "turnover_to_target",
         "turnover_to_band",
         "opportunity_cost",

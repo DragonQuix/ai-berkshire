@@ -117,6 +117,8 @@
 > 2026-06-30 继续推进第二十二切片：`portfolio_input.as_ratio()` 从“必须大于 0”调整为“不可为负数且不得超过 100%”，使 `target_weight` / `min_weight` / `max_weight` 可显式填 0，对应清仓目标或 0% 约束边界；`portfolio_analyzer analyze --cash-hurdle 0` 也可用于零现金门槛场景。持仓 `weight` 仍必须大于 0，避免空仓位进入归一化。新增回归测试锁定 0% 目标/上下限和 CLI 零现金门槛，并同步 `/portfolio-review` 文档契约与 Codex 工具副本。
 >
 > 2026-06-30 继续推进第二十三切片：`allocation_drift` 新增 `target_allocation_status`，按目标仓位合计识别 `under_allocated` / `fully_allocated` / `over_allocated` / `not_configured`，避免报告只展示 `target_gap_to_full_allocation` 负数而缺少语义；Markdown “目标仓位偏离”章节同步展示中文目标覆盖状态，`/portfolio-review` 已要求引用该字段。
+>
+> 2026-06-30 继续推进第二十四切片：Markdown “目标仓位偏离”章节对 `over_allocated` 不再显示负的“未分配目标”，改为用正数展示“目标超配”，`under_allocated` 继续展示“未分配目标”；`/portfolio-review` 已同步固化该展示口径，防止报告使用负数缺口表达目标超配。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析

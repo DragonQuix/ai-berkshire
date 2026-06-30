@@ -18,6 +18,15 @@ def _target_status_label(status: str) -> str:
     return labels.get(status, status)
 
 
+def _target_gap_text(drift: dict[str, Any]) -> str:
+    gap = drift["target_gap_to_full_allocation"]
+    if drift["target_allocation_status"] == "over_allocated":
+        return f"目标超配：{_pct(abs(gap))}"
+    if drift["target_allocation_status"] == "fully_allocated":
+        return "目标差额：0.0%"
+    return f"未分配目标：{_pct(gap)}"
+
+
 def _render_group(title: str, groups: dict[str, float]) -> list[str]:
     lines = [f"### {title}", "", "| 分类 | 占比 |", "|---|---:|"]
     lines.extend(f"| {name} | {_pct(weight)} |" for name, weight in groups.items())
@@ -86,7 +95,7 @@ def _append_allocation_drift(lines: list[str], analysis: dict[str, Any]) -> None
             "",
             "## 目标仓位偏离",
             "",
-            f"目标仓位合计：{_pct(drift['target_weight_sum'])}，未分配目标：{_pct(drift['target_gap_to_full_allocation'])}",
+            f"目标仓位合计：{_pct(drift['target_weight_sum'])}，{_target_gap_text(drift)}",
             f"目标覆盖状态：{_target_status_label(drift['target_allocation_status'])}",
             f"已设目标持仓当前占比：{_pct(drift['targeted_current_weight'])}，未设目标持仓当前占比：{_pct(drift['untargeted_current_weight'])}",
             f"理论换手率：{_pct(drift['turnover_to_target'])}",
