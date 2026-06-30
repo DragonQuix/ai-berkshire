@@ -116,12 +116,15 @@ def _target_or_limit(item: dict[str, Any], status: str) -> float | None:
 def _append_allocation_drift(
     items: list[dict[str, Any]],
     allocation_drift: dict[str, Any] | None,
+    missing_input_names: set[str],
 ) -> None:
     if not allocation_drift:
         return
     seen_targets = {item["target"] for item in items}
     for row in allocation_drift["needs_attention"]:
         if row["name"] in seen_targets:
+            continue
+        if row["status"] == "underweight" and row["name"] in missing_input_names:
             continue
         if row["status"] == "overweight":
             items.append(
@@ -184,7 +187,10 @@ def _append_missing_inputs(
     weights: dict[str, float],
     opportunity_cost: dict[str, Any],
 ) -> None:
+    seen_targets = {item["target"] for item in items}
     for name in opportunity_cost["missing_inputs"]:
+        if name in seen_targets:
+            continue
         items.append(
             _item(
                 "fill_inputs",
@@ -221,8 +227,9 @@ def build_rebalance_suggestions(
     allocation_drift: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
+    missing_input_names = set(opportunity_cost["missing_inputs"])
     _append_below_cash(items, opportunity_cost)
-    _append_allocation_drift(items, allocation_drift)
+    _append_allocation_drift(items, allocation_drift, missing_input_names)
     _append_concentration(items, rows, concentration)
     _append_cash_buffer(items, concentration, opportunity_cost)
     _append_missing_inputs(items, _weight_by_name(rows), opportunity_cost)

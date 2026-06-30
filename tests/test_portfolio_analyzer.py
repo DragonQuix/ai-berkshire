@@ -724,6 +724,43 @@ def test_rebalance_suggestions_prioritize_allocation_drift_actions() -> None:
     assert alibaba["suggested_weight"] == pytest.approx(0.20)
 
 
+def test_rebalance_does_not_add_underweight_holding_without_expected_return() -> None:
+    holdings = [
+        {
+            **SAMPLE_HOLDINGS[0],
+            "weight": 30,
+            "target_weight": 30,
+            "expected_return": 0.08,
+        },
+        {
+            **SAMPLE_HOLDINGS[1],
+            "weight": 10,
+            "target_weight": 20,
+            "min_weight": 15,
+        },
+        {
+            **SAMPLE_HOLDINGS[2],
+            "weight": 20,
+            "target_weight": 20,
+            "expected_return": 0.09,
+        },
+        {**SAMPLE_HOLDINGS[3], "weight": 20, "expected_return": 0.07},
+        {**SAMPLE_HOLDINGS[4], "weight": 20},
+    ]
+
+    suggestions = pa.analyze_portfolio(holdings)["rebalance_suggestions"]
+
+    targets = [item["target"] for item in suggestions["items"]]
+    alibaba = next(item for item in suggestions["items"] if item["target"] == "阿里巴巴")
+    assert targets.count("阿里巴巴") == 1
+    assert alibaba["action"] == "fill_inputs"
+    assert alibaba["suggested_weight"] is None
+    assert ("add_to_target", "阿里巴巴") not in {
+        (item["action"], item["target"]) for item in suggestions["items"]
+    }
+    assert suggestions["primary_action"] == "补齐 阿里巴巴 预期收益输入"
+
+
 def test_render_markdown_outputs_portfolio_level_sections() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
