@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "company": "腾讯",
+    "ticker": "00700",
+    "market": "hk",
+    "generated_at": "2026-06-29",
+    "owner": "Team Lead"
+  },
+  "financials": {
+    "currency": "RMB",
+    "unit": "亿元",
+    "periods": ["2025"],
+    "source_refs": ["S1", "S3"]
+  },
+  "valuation": {
+    "price": 480,
+    "market_cap_checked": {
+      "reported": "约4.5万亿港元",
+      "checked_by": "Team Lead",
+      "source_ref": "S2"
+    },
+    "source_refs": ["S2"]
+  },
+  "business_segments": [
+    {
+      "segment": "广告与视频号",
+      "evidence": "管理层补充说明：AI推荐提升广告加载率和转化效率，但未单独披露AI广告收入。",
+      "source_ref": "S3"
+    }
+  ],
+  "management_and_governance": [
+    {
+      "topic": "资本配置",
+      "evidence": "管理层维持回购与分红并行。",
+      "source_ref": "S1"
+    }
+  ],
+  "industry_and_competition": [
+    {
+      "topic": "中国互联网广告",
+      "evidence": "宏观广告复苏仍存在消费景气度约束。",
+      "source_ref": "E1"
+    }
+  ],
+  "risks_and_counterevidence": [
+    {
+      "risk": "AI投入拖累利润率",
+      "counterevidence": "补充资料显示AI相关资本开支仍需与广告增量匹配验证。",
+      "source_ref": "S3"
+    }
+  ],
+  "tool_outputs": [
+    {
+      "tool": "financial_rigor.py",
+      "command": "python tools/financial_rigor.py verify-market-cap --price 480 --shares 94 --reported 45120 --currency HKD",
+      "summary": "市值验算偏差在可接受范围内。",
+      "source_ref": "A1"
+    }
+  ],
+  "known_gaps": []
+}

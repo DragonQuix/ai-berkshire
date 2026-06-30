@@ -651,6 +651,53 @@ ROLE_REQUIRED_SECTIONS = [
 ]
 
 
+REGRESSION_SAMPLE_DIR = (
+    REPO / "examples" / "team-research-regression" / "tencent-supplement-loop"
+)
+
+
+def test_permission_safe_supplement_loop_regression_sample_validates() -> None:
+    """回归样例必须展示“补数请求 -> Team Lead 补资料 -> 第二轮分析”闭环。"""
+    result = tro.validate_team_research_outputs(REGRESSION_SAMPLE_DIR)
+
+    assert result["status"] == "pass"
+    data_pack = json.loads((REGRESSION_SAMPLE_DIR / "data-pack.json").read_text(encoding="utf-8"))
+    audit = json.loads((REGRESSION_SAMPLE_DIR / "audit-results.json").read_text(encoding="utf-8"))
+    loop = (REGRESSION_SAMPLE_DIR / "supplement-loop.md").read_text(encoding="utf-8")
+    final_report = (REGRESSION_SAMPLE_DIR / "最终报告.md").read_text(encoding="utf-8")
+
+    assert data_pack["meta"]["owner"] == "Team Lead"
+    assert data_pack["known_gaps"] == []
+    assert audit["verdict"] == "pass"
+    assert audit["items"] and all(item["status"] == "pass" for item in audit["items"])
+    assert "补数请求" in loop
+    assert "Team Lead 补资料" in loop
+    assert "第二轮分析" in loop
+    assert "角色冲突与 Team Lead 仲裁" in final_report
+    assert "E1" in final_report and "S3" in final_report
+
+
+def test_permission_safe_supplement_loop_sample_synced_to_codex() -> None:
+    codex_dir = (
+        REPO / "codex" / "ai-berkshire" / "examples" / "team-research-regression"
+        / "tencent-supplement-loop"
+    )
+    root_files = sorted(
+        p.relative_to(REGRESSION_SAMPLE_DIR)
+        for p in REGRESSION_SAMPLE_DIR.rglob("*")
+        if p.is_file()
+    )
+    codex_files = sorted(
+        p.relative_to(codex_dir)
+        for p in codex_dir.rglob("*")
+        if p.is_file()
+    )
+
+    assert codex_files == root_files
+    for rel in root_files:
+        assert (codex_dir / rel).read_bytes() == (REGRESSION_SAMPLE_DIR / rel).read_bytes()
+
+
 def _strip_role_brief_section(company_dir: Path, filename: str, section: str) -> None:
     """删除某份 role-brief 中的指定小节（含其标题行及到下一个 ## 之前的内容）。"""
     path = company_dir / "role-briefs" / filename

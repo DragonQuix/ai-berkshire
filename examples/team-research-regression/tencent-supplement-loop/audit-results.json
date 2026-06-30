@@ -1,0 +1,35 @@
+{
+  "report": "examples/team-research-regression/tencent-supplement-loop/最终报告.md",
+  "generated_at": "2026-06-29",
+  "sample_ratio": 0.25,
+  "items": [
+    {
+      "claim": "2025 年收入为 6600 亿元",
+      "report_location": "核心数据速览",
+      "source_ref": "S1",
+      "expected_value": "6600亿元",
+      "verified_value": "6600亿元",
+      "status": "pass",
+      "note": "年报口径核对通过。"
+    },
+    {
+      "claim": "AI广告增量口径来自补充资料包",
+      "report_location": "补数闭环与第二轮分析",
+      "source_ref": "S3",
+      "expected_value": "未单独披露AI广告收入",
+      "verified_value": "未单独披露AI广告收入",
+      "status": "pass",
+      "note": "Team Lead 补资料后，第二轮分析改用效率提升而非收入额。"
+    },
+    {
+      "claim": "广告复苏存在反面证据",
+      "report_location": "投资论点（Bull vs Bear）",
+      "source_ref": "E1",
+      "expected_value": "复苏不均衡",
+      "verified_value": "复苏不均衡",
+      "status": "pass",
+      "note": "反证已进入最终报告。"
+    }
+  ],
+  "verdict": "pass"
+}
