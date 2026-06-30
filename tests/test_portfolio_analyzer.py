@@ -604,6 +604,33 @@ def test_render_markdown_localizes_risk_levels() -> None:
         assert "（low）" not in section
 
 
+def test_render_markdown_localizes_severe_stress_risk_level() -> None:
+    holdings = [
+        {
+            "name": "腾讯",
+            "weight": 50,
+            "industry": "互联网",
+            "region": "中国",
+            "currency": "HKD",
+            "themes": ["平台经济"],
+        },
+        {
+            "name": "阿里巴巴",
+            "weight": 50,
+            "industry": "互联网",
+            "region": "中国",
+            "currency": "HKD",
+            "themes": ["云计算"],
+        },
+    ]
+
+    markdown = pa.render_markdown(pa.analyze_portfolio(holdings))
+    stress_section = markdown.split("## 压力测试", 1)[1].split("\n## ", 1)[0]
+
+    assert "| 中美/地缘风险升级：中国与台湾资产折价扩大 | -40.0% | 严重 |" in stress_section
+    assert "| severe |" not in stress_section
+
+
 def test_render_markdown_localizes_correlation_drivers() -> None:
     markdown = pa.render_markdown(pa.analyze_portfolio(SAMPLE_HOLDINGS))
     correlation_section = markdown.split("## 相关性风险", 1)[1].split("\n## ", 1)[0]

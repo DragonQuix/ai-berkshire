@@ -143,6 +143,8 @@
 > 2026-06-30 继续推进第三十五切片：`rebalance_suggestions` 的补输入建议原因与 `opportunity_cost` 口径对齐；缺少 `expected_return` 的持仓会触发 `fill_inputs`，提示“缺少 expected_return，无法纳入机会成本排序”，而缺省 `conviction` 按 100% 处理、不再被误写为缺失字段。`/portfolio-review` 已同步说明缺省 `conviction` 不视为缺失输入，并用回归测试锁定 root/Codex 工具副本同步。
 >
 > 2026-06-30 继续推进第三十六切片：Markdown “机会成本”章节对缺少 `expected_return` 的持仓显式加上 `数据不足：缺少预期收益输入：...`，与 `/portfolio-review` 的诚实留白原则对齐，避免只写“缺少预期收益输入”而没有数据不足标记。JSON 结构字段保持不变，Codex 工具副本同步，并用回归测试锁定该展示口径。
+>
+> 2026-06-30 继续推进第三十七切片：Markdown “压力测试”章节补齐 `risk_level=severe` 的中文展示，输出“严重”而不是内部枚举 `severe`；JSON 结构字段保持不变，`/portfolio-review` 已同步要求风险等级展示为“严重 / 高 / 中 / 低”，并用回归测试锁定该展示口径。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析

@@ -64,6 +64,7 @@ def _rebalance_priority_label(priority: str) -> str:
 
 def _risk_level_label(level: str) -> str:
     labels = {
+        "severe": "严重",
         "high": "高",
         "medium": "中",
         "low": "低",
