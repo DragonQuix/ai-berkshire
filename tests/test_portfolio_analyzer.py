@@ -183,6 +183,23 @@ def test_expected_return_allows_negative_percent_values() -> None:
     assert opportunity["weakest_holding"]["name"] == "腾讯"
 
 
+@pytest.mark.parametrize(
+    "field, message",
+    [
+        ("expected_return", "腾讯.expected_return 必须是数字"),
+        ("conviction", "腾讯.conviction 必须是数字"),
+    ],
+)
+def test_opportunity_inputs_must_be_numeric(field: str, message: str) -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8, field: "not-a-number"},
+        *SAMPLE_HOLDINGS[1:],
+    ]
+
+    with pytest.raises(ValueError, match=message):
+        pa.analyze_portfolio(holdings)
+
+
 def test_analyze_portfolio_allows_custom_cash_hurdle() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.05, "conviction": 1.0},
@@ -749,6 +766,38 @@ def test_cli_rejects_invalid_holding_without_traceback(tmp_path: Path) -> None:
     assert "输入持仓字段错误" in completed.stderr
     assert str(input_path) in completed.stderr
     assert "腾讯.conviction 不能超过 100%" in completed.stderr
+    assert "Traceback" not in completed.stderr
+
+
+def test_cli_rejects_non_numeric_opportunity_input_with_field_context(tmp_path: Path) -> None:
+    input_path = tmp_path / "holdings.json"
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": "bad-input", "conviction": 0.8},
+        *SAMPLE_HOLDINGS[1:],
+    ]
+    input_path.write_text(json.dumps({"holdings": holdings}, ensure_ascii=False), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(TOOLS_DIR / "portfolio_analyzer.py"),
+            "analyze",
+            str(input_path),
+            "--format",
+            "json",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        check=False,
+    )
+
+    assert completed.returncode == 2
+    assert "输入持仓字段错误" in completed.stderr
+    assert str(input_path) in completed.stderr
+    assert "腾讯.expected_return 必须是数字" in completed.stderr
+    assert "could not convert string" not in completed.stderr
     assert "Traceback" not in completed.stderr
 
 

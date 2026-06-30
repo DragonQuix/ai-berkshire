@@ -7,19 +7,26 @@ from typing import Any
 DEFAULT_CASH_HURDLE = 0.04
 
 
+def _as_float(value: Any, field: str) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} 必须是数字") from exc
+
+
 def _as_non_negative_ratio(value: Any, field: str) -> float | None:
     if value is None or value == "":
         return None
-    number = float(value)
+    number = _as_float(value, field)
     if number < 0:
         raise ValueError(f"{field} 不可为负数")
     return number / 100.0 if number > 1 else number
 
 
-def _as_signed_ratio(value: Any) -> float | None:
+def _as_signed_ratio(value: Any, field: str) -> float | None:
     if value is None or value == "":
         return None
-    number = float(value)
+    number = _as_float(value, field)
     return number / 100.0 if abs(number) > 1 else number
 
 
@@ -39,7 +46,10 @@ def build_opportunity_cost(
     for row in rows:
         if row.get("is_cash"):
             continue
-        expected_return = _as_signed_ratio(row.get("expected_return"))
+        expected_return = _as_signed_ratio(
+            row.get("expected_return"),
+            f"{row['name']}.expected_return",
+        )
         conviction = _as_confidence_ratio(row.get("conviction"), f"{row['name']}.conviction")
         if conviction is None:
             conviction = 1.0
