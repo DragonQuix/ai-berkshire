@@ -159,6 +159,7 @@ def _overall_health(
     return {
         "rating": rating,
         "summary": "；".join(drivers) if drivers else "未发现触发降级的结构性风险。",
+        "primary_driver": drivers[0] if drivers else "未发现触发降级的结构性风险。",
         "drivers": drivers,
     }
 

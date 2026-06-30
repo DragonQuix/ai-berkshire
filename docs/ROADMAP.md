@@ -149,6 +149,8 @@
 > 2026-06-30 继续推进第三十八切片：`overall_health` 接入 `stress_tests`，当任一压力情景风险等级为 `severe` 时，整体健康度直接降为“问题严重”，避免报告一边显示严重压力测试、一边仍给出“需要调整”的低估判断。`/portfolio-review` 已同步说明该联动口径，Codex 工具副本同步，并用回归测试锁定。
 >
 > 2026-06-30 继续推进第三十九切片：`overall_health` 新增 `drivers` 与动态 `summary`，把整体健康度评级的触发原因显式输出，覆盖严重压力测试、单一暴露、相关性风险和集中度判断；Markdown 顶部同步展示“健康度依据”，避免读者只看到评级而看不到为什么被降级。`/portfolio-review` 已同步要求引用该依据，Codex 工具副本同步，并用回归测试锁定 JSON 与 Markdown 两层输出。
+>
+> 2026-06-30 继续推进第四十切片：`overall_health` 新增 `primary_driver`，把 `drivers` 中优先级最高的风险提炼为“当前最大风险”；Markdown 顶部同步展示该字段，直接对齐 `/portfolio-review` 结论必须回答“当前最大风险是什么”的准出要求。Codex 工具副本同步，并用回归测试锁定 JSON 与 Markdown 输出。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析

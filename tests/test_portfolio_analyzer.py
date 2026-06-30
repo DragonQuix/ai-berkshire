@@ -203,7 +203,9 @@ def test_overall_health_explains_rating_drivers_in_json_and_markdown() -> None:
         "严重压力测试：利率飙升：长久期成长资产估值压缩"
         in analysis["overall_health"]["drivers"]
     )
+    assert analysis["overall_health"]["primary_driver"] == "严重压力测试：利率飙升：长久期成长资产估值压缩"
     assert "健康度依据：严重压力测试：利率飙升：长久期成长资产估值压缩" in markdown
+    assert "当前最大风险：严重压力测试：利率飙升：长久期成长资产估值压缩" in markdown
 
 
 def test_overall_health_explains_exposure_and_correlation_drivers() -> None:
