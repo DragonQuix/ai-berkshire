@@ -99,6 +99,15 @@ def _build_row(raw: dict[str, Any], name: str) -> dict[str, Any]:
     return row
 
 
+def _ensure_unique_names(rows: list[dict[str, Any]]) -> None:
+    seen: set[str] = set()
+    for row in rows:
+        name = row["name"]
+        if name in seen:
+            raise ValueError(f"持仓名称重复：{name}")
+        seen.add(name)
+
+
 def normalize_holdings(holdings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if not isinstance(holdings, list) or not holdings:
         raise ValueError("holdings 必须是非空数组")
@@ -113,6 +122,7 @@ def normalize_holdings(holdings: list[dict[str, Any]]) -> list[dict[str, Any]]:
             raise ValueError(f"第 {idx} 个持仓缺少 name 或 code")
         raw_weights.append(_as_weight(raw.get("weight"), f"{name}.weight"))
         rows.append(_build_row(raw, name))
+    _ensure_unique_names(rows)
 
     divisor = 100.0 if sum(raw_weights) > 1.5 else 1.0
     scaled = [weight / divisor for weight in raw_weights]

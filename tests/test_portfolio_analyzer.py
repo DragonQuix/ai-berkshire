@@ -686,6 +686,17 @@ def test_holding_weight_ratio_cannot_exceed_full_weight() -> None:
         pa.analyze_portfolio(holdings)
 
 
+def test_holding_names_must_be_unique() -> None:
+    holdings = [
+        SAMPLE_HOLDINGS[0],
+        {**SAMPLE_HOLDINGS[1], "name": "腾讯"},
+        *SAMPLE_HOLDINGS[2:],
+    ]
+
+    with pytest.raises(ValueError, match="持仓名称重复：腾讯"):
+        pa.analyze_portfolio(holdings)
+
+
 def test_rebalance_suggestions_prioritize_allocation_drift_actions() -> None:
     holdings = [
         {
