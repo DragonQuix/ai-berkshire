@@ -95,6 +95,8 @@
 > 2026-06-30 继续推进第十一切片：`allocation_drift` 新增回到约束区间的最小调仓测算，逐项输出 `adjustment_to_band`，聚合输出 `buy_to_band`、`sell_to_band`、`turnover_to_band` 与 `unmatched_band_cash_delta`；该口径优先用于只有 `min_weight` / `max_weight`、没有 `target_weight` 的持仓，保留既有 `turnover_to_target` 精确回到目标仓位语义。Markdown 报告和 `/portfolio-review` 已要求展示 `allocation_drift.turnover_to_band`。
 >
 > 2026-06-30 继续推进第十二切片：组合输入解析拆分为 `tools/portfolio_input.py`，并新增目标仓位约束一致性校验；`min_weight > max_weight`、`target_weight < min_weight`、`target_weight > max_weight` 会在分析前直接打回，避免自相矛盾的约束进入 `allocation_drift` 和 `rebalance_suggestions`。
+>
+> 2026-06-30 继续推进第十三切片：`portfolio_input.as_ratio()` 新增比例上限校验，`target_weight` / `min_weight` / `max_weight` 与 CLI `--cash-hurdle` 换算后不得超过 100%；输入 `150` 这类超过 100% 的比例会在进入组合分析前直接打回。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析

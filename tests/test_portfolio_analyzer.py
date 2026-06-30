@@ -253,6 +253,17 @@ def test_allocation_constraints_must_be_internally_consistent(
         pa.analyze_portfolio(holdings)
 
 
+@pytest.mark.parametrize("field", ["target_weight", "min_weight", "max_weight"])
+def test_allocation_constraint_ratios_cannot_exceed_full_weight(field: str) -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], field: 150},
+        *SAMPLE_HOLDINGS[1:],
+    ]
+
+    with pytest.raises(ValueError, match=f"腾讯.{field} 不能超过 100%"):
+        pa.analyze_portfolio(holdings)
+
+
 def test_rebalance_suggestions_prioritize_allocation_drift_actions() -> None:
     holdings = [
         {
@@ -372,6 +383,32 @@ def test_cli_accepts_custom_cash_hurdle(tmp_path: Path) -> None:
     payload = json.loads(completed.stdout)
     assert payload["opportunity_cost"]["cash_hurdle"] == pytest.approx(0.06)
     assert [row["name"] for row in payload["opportunity_cost"]["below_cash_hurdle"]] == ["腾讯"]
+
+
+def test_cli_rejects_cash_hurdle_above_full_weight(tmp_path: Path) -> None:
+    input_path = tmp_path / "holdings.json"
+    input_path.write_text(json.dumps({"holdings": SAMPLE_HOLDINGS}, ensure_ascii=False), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(TOOLS_DIR / "portfolio_analyzer.py"),
+            "analyze",
+            str(input_path),
+            "--format",
+            "json",
+            "--cash-hurdle",
+            "150",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        check=False,
+    )
+
+    assert completed.returncode != 0
+    assert "--cash-hurdle 不能超过 100%" in completed.stderr
 
 
 def test_sample_portfolio_file_runs_through_cli() -> None:

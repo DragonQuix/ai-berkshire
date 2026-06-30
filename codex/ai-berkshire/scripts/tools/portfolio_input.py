@@ -20,7 +20,10 @@ def _as_float(value: Any, field: str) -> float:
 
 def as_ratio(value: Any, field: str) -> float:
     number = _as_float(value, field)
-    return number / 100.0 if number > 1 else number
+    ratio = number / 100.0 if number > 1 else number
+    if ratio > 1:
+        raise ValueError(f"{field} 不能超过 100%")
+    return ratio
 
 
 def _optional_ratio(value: Any, field: str) -> float | None:
