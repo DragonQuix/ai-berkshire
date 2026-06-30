@@ -883,6 +883,21 @@ def test_rebalance_reviews_valuation_tension_when_all_cash_deploy_candidates_are
     assert suggestions["primary_action"] == "复核 腾讯 估值水位张力"
 
 
+def test_rebalance_primary_action_names_exposure_review() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "weight": 30, "expected_return": 0.10, "conviction": 1.0},
+        {**SAMPLE_HOLDINGS[1], "weight": 25, "expected_return": 0.09, "conviction": 1.0},
+        {**SAMPLE_HOLDINGS[2], "weight": 25, "expected_return": 0.08, "conviction": 1.0},
+        {**SAMPLE_HOLDINGS[4], "weight": 20},
+    ]
+
+    suggestions = pa.analyze_portfolio(holdings)["rebalance_suggestions"]
+
+    review = next(item for item in suggestions["items"] if item["action"] == "review_exposure")
+    assert review["target"] == "互联网"
+    assert suggestions["primary_action"] == "复核 互联网 单一暴露"
+
+
 def test_render_markdown_outputs_portfolio_level_sections() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},

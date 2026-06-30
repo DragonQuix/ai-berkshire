@@ -56,6 +56,7 @@ def _primary_action(items: list[dict[str, Any]]) -> str:
         "raise_cash": "提高现金仓位",
         "deploy_cash_review": f"研究现金用途：{target}",
         "fill_inputs": f"补齐 {target} 预期收益输入",
+        "review_exposure": f"复核 {target} 单一暴露",
         "review_valuation_tension": f"复核 {target} 估值水位张力",
     }
     return labels.get(first["action"], f"复核 {target}")
