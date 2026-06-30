@@ -238,6 +238,27 @@ def test_rebalance_suggestions_turn_diagnostics_into_actions() -> None:
     assert ali["suggested_weight"] == pytest.approx(0.0)
 
 
+def test_rebalance_missing_input_reason_only_mentions_expected_return() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.08},
+        {**SAMPLE_HOLDINGS[1], "expected_return": 0.07},
+        SAMPLE_HOLDINGS[2],
+        {**SAMPLE_HOLDINGS[3], "expected_return": 0.06},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    missing = next(
+        item
+        for item in analysis["rebalance_suggestions"]["items"]
+        if item["action"] == "fill_inputs"
+    )
+    assert missing["target"] == "台积电"
+    assert missing["reason"] == "缺少 expected_return，无法纳入机会成本排序。"
+    assert "conviction" not in missing["reason"]
+
+
 def test_allocation_drift_flags_target_weight_deviations() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "weight": 45, "target_weight": 35, "max_weight": 40},

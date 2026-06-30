@@ -139,11 +139,13 @@
 > 2026-06-30 继续推进第三十三切片：`portfolio_opportunity` 放开 `expected_return` 的负数输入，用于表达看跌或论文破产场景；`-5` 与 `-0.05` 均会解析为 -5%，并继续参与机会成本排序、低于现金门槛列表和最弱持仓判断。`conviction` 仍严格限制在 0-100%，`--cash-hurdle` 仍不可为负且不得超过 100%。`/portfolio-review` 已同步说明负预期收益口径，并用回归测试锁定 root/Codex 工具副本同步。
 >
 > 2026-06-30 继续推进第三十四切片：`portfolio_opportunity` 对 `expected_return` 与 `conviction` 的非数字输入追加字段级中文错误，统一返回 `标的.字段 必须是数字`，CLI 继续包装为 `错误: 输入持仓字段错误 <path>: ...` 且不暴露 Python 原生 `could not convert string` 或 traceback。`/portfolio-review` 已同步说明该输入卫生契约，并用回归测试锁定 API 与 CLI 行为及 root/Codex 工具副本同步。
+>
+> 2026-06-30 继续推进第三十五切片：`rebalance_suggestions` 的补输入建议原因与 `opportunity_cost` 口径对齐；缺少 `expected_return` 的持仓会触发 `fill_inputs`，提示“缺少 expected_return，无法纳入机会成本排序”，而缺省 `conviction` 按 100% 处理、不再被误写为缺失字段。`/portfolio-review` 已同步说明缺省 `conviction` 不视为缺失输入，并用回归测试锁定 root/Codex 工具副本同步。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
 - 相关性风险检测
-- 机会成本（含负预期收益与字段级输入错误）、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议与可配置现金门槛
+- 机会成本（含负预期收益、字段级输入错误与缺失输入建议）、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议与可配置现金门槛
 
 ### 权限安全架构回归样例
 > 2026-06-29 已启动第一切片：新增 `examples/team-research-regression/tencent-supplement-loop/`，构造腾讯团队研究回归样例，覆盖 `data-pack.json`、`source-index.md`、四份 `role-briefs/`、`audit-results.json`、`最终报告.md` 与 `supplement-loop.md`。样例明确展示“角色只读提出补数请求 -> Team Lead 补 S3 资料 -> 第二轮分析修正结论 -> Team Lead 仲裁并抽检准出”的闭环，且 `audit-results.json.verdict=pass`、抽检项均绑定已定义 ref。同步到 Codex 包内，并新增回归测试验证样例可通过 `team_research_outputs.validate` 且 root/Codex 样例逐文件一致。

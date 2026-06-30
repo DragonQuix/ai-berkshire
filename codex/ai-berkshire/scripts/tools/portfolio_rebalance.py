@@ -190,7 +190,7 @@ def _append_missing_inputs(
                 "fill_inputs",
                 name,
                 "medium",
-                "缺少 expected_return 或 conviction，无法纳入机会成本排序。",
+                "缺少 expected_return，无法纳入机会成本排序。",
                 weights.get(name),
                 None,
             )
