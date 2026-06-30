@@ -167,11 +167,13 @@
 > 2026-06-30 继续推进第四十七切片：`rebalance_suggestions` 增加低配缺输入冲突消解；当持仓低于目标仓位或下限但缺少 `expected_return` 时，不再直接输出 `add_to_target` 加仓建议，而是先输出 `fill_inputs`，且同一标的不重复出现在再平衡表中。避免机械目标仓位建议绕过机会成本数据缺口。`/portfolio-review` 已同步说明“低配但缺预期收益先补输入、不直接加仓”的口径，Codex 工具副本同步，并用回归测试锁定。
 >
 > 2026-06-30 继续推进第四十八切片：`portfolio_input` 增加持仓名称唯一性校验；同一组合输入内出现重复 `name` 会在分析前直接打回，避免 `opportunity_cost.missing_inputs`、`rebalance_suggestions`、权重映射和 Markdown 明细表把两个持仓混成同一标的。`/portfolio-review` 已同步说明 `name` 必须唯一，Codex 工具副本同步，并用回归测试锁定。
+>
+> 2026-06-30 继续推进第四十九切片：`portfolio_input` 增加非空 `code` 唯一性校验；不同 `name` 若填写同一股票代码会在分析前直接打回，避免名称伪装成多标的但实际代码相同，导致集中度、机会成本和再平衡建议身份混淆。`/portfolio-review` 已同步说明非空 `code` 必须唯一，Codex 工具副本同步，并用回归测试锁定。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
 - 相关性风险检测
-- 机会成本（含负预期收益、字段级输入错误、缺失输入建议与数据不足展示，并纳入整体健康度降级/数据不足判断）、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议（含低配缺输入冲突消解）、首屏结论摘要、动作口径与数据缺口、可配置现金门槛、持仓名称唯一性校验
+- 机会成本（含负预期收益、字段级输入错误、缺失输入建议与数据不足展示，并纳入整体健康度降级/数据不足判断）、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议（含低配缺输入冲突消解）、首屏结论摘要、动作口径与数据缺口、可配置现金门槛、持仓名称/代码唯一性校验
 
 ### 权限安全架构回归样例
 > 2026-06-29 已启动第一切片：新增 `examples/team-research-regression/tencent-supplement-loop/`，构造腾讯团队研究回归样例，覆盖 `data-pack.json`、`source-index.md`、四份 `role-briefs/`、`audit-results.json`、`最终报告.md` 与 `supplement-loop.md`。样例明确展示“角色只读提出补数请求 -> Team Lead 补 S3 资料 -> 第二轮分析修正结论 -> Team Lead 仲裁并抽检准出”的闭环，且 `audit-results.json.verdict=pass`、抽检项均绑定已定义 ref。同步到 Codex 包内，并新增回归测试验证样例可通过 `team_research_outputs.validate` 且 root/Codex 样例逐文件一致。

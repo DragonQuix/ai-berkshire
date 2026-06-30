@@ -697,6 +697,17 @@ def test_holding_names_must_be_unique() -> None:
         pa.analyze_portfolio(holdings)
 
 
+def test_non_empty_holding_codes_must_be_unique() -> None:
+    holdings = [
+        SAMPLE_HOLDINGS[0],
+        {**SAMPLE_HOLDINGS[1], "name": "腾讯控股", "code": "00700.HK"},
+        *SAMPLE_HOLDINGS[2:],
+    ]
+
+    with pytest.raises(ValueError, match="持仓代码重复：00700.HK"):
+        pa.analyze_portfolio(holdings)
+
+
 def test_rebalance_suggestions_prioritize_allocation_drift_actions() -> None:
     holdings = [
         {
