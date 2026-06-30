@@ -4,6 +4,9 @@ from __future__ import annotations
 from typing import Any
 
 
+FULL_ALLOCATION_TOLERANCE = 0.005
+
+
 def _has_targets(row: dict[str, Any]) -> bool:
     return any(row.get(field) is not None for field in ("target_weight", "min_weight", "max_weight"))
 
@@ -70,6 +73,15 @@ def _targeted_current_weight(items: list[dict[str, Any]]) -> float:
     return sum(item["current_weight"] for item in items if item["target_weight"] is not None)
 
 
+def _target_allocation_status(items: list[dict[str, Any]], target_sum: float) -> str:
+    if not items:
+        return "not_configured"
+    gap = 1.0 - target_sum
+    if abs(gap) <= FULL_ALLOCATION_TOLERANCE:
+        return "fully_allocated"
+    return "under_allocated" if gap > 0 else "over_allocated"
+
+
 def _sum_positive_adjustments(items: list[dict[str, Any]]) -> float:
     return sum(max(item["adjustment_to_band"], 0.0) for item in items)
 
@@ -114,6 +126,7 @@ def build_allocation_drift(
         "turnover_to_band": max(sell_to_band, buy_to_band),
         "unmatched_band_cash_delta": sell_to_band - buy_to_band,
         "target_weight_sum": target_sum,
+        "target_allocation_status": _target_allocation_status(items, target_sum),
         "target_gap_to_full_allocation": 1.0 - target_sum,
         "targeted_current_weight": targeted_current,
         "untargeted_current_weight": 1.0 - targeted_current,

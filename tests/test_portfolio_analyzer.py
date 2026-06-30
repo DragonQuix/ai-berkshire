@@ -230,9 +230,36 @@ def test_allocation_drift_flags_target_weight_deviations() -> None:
     assert drift["turnover_to_target"] == pytest.approx(0.10)
     assert drift["unmatched_cash_delta"] == pytest.approx(0.02)
     assert drift["target_weight_sum"] == pytest.approx(0.90)
+    assert drift["target_allocation_status"] == "under_allocated"
     assert drift["target_gap_to_full_allocation"] == pytest.approx(0.10)
     assert drift["targeted_current_weight"] == pytest.approx(0.92)
     assert drift["untargeted_current_weight"] == pytest.approx(0.08)
+
+
+def test_allocation_drift_classifies_full_and_over_allocated_targets() -> None:
+    full_targets = [
+        {**SAMPLE_HOLDINGS[0], "weight": 35, "target_weight": 35},
+        {**SAMPLE_HOLDINGS[1], "weight": 20, "target_weight": 20},
+        {**SAMPLE_HOLDINGS[2], "weight": 15, "target_weight": 15},
+        {**SAMPLE_HOLDINGS[3], "weight": 10, "target_weight": 10},
+        {**SAMPLE_HOLDINGS[4], "weight": 20, "target_weight": 20},
+    ]
+    over_targets = [
+        {**SAMPLE_HOLDINGS[0], "weight": 35, "target_weight": 45},
+        {**SAMPLE_HOLDINGS[1], "weight": 20, "target_weight": 25},
+        {**SAMPLE_HOLDINGS[2], "weight": 15, "target_weight": 20},
+        {**SAMPLE_HOLDINGS[3], "weight": 10, "target_weight": 10},
+        {**SAMPLE_HOLDINGS[4], "weight": 20, "target_weight": 10},
+    ]
+
+    full_drift = pa.analyze_portfolio(full_targets)["allocation_drift"]
+    over_drift = pa.analyze_portfolio(over_targets)["allocation_drift"]
+
+    assert full_drift["target_weight_sum"] == pytest.approx(1.0)
+    assert full_drift["target_allocation_status"] == "fully_allocated"
+    assert over_drift["target_weight_sum"] == pytest.approx(1.10)
+    assert over_drift["target_allocation_status"] == "over_allocated"
+    assert over_drift["target_gap_to_full_allocation"] == pytest.approx(-0.10)
 
 
 def test_allocation_drift_estimates_minimum_band_rebalance_without_targets() -> None:
@@ -375,6 +402,7 @@ def test_render_markdown_outputs_portfolio_level_sections() -> None:
     assert "## 机会成本" in markdown
     assert "## 目标仓位偏离" in markdown
     assert "目标仓位合计" in markdown
+    assert "目标覆盖状态" in markdown
     assert "理论换手率" in markdown
     assert "约束区间最小换手率" in markdown
     assert "## 再平衡建议" in markdown

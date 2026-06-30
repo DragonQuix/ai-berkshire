@@ -55,6 +55,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "--cash-hurdle",
         "allocation_drift",
         "target_weight_sum",
+        "target_allocation_status",
         "turnover_to_target",
         "turnover_to_band",
         "opportunity_cost",
