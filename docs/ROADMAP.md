@@ -161,11 +161,13 @@
 > 2026-06-30 继续推进第四十四切片：`executive_summary` 新增 `data_gap_summary`，把 `opportunity_cost.missing_inputs` 中缺少 `expected_return` 的持仓前置到首屏摘要；Markdown 顶部同步展示“数据缺口”，即使首屏已经给出健康度、最大风险和首要动作，也会明确提示哪些持仓缺少预期收益输入，避免机会成本排序和机械建议被误读为完整数据基础上的结论。`/portfolio-review` 已同步要求引用该字段，Codex 工具副本同步，并用回归测试锁定。
 >
 > 2026-06-30 继续推进第四十五切片：`overall_health` 接入 `opportunity_cost.below_cash_hurdle`，当任一持仓风险调整后收益低于现金门槛时，整体健康度至少降为“需要调整”，并在 `drivers` / `primary_driver` / `summary` 中写入“机会成本：X 低于现金门槛”；修复此前结构分散组合可能显示“良好”但首要动作却建议减仓的首屏矛盾。`/portfolio-review` 已同步说明该降级口径，Codex 工具副本同步，并用回归测试锁定。
+>
+> 2026-06-30 继续推进第四十六切片：`overall_health` 接入 `opportunity_cost.missing_inputs`，当组合结构、暴露、相关性与压力测试均未触发更强风险，但缺少 `expected_return` 时，整体健康度标为“数据不足”，并在 `drivers` / `primary_driver` / `summary` 中写入“数据缺口：缺少预期收益输入：X”；避免首屏一边提示数据缺口，一边把组合评为“良好”。`/portfolio-review` 已同步说明该数据不足口径，Codex 工具副本同步，并用回归测试锁定。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
 - 相关性风险检测
-- 机会成本（含负预期收益、字段级输入错误、缺失输入建议与数据不足展示，并纳入整体健康度降级）、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议、首屏结论摘要、动作口径与数据缺口、可配置现金门槛
+- 机会成本（含负预期收益、字段级输入错误、缺失输入建议与数据不足展示，并纳入整体健康度降级/数据不足判断）、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议、首屏结论摘要、动作口径与数据缺口、可配置现金门槛
 
 ### 权限安全架构回归样例
 > 2026-06-29 已启动第一切片：新增 `examples/team-research-regression/tencent-supplement-loop/`，构造腾讯团队研究回归样例，覆盖 `data-pack.json`、`source-index.md`、四份 `role-briefs/`、`audit-results.json`、`最终报告.md` 与 `supplement-loop.md`。样例明确展示“角色只读提出补数请求 -> Team Lead 补 S3 资料 -> 第二轮分析修正结论 -> Team Lead 仲裁并抽检准出”的闭环，且 `audit-results.json.verdict=pass`、抽检项均绑定已定义 ref。同步到 Codex 包内，并新增回归测试验证样例可通过 `team_research_outputs.validate` 且 root/Codex 样例逐文件一致。

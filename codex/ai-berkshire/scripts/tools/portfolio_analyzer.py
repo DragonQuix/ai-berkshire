@@ -144,10 +144,13 @@ def _overall_health(
     high_flags = [flag for flag in flags if flag["level"] == "high"]
     severe_stress = [item for item in stress_tests if item["risk_level"] == "severe"]
     below_cash = opportunity_cost["below_cash_hurdle"]
+    missing_inputs = opportunity_cost["missing_inputs"]
     if high_flags or severe_stress or concentration["assessment"] == "问题严重":
         rating = "问题严重"
     elif below_cash or flags or pairs or concentration["assessment"] == "需要调整":
         rating = "需要调整"
+    elif missing_inputs:
+        rating = "数据不足"
     else:
         rating = concentration["assessment"]
     drivers = [f"严重压力测试：{item['assumption']}" for item in severe_stress]
@@ -161,6 +164,9 @@ def _overall_health(
     )
     if concentration["assessment"] in {"问题严重", "需要调整"}:
         drivers.append(f"集中度判断：{concentration['assessment']}")
+    if missing_inputs:
+        names = "、".join(missing_inputs)
+        drivers.append(f"数据缺口：缺少预期收益输入：{names}")
     return {
         "rating": rating,
         "summary": "；".join(drivers) if drivers else "未发现触发降级的结构性风险。",

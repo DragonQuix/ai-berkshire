@@ -269,6 +269,56 @@ def test_overall_health_reflects_opportunity_cost_below_cash() -> None:
     assert "机会成本：Costco 低于现金门槛" in analysis["overall_health"]["drivers"]
 
 
+def test_overall_health_marks_missing_expected_return_as_data_insufficient() -> None:
+    holdings = [
+        {
+            "name": "Costco",
+            "weight": 20,
+            "industry": "零售",
+            "region": "美国",
+            "currency": "USD",
+            "themes": ["会员制"],
+        },
+        {
+            "name": "Novo Nordisk",
+            "weight": 20,
+            "industry": "医药",
+            "region": "丹麦",
+            "currency": "DKK",
+            "themes": ["慢病管理"],
+        },
+        {
+            "name": "LVMH",
+            "weight": 20,
+            "industry": "奢侈品",
+            "region": "法国",
+            "currency": "EUR",
+            "themes": ["高端消费"],
+        },
+        {
+            "name": "Unilever",
+            "weight": 20,
+            "industry": "日用消费",
+            "region": "英国",
+            "currency": "GBP",
+            "themes": ["必选消费"],
+        },
+        {"name": "现金", "weight": 20, "asset_type": "cash", "region": "现金", "currency": "CNY"},
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    assert analysis["concentration"]["assessment"] == "良好"
+    assert not analysis["risk_flags"]
+    assert not analysis["correlation_risks"]
+    assert analysis["overall_health"]["rating"] == "数据不足"
+    assert (
+        analysis["overall_health"]["primary_driver"]
+        == "数据缺口：缺少预期收益输入：Costco、Novo Nordisk、LVMH、Unilever"
+    )
+    assert analysis["executive_summary"]["health_rating"] == "数据不足"
+
+
 def test_render_markdown_answers_top_level_primary_action() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
