@@ -29,6 +29,15 @@ def _target_gap_text(drift: dict[str, Any]) -> str:
     return f"未分配目标：{_pct(gap)}"
 
 
+def _allocation_item_status_label(status: str) -> str:
+    labels = {
+        "overweight": "超配",
+        "underweight": "低配",
+        "within_band": "约束内",
+    }
+    return labels.get(status, status)
+
+
 def _render_group(title: str, groups: dict[str, float]) -> list[str]:
     lines = [f"### {title}", "", "| 分类 | 占比 |", "|---|---:|"]
     lines.extend(f"| {name} | {_pct(weight)} |" for name, weight in groups.items())
@@ -126,7 +135,7 @@ def _append_allocation_drift(lines: list[str], analysis: dict[str, Any]) -> None
         lines.append(
             f"| {item['name']} | {_pct(item['current_weight'])} | {target} | "
             f"{min_weight} | {max_weight} | {drift_value} | "
-            f"{_pct(item['adjustment_to_band'])} | {item['status']} |"
+            f"{_pct(item['adjustment_to_band'])} | {_allocation_item_status_label(item['status'])} |"
         )
 
 

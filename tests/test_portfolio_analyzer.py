@@ -433,6 +433,25 @@ def test_render_markdown_labels_unconfigured_targets_without_fake_gap() -> None:
     assert "未分配目标：100.0%" not in markdown
 
 
+def test_render_markdown_localizes_allocation_item_statuses() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "weight": 45, "target_weight": 35, "max_weight": 40},
+        {**SAMPLE_HOLDINGS[1], "weight": 12, "target_weight": 20, "min_weight": 15},
+        {**SAMPLE_HOLDINGS[2], "weight": 15, "target_weight": 15, "min_weight": 10, "max_weight": 20},
+        {**SAMPLE_HOLDINGS[3], "weight": 8},
+        {**SAMPLE_HOLDINGS[4], "weight": 20, "target_weight": 20},
+    ]
+
+    markdown = pa.render_markdown(pa.analyze_portfolio(holdings))
+
+    assert "| 腾讯 | 45.0% | 35.0% | - | 40.0% | 10.0% | -5.0% | 超配 |" in markdown
+    assert "| 阿里巴巴 | 12.0% | 20.0% | 15.0% | - | -8.0% | 3.0% | 低配 |" in markdown
+    assert "| 台积电 | 15.0% | 15.0% | 10.0% | 20.0% | 0.0% | 0.0% | 约束内 |" in markdown
+    assert "overweight" not in markdown
+    assert "underweight" not in markdown
+    assert "within_band" not in markdown
+
+
 def test_cli_outputs_json_from_holdings_file(tmp_path: Path) -> None:
     input_path = tmp_path / "holdings.json"
     input_path.write_text(json.dumps({"holdings": SAMPLE_HOLDINGS}, ensure_ascii=False), encoding="utf-8")
