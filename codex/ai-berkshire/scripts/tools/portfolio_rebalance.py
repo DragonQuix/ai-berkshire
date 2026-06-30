@@ -25,6 +25,10 @@ def _weighted_cash_drag(item: dict[str, Any], cash_hurdle: float) -> float:
     return item["weight"] * max(0.0, cash_hurdle - item["risk_adjusted_return"])
 
 
+def _below_cash_text(row: dict[str, Any], cash_hurdle: float) -> str:
+    return f"风险调整后 {row['risk_adjusted_return']:.1%} 低于现金门槛 {cash_hurdle:.1%}"
+
+
 def _item(
     action: str,
     target: str,
@@ -97,13 +101,14 @@ def _append_below_cash(
         key=lambda item: (-_weighted_cash_drag(item, cash_hurdle), item["name"]),
     )
     for row in below_cash:
+        below_cash_reason = _below_cash_text(row, cash_hurdle)
         if row["name"] in low_valuation_tension_names:
             items.append(
                 _item(
                     "review_valuation_tension",
                     row["name"],
                     "medium",
-                    "风险调整后收益低于现金门槛，但存在低估低预期张力，应先复核估值水位与 expected_return。",
+                    f"{below_cash_reason}，但存在低估低预期张力，应先复核估值水位与 expected_return。",
                     row["weight"],
                     None,
                 )
@@ -114,7 +119,7 @@ def _append_below_cash(
                 "reduce_or_exit",
                 row["name"],
                 "high",
-                "风险调整后预期收益低于现金门槛，继续持有需要额外论文支撑。",
+                f"{below_cash_reason}，继续持有需要额外论文支撑。",
                 row["weight"],
                 0.0,
             )

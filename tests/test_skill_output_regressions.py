@@ -69,6 +69,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "现金缓冲理由必须展示当前现金占比",
         "集中度理由必须展示第一大持仓占比",
         "目标偏离理由必须展示当前仓位与建议仓位",
+        "机会成本理由必须展示风险调整后收益与现金门槛",
         "review_exposure",
         "turnover_to_target",
         "turnover_to_band",

@@ -524,6 +524,7 @@ def test_rebalance_suggestions_turn_diagnostics_into_actions() -> None:
     cash = next(item for item in suggestions["items"] if item["action"] == "raise_cash")
     assert ali["current_weight"] == pytest.approx(0.20)
     assert ali["suggested_weight"] == pytest.approx(0.0)
+    assert "风险调整后 2.1% 低于现金门槛 4.0%" in ali["reason"]
     assert "第一大持仓 55.0% 超过 40%" in tencent["reason"]
     assert "现金 2.0% 低于 3%" in cash["reason"]
 
@@ -846,6 +847,7 @@ def test_rebalance_does_not_exit_low_valuation_low_return_without_review() -> No
     assert tencent["action"] == "review_valuation_tension"
     assert tencent["suggested_weight"] is None
     assert "低估低预期" in tencent["reason"]
+    assert "风险调整后 3.0% 低于现金门槛 4.0%" in tencent["reason"]
     assert ("reduce_or_exit", "腾讯") not in {
         (item["action"], item["target"]) for item in suggestions["items"]
     }
