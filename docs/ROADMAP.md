@@ -79,10 +79,13 @@
 > 2026-06-29 继续推进第三切片：`portfolio_analyzer` 新增 `opportunity_cost`，读取持仓级 `expected_return` 与 `conviction`，计算 `risk_adjusted_return = expected_return × conviction`，按风险调整后预期年化排序，并输出低于 4% 现金门槛的持仓、最弱持仓与缺失输入列表；机会成本计算拆分为 `tools/portfolio_opportunity.py`，Markdown 报告新增“机会成本”章节。`/portfolio-review` 已要求输入和报告引用 `opportunity_cost`，并继续用回归测试锁定 root/Codex 同步。
 >
 > 2026-06-29 继续推进第四切片：新增 `examples/portfolio-holdings.sample.json`，作为 `portfolio_analyzer` 和 `/portfolio-review` 的最小可运行样例；样例包含结构诊断、压力测试和机会成本所需字段，并同步到 Codex 包内。新增 smoke test 直接用样例跑 CLI 的 Markdown/JSON 输出，防止后续字段契约漂移。
+>
+> 2026-06-30 继续推进第五切片：`portfolio_analyzer` 新增 `rebalance_suggestions`，将机会成本、第一大持仓集中度和现金缓冲转成机械再平衡建议，输出首要动作、逐项 action/priority/current_weight/suggested_weight/reason；计算逻辑拆分为 `tools/portfolio_rebalance.py`，Markdown 报告新增“再平衡建议”章节，`/portfolio-review` 已要求报告引用该字段并明确机械建议不替代个股估值和最终交易判断。新增回归测试锁定 JSON 字段、Markdown 章节和 root/Codex 工具副本同步。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
 - 相关性风险检测
+- 机会成本、压力测试与机械再平衡建议
 
 ### 权限安全架构回归样例
 > 2026-06-29 已启动第一切片：新增 `examples/team-research-regression/tencent-supplement-loop/`，构造腾讯团队研究回归样例，覆盖 `data-pack.json`、`source-index.md`、四份 `role-briefs/`、`audit-results.json`、`最终报告.md` 与 `supplement-loop.md`。样例明确展示“角色只读提出补数请求 -> Team Lead 补 S3 资料 -> 第二轮分析修正结论 -> Team Lead 仲裁并抽检准出”的闭环，且 `audit-results.json.verdict=pass`、抽检项均绑定已定义 ref。同步到 Codex 包内，并新增回归测试验证样例可通过 `team_research_outputs.validate` 且 root/Codex 样例逐文件一致。

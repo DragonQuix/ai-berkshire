@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from portfolio_opportunity import build_opportunity_cost
+from portfolio_rebalance import build_rebalance_suggestions
 from portfolio_render import render_markdown
 from portfolio_stress import build_stress_tests
 
@@ -217,6 +218,7 @@ def analyze_portfolio(holdings: list[dict[str, Any]]) -> dict[str, Any]:
     pairs = _build_correlation_risks(rows)
     stress_tests = build_stress_tests(rows)
     opportunity_cost = build_opportunity_cost(rows)
+    rebalance = build_rebalance_suggestions(rows, concentration, flags, opportunity_cost)
     return {
         "_source": "portfolio_analyzer",
         "holdings": rows,
@@ -226,6 +228,7 @@ def analyze_portfolio(holdings: list[dict[str, Any]]) -> dict[str, Any]:
         "correlation_risks": pairs,
         "stress_tests": stress_tests,
         "opportunity_cost": opportunity_cost,
+        "rebalance_suggestions": rebalance,
         "overall_health": _overall_health(concentration, flags, pairs),
     }
 

@@ -140,6 +140,29 @@ def test_opportunity_cost_ranks_holdings_against_cash_hurdle() -> None:
     assert [row["name"] for row in opportunity["below_cash_hurdle"]] == ["阿里巴巴", "英伟达"]
 
 
+def test_rebalance_suggestions_turn_diagnostics_into_actions() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "weight": 55, "expected_return": 0.12, "conviction": 0.8},
+        {**SAMPLE_HOLDINGS[1], "weight": 20, "expected_return": 0.03, "conviction": 0.7},
+        {**SAMPLE_HOLDINGS[2], "weight": 15},
+        {**SAMPLE_HOLDINGS[3], "weight": 8, "expected_return": 0.06, "conviction": 0.5},
+        {**SAMPLE_HOLDINGS[4], "weight": 2},
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    suggestions = analysis["rebalance_suggestions"]
+    assert suggestions["primary_action"] == "减仓/清仓 阿里巴巴"
+    actions = {(item["action"], item["target"]) for item in suggestions["items"]}
+    assert ("reduce_or_exit", "阿里巴巴") in actions
+    assert ("trim_to_limit", "腾讯") in actions
+    assert ("raise_cash", "现金") in actions
+    assert ("fill_inputs", "台积电") in actions
+    ali = next(item for item in suggestions["items"] if item["target"] == "阿里巴巴")
+    assert ali["current_weight"] == pytest.approx(0.20)
+    assert ali["suggested_weight"] == pytest.approx(0.0)
+
+
 def test_render_markdown_outputs_portfolio_level_sections() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
@@ -155,6 +178,7 @@ def test_render_markdown_outputs_portfolio_level_sections() -> None:
     assert "## 相关性风险" in markdown
     assert "## 压力测试" in markdown
     assert "## 机会成本" in markdown
+    assert "## 再平衡建议" in markdown
     assert "互联网" in markdown
 
 
@@ -234,12 +258,14 @@ def test_sample_portfolio_file_runs_through_cli() -> None:
     payload = json.loads(json_result.stdout)
     assert payload["opportunity_cost"]["ranked_holdings"]
     assert payload["stress_tests"]
+    assert "rebalance_suggestions" in payload
 
 
 def test_codex_tool_copy_stays_in_sync() -> None:
     for filename in [
         "portfolio_analyzer.py",
         "portfolio_opportunity.py",
+        "portfolio_rebalance.py",
         "portfolio_render.py",
         "portfolio_stress.py",
     ]:

@@ -69,6 +69,31 @@ def _append_opportunity(lines: list[str], analysis: dict[str, Any]) -> None:
         lines.append(f"\n缺少预期收益输入：{names}")
 
 
+def _append_rebalance(lines: list[str], analysis: dict[str, Any]) -> None:
+    suggestions = analysis["rebalance_suggestions"]
+    lines.extend(
+        [
+            "",
+            "## 再平衡建议",
+            "",
+            f"首要动作：**{suggestions['primary_action']}**",
+            "",
+            "| 优先级 | 动作 | 标的/暴露 | 当前占比 | 建议占比 | 理由 |",
+            "|---|---|---|---:|---:|---|",
+        ]
+    )
+    if not suggestions["items"]:
+        lines.append("| low | hold | 组合 | - | - | 暂无机械调仓建议，维持观察。 |")
+        return
+    for item in suggestions["items"]:
+        current = "-" if item["current_weight"] is None else _pct(item["current_weight"])
+        suggested = "-" if item["suggested_weight"] is None else _pct(item["suggested_weight"])
+        lines.append(
+            f"| {item['priority']} | {item['action']} | {item['target']} | "
+            f"{current} | {suggested} | {item['reason']} |"
+        )
+
+
 def _append_flags(lines: list[str], analysis: dict[str, Any]) -> None:
     lines.extend(["", "## 风险提示", ""])
     flags = analysis["risk_flags"]
@@ -105,5 +130,6 @@ def render_markdown(analysis: dict[str, Any]) -> str:
     _append_correlation(lines, analysis)
     _append_stress(lines, analysis)
     _append_opportunity(lines, analysis)
+    _append_rebalance(lines, analysis)
     _append_flags(lines, analysis)
     return "\n".join(lines) + "\n"
