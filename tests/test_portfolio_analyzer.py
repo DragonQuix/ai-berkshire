@@ -160,6 +160,60 @@ def test_overall_health_reflects_severe_stress_test() -> None:
     assert analysis["overall_health"]["rating"] == "问题严重"
 
 
+def test_overall_health_explains_rating_drivers_in_json_and_markdown() -> None:
+    holdings = [
+        {
+            "name": "腾讯",
+            "weight": 25,
+            "industry": "互联网",
+            "region": "中国",
+            "currency": "HKD",
+            "themes": ["平台经济"],
+        },
+        {
+            "name": "台积电",
+            "weight": 25,
+            "industry": "半导体",
+            "region": "台湾",
+            "currency": "TWD",
+            "themes": ["晶圆制造"],
+        },
+        {
+            "name": "Salesforce",
+            "weight": 25,
+            "industry": "软件",
+            "region": "美国",
+            "currency": "USD",
+            "themes": ["云计算"],
+        },
+        {
+            "name": "ASML",
+            "weight": 25,
+            "industry": "设备",
+            "region": "荷兰",
+            "currency": "EUR",
+            "themes": ["AI光刻"],
+        },
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+    markdown = pa.render_markdown(analysis)
+
+    assert (
+        "严重压力测试：利率飙升：长久期成长资产估值压缩"
+        in analysis["overall_health"]["drivers"]
+    )
+    assert "健康度依据：严重压力测试：利率飙升：长久期成长资产估值压缩" in markdown
+
+
+def test_overall_health_explains_exposure_and_correlation_drivers() -> None:
+    analysis = pa.analyze_portfolio(SAMPLE_HOLDINGS)
+
+    drivers = analysis["overall_health"]["drivers"]
+    assert "单一暴露：互联网 55.0%" in drivers
+    assert "相关性风险：腾讯 / 阿里巴巴 55.0%" in drivers
+
+
 def test_opportunity_cost_ranks_holdings_against_cash_hurdle() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},

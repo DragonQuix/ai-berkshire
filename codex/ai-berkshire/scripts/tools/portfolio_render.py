@@ -233,6 +233,7 @@ def render_markdown(analysis: dict[str, Any]) -> str:
         "# 组合级分析",
         "",
         f"整体健康度：**{analysis['overall_health']['rating']}**",
+        f"健康度依据：{analysis['overall_health']['summary']}",
         "",
         "## 组合集中度",
         "",

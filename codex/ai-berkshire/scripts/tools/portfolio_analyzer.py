@@ -139,7 +139,7 @@ def _overall_health(
     flags: list[dict[str, Any]],
     pairs: list[dict[str, Any]],
     stress_tests: list[dict[str, Any]],
-) -> dict[str, str]:
+) -> dict[str, Any]:
     high_flags = [flag for flag in flags if flag["level"] == "high"]
     severe_stress = [item for item in stress_tests if item["risk_level"] == "severe"]
     if high_flags or severe_stress or concentration["assessment"] == "问题严重":
@@ -148,9 +148,18 @@ def _overall_health(
         rating = "需要调整"
     else:
         rating = concentration["assessment"]
+    drivers = [f"严重压力测试：{item['assumption']}" for item in severe_stress]
+    drivers.extend(f"单一暴露：{flag['name']} {flag['weight']:.1%}" for flag in flags[:3])
+    drivers.extend(
+        f"相关性风险：{' / '.join(pair['names'])} {pair['combined_weight']:.1%}"
+        for pair in pairs[:3]
+    )
+    if concentration["assessment"] in {"问题严重", "需要调整"}:
+        drivers.append(f"集中度判断：{concentration['assessment']}")
     return {
         "rating": rating,
-        "summary": "工具只做组合结构诊断，最终调仓仍需结合个股论文和估值水位。",
+        "summary": "；".join(drivers) if drivers else "未发现触发降级的结构性风险。",
+        "drivers": drivers,
     }
 
 def analyze_portfolio(
