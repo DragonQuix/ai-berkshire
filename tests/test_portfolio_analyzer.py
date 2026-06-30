@@ -204,6 +204,10 @@ def test_allocation_drift_flags_target_weight_deviations() -> None:
     assert drift["buy_to_target"] == pytest.approx(0.08)
     assert drift["turnover_to_target"] == pytest.approx(0.10)
     assert drift["unmatched_cash_delta"] == pytest.approx(0.02)
+    assert drift["target_weight_sum"] == pytest.approx(0.90)
+    assert drift["target_gap_to_full_allocation"] == pytest.approx(0.10)
+    assert drift["targeted_current_weight"] == pytest.approx(0.92)
+    assert drift["untargeted_current_weight"] == pytest.approx(0.08)
 
 
 def test_render_markdown_outputs_portfolio_level_sections() -> None:
@@ -222,6 +226,7 @@ def test_render_markdown_outputs_portfolio_level_sections() -> None:
     assert "## 压力测试" in markdown
     assert "## 机会成本" in markdown
     assert "## 目标仓位偏离" in markdown
+    assert "目标仓位合计" in markdown
     assert "理论换手率" in markdown
     assert "## 再平衡建议" in markdown
     assert "互联网" in markdown

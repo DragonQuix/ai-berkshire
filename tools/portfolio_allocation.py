@@ -43,6 +43,14 @@ def _sum_negative_drifts(items: list[dict[str, Any]]) -> float:
     return sum(abs(min(item["drift_to_target"] or 0.0, 0.0)) for item in items)
 
 
+def _target_weight_sum(items: list[dict[str, Any]]) -> float:
+    return sum(item["target_weight"] or 0.0 for item in items)
+
+
+def _targeted_current_weight(items: list[dict[str, Any]]) -> float:
+    return sum(item["current_weight"] for item in items if item["target_weight"] is not None)
+
+
 def build_allocation_drift(
     rows: list[dict[str, Any]],
     tolerance: float = 0.03,
@@ -51,6 +59,8 @@ def build_allocation_drift(
     attention = [item for item in items if item["status"] != "within_band"]
     sell_to_target = _sum_positive_drifts(items)
     buy_to_target = _sum_negative_drifts(items)
+    target_sum = _target_weight_sum(items)
+    targeted_current = _targeted_current_weight(items)
     primary = None
     if attention:
         primary = max(
@@ -67,4 +77,8 @@ def build_allocation_drift(
         "buy_to_target": buy_to_target,
         "turnover_to_target": max(sell_to_target, buy_to_target),
         "unmatched_cash_delta": sell_to_target - buy_to_target,
+        "target_weight_sum": target_sum,
+        "target_gap_to_full_allocation": 1.0 - target_sum,
+        "targeted_current_weight": targeted_current,
+        "untargeted_current_weight": 1.0 - targeted_current,
     }

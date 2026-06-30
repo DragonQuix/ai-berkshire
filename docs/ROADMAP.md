@@ -87,11 +87,13 @@
 > 2026-06-30 继续推进第七切片：`portfolio_analyzer` 新增 `allocation_drift`，支持持仓输入可选 `target_weight`、`min_weight`、`max_weight`，输出目标仓位偏离、上下限状态、需关注列表和最大偏离项；计算逻辑拆分为 `tools/portfolio_allocation.py`，Markdown 报告新增“目标仓位偏离”章节。`/portfolio-review` 已补充目标仓位字段说明，回归测试锁定 JSON 字段、Markdown 章节、技能契约和 root/Codex 工具副本同步。
 >
 > 2026-06-30 继续推进第八切片：`allocation_drift` 新增目标调仓测算，输出 `buy_to_target`、`sell_to_target`、`turnover_to_target` 与 `unmatched_cash_delta`，用于估算回到目标仓位需要的买入/卖出规模和理论换手率；Markdown “目标仓位偏离”章节同步展示理论换手率和目标买卖合计，`/portfolio-review` 已要求引用 `allocation_drift.turnover_to_target`。
+>
+> 2026-06-30 继续推进第九切片：`allocation_drift` 新增目标仓位覆盖度诊断，输出 `target_weight_sum`、`target_gap_to_full_allocation`、`targeted_current_weight` 与 `untargeted_current_weight`，用于识别目标仓位是否只覆盖部分组合或目标权重合计偏离 100%；Markdown “目标仓位偏离”章节同步展示目标仓位合计、未分配目标和已/未设目标持仓当前占比，`/portfolio-review` 已要求引用 `allocation_drift.target_weight_sum`。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
 - 相关性风险检测
-- 机会成本、压力测试、目标仓位偏离、目标调仓测算、机械再平衡建议与可配置现金门槛
+- 机会成本、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议与可配置现金门槛
 
 ### 权限安全架构回归样例
 > 2026-06-29 已启动第一切片：新增 `examples/team-research-regression/tencent-supplement-loop/`，构造腾讯团队研究回归样例，覆盖 `data-pack.json`、`source-index.md`、四份 `role-briefs/`、`audit-results.json`、`最终报告.md` 与 `supplement-loop.md`。样例明确展示“角色只读提出补数请求 -> Team Lead 补 S3 资料 -> 第二轮分析修正结论 -> Team Lead 仲裁并抽检准出”的闭环，且 `audit-results.json.verdict=pass`、抽检项均绑定已定义 ref。同步到 Codex 包内，并新增回归测试验证样例可通过 `team_research_outputs.validate` 且 root/Codex 样例逐文件一致。

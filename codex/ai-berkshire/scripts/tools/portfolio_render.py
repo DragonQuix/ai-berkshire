@@ -76,6 +76,8 @@ def _append_allocation_drift(lines: list[str], analysis: dict[str, Any]) -> None
             "",
             "## 目标仓位偏离",
             "",
+            f"目标仓位合计：{_pct(drift['target_weight_sum'])}，未分配目标：{_pct(drift['target_gap_to_full_allocation'])}",
+            f"已设目标持仓当前占比：{_pct(drift['targeted_current_weight'])}，未设目标持仓当前占比：{_pct(drift['untargeted_current_weight'])}",
             f"理论换手率：{_pct(drift['turnover_to_target'])}",
             f"目标买入合计：{_pct(drift['buy_to_target'])}，目标卖出合计：{_pct(drift['sell_to_target'])}",
             "",
