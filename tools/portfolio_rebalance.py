@@ -56,8 +56,19 @@ def _primary_action(items: list[dict[str, Any]]) -> str:
         "raise_cash": "提高现金仓位",
         "deploy_cash_review": f"研究现金用途：{target}",
         "fill_inputs": f"补齐 {target} 预期收益输入",
+        "review_valuation_tension": f"复核 {target} 估值水位张力",
     }
     return labels.get(first["action"], f"复核 {target}")
+
+
+def _high_valuation_tension_names(valuation_sanity: dict[str, Any] | None) -> set[str]:
+    if not valuation_sanity:
+        return set()
+    return {
+        item["name"]
+        for item in valuation_sanity.get("tensions", [])
+        if item.get("tension_type") == "high_valuation_high_return"
+    }
 
 
 def _append_below_cash(items: list[dict[str, Any]], opportunity_cost: dict[str, Any]) -> None:
@@ -117,6 +128,7 @@ def _append_allocation_drift(
     items: list[dict[str, Any]],
     allocation_drift: dict[str, Any] | None,
     missing_input_names: set[str],
+    high_valuation_tension_names: set[str],
 ) -> None:
     if not allocation_drift:
         return
@@ -138,6 +150,19 @@ def _append_allocation_drift(
                 )
             )
         elif row["status"] == "underweight":
+            if row["name"] in high_valuation_tension_names:
+                items.append(
+                    _item(
+                        "review_valuation_tension",
+                        row["name"],
+                        "medium",
+                        "当前低配但存在高估高预期张力，应先复核 PE 分位与 expected_return，再决定是否补足。",
+                        row["current_weight"],
+                        None,
+                    )
+                )
+                seen_targets.add(row["name"])
+                continue
             items.append(
                 _item(
                     "add_to_target",
@@ -155,6 +180,7 @@ def _append_cash_buffer(
     items: list[dict[str, Any]],
     concentration: dict[str, Any],
     opportunity_cost: dict[str, Any],
+    high_valuation_tension_names: set[str],
 ) -> None:
     cash_weight = concentration["cash_weight"]
     if cash_weight < MIN_CASH:
@@ -169,7 +195,25 @@ def _append_cash_buffer(
             )
         )
     elif cash_weight > MAX_CASH and opportunity_cost["ranked_holdings"]:
-        target = opportunity_cost["ranked_holdings"][0]["name"]
+        eligible = [
+            row
+            for row in opportunity_cost["ranked_holdings"]
+            if row["name"] not in high_valuation_tension_names
+        ]
+        if not eligible:
+            target = opportunity_cost["ranked_holdings"][0]
+            items.append(
+                _item(
+                    "review_valuation_tension",
+                    target["name"],
+                    "medium",
+                    "现金偏高但最高收益候选存在高估高预期张力，应先复核估值水位再部署现金。",
+                    target["weight"],
+                    None,
+                )
+            )
+            return
+        target = eligible[0]["name"]
         items.append(
             _item(
                 "deploy_cash_review",
@@ -225,13 +269,17 @@ def build_rebalance_suggestions(
     risk_flags: list[dict[str, Any]],
     opportunity_cost: dict[str, Any],
     allocation_drift: dict[str, Any] | None = None,
+    valuation_sanity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
     missing_input_names = set(opportunity_cost["missing_inputs"])
+    high_valuation_names = _high_valuation_tension_names(valuation_sanity)
     _append_below_cash(items, opportunity_cost)
-    _append_allocation_drift(items, allocation_drift, missing_input_names)
+    _append_allocation_drift(
+        items, allocation_drift, missing_input_names, high_valuation_names
+    )
     _append_concentration(items, rows, concentration)
-    _append_cash_buffer(items, concentration, opportunity_cost)
+    _append_cash_buffer(items, concentration, opportunity_cost, high_valuation_names)
     _append_missing_inputs(items, _weight_by_name(rows), opportunity_cost)
     _append_exposure_review(items, risk_flags)
     return {

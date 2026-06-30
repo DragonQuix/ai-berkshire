@@ -786,6 +786,77 @@ def test_rebalance_does_not_add_underweight_holding_without_expected_return() ->
     assert suggestions["primary_action"] == "补齐 阿里巴巴 预期收益输入"
 
 
+def test_rebalance_does_not_add_underweight_high_valuation_tension() -> None:
+    holdings = [
+        {
+            **SAMPLE_HOLDINGS[0],
+            "weight": 20,
+            "target_weight": 20,
+            "expected_return": 0.08,
+            "pe_percentile": 0.50,
+        },
+        {
+            **SAMPLE_HOLDINGS[1],
+            "weight": 10,
+            "target_weight": 20,
+            "min_weight": 15,
+            "expected_return": 0.25,
+            "pe_percentile": 0.92,
+        },
+        {**SAMPLE_HOLDINGS[2], "weight": 20, "target_weight": 20, "expected_return": 0.09},
+        {**SAMPLE_HOLDINGS[3], "weight": 20, "expected_return": 0.07},
+        {**SAMPLE_HOLDINGS[4], "weight": 30, "target_weight": 30},
+    ]
+
+    suggestions = pa.analyze_portfolio(holdings)["rebalance_suggestions"]
+
+    alibaba = next(item for item in suggestions["items"] if item["target"] == "阿里巴巴")
+    assert alibaba["action"] == "review_valuation_tension"
+    assert alibaba["suggested_weight"] is None
+    assert "高估高预期" in alibaba["reason"]
+    assert ("add_to_target", "阿里巴巴") not in {
+        (item["action"], item["target"]) for item in suggestions["items"]
+    }
+    assert suggestions["primary_action"] == "复核 阿里巴巴 估值水位张力"
+
+
+def test_rebalance_deploy_cash_skips_high_valuation_tension_candidate() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "weight": 15, "expected_return": 0.25, "pe_percentile": 0.92},
+        {**SAMPLE_HOLDINGS[1], "weight": 15, "expected_return": 0.12, "pe_percentile": 0.50},
+        {**SAMPLE_HOLDINGS[2], "weight": 15, "expected_return": 0.08},
+        {**SAMPLE_HOLDINGS[3], "weight": 10, "expected_return": 0.06},
+        {**SAMPLE_HOLDINGS[4], "weight": 45},
+    ]
+
+    suggestions = pa.analyze_portfolio(holdings)["rebalance_suggestions"]
+
+    deploy = next(item for item in suggestions["items"] if item["action"] == "deploy_cash_review")
+    assert deploy["target"] == "阿里巴巴"
+    assert all(
+        item["target"] != "腾讯" or item["action"] != "deploy_cash_review"
+        for item in suggestions["items"]
+    )
+    assert suggestions["primary_action"] == "研究现金用途：阿里巴巴"
+
+
+def test_rebalance_reviews_valuation_tension_when_all_cash_deploy_candidates_are_high_valuation() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "weight": 15, "expected_return": 0.25, "pe_percentile": 0.92},
+        {**SAMPLE_HOLDINGS[1], "weight": 15, "expected_return": 0.20, "pe_percentile": 0.88},
+        {**SAMPLE_HOLDINGS[2], "weight": 15, "expected_return": 0.18, "pe_percentile": 0.85},
+        {**SAMPLE_HOLDINGS[3], "weight": 10, "expected_return": 0.16, "pe_percentile": 0.82},
+        {**SAMPLE_HOLDINGS[4], "weight": 45},
+    ]
+
+    suggestions = pa.analyze_portfolio(holdings)["rebalance_suggestions"]
+
+    assert not any(item["action"] == "deploy_cash_review" for item in suggestions["items"])
+    review = next(item for item in suggestions["items"] if item["action"] == "review_valuation_tension")
+    assert review["target"] == "腾讯"
+    assert suggestions["primary_action"] == "复核 腾讯 估值水位张力"
+
+
 def test_render_markdown_outputs_portfolio_level_sections() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
@@ -929,6 +1000,34 @@ def test_render_markdown_localizes_empty_rebalance_row() -> None:
     assert "| 低 | 维持观察 | 组合 | - | - | 暂无机械调仓建议，维持观察。 |" in rebalance_section
     assert "| low |" not in rebalance_section
     assert "| hold |" not in rebalance_section
+
+
+def test_render_markdown_localizes_valuation_tension_rebalance_action() -> None:
+    holdings = [
+        {
+            **SAMPLE_HOLDINGS[0],
+            "weight": 20,
+            "target_weight": 20,
+            "expected_return": 0.08,
+        },
+        {
+            **SAMPLE_HOLDINGS[1],
+            "weight": 10,
+            "target_weight": 20,
+            "min_weight": 15,
+            "expected_return": 0.25,
+            "pe_percentile": 0.92,
+        },
+        {**SAMPLE_HOLDINGS[2], "weight": 20, "target_weight": 20, "expected_return": 0.09},
+        {**SAMPLE_HOLDINGS[3], "weight": 20, "expected_return": 0.07},
+        {**SAMPLE_HOLDINGS[4], "weight": 30, "target_weight": 30},
+    ]
+
+    markdown = pa.render_markdown(pa.analyze_portfolio(holdings))
+    rebalance_section = markdown.split("## 再平衡建议", 1)[1].split("\n## ", 1)[0]
+
+    assert "| 中 | 复核估值张力 | 阿里巴巴 | 10.0% | - |" in rebalance_section
+    assert "review_valuation_tension" not in rebalance_section
 
 
 def test_render_markdown_localizes_risk_levels() -> None:

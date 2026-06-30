@@ -48,6 +48,7 @@ def _rebalance_action_label(action: str) -> str:
         "deploy_cash_review": "研究现金用途",
         "fill_inputs": "补齐输入",
         "review_exposure": "复核暴露",
+        "review_valuation_tension": "复核估值张力",
         "hold": "维持观察",
     }
     return labels.get(action, action)

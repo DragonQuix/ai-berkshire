@@ -231,6 +231,7 @@ def analyze_portfolio(
         flags,
         opportunity_cost,
         allocation_drift,
+        valuation_sanity,
     )
     overall_health = _overall_health(
         concentration, flags, pairs, stress_tests, opportunity_cost, valuation_sanity
