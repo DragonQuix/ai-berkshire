@@ -133,7 +133,7 @@ def _append_concentration(
             "trim_to_limit",
             largest["name"],
             "high",
-            f"第一大持仓超过 {TOP1_LIMIT:.0%} 集中度上限。",
+            f"第一大持仓 {largest['weight']:.1%} 超过 {TOP1_LIMIT:.0%} 集中度上限。",
             largest["weight"],
             TOP1_LIMIT,
         )

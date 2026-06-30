@@ -520,9 +520,11 @@ def test_rebalance_suggestions_turn_diagnostics_into_actions() -> None:
     assert ("raise_cash", "现金") in actions
     assert ("fill_inputs", "台积电") in actions
     ali = next(item for item in suggestions["items"] if item["target"] == "阿里巴巴")
+    tencent = next(item for item in suggestions["items"] if item["action"] == "trim_to_limit")
     cash = next(item for item in suggestions["items"] if item["action"] == "raise_cash")
     assert ali["current_weight"] == pytest.approx(0.20)
     assert ali["suggested_weight"] == pytest.approx(0.0)
+    assert "第一大持仓 55.0% 超过 40%" in tencent["reason"]
     assert "现金 2.0% 低于 3%" in cash["reason"]
 
 

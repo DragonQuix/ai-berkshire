@@ -67,6 +67,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "优先级跟随该暴露的风险等级",
         "暴露达到",
         "现金缓冲理由必须展示当前现金占比",
+        "集中度理由必须展示第一大持仓占比",
         "review_exposure",
         "turnover_to_target",
         "turnover_to_band",
