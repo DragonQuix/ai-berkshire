@@ -94,6 +94,7 @@ def _build_row(raw: dict[str, Any], name: str) -> dict[str, Any]:
         "target_weight": _optional_ratio(raw.get("target_weight"), f"{name}.target_weight"),
         "min_weight": _optional_ratio(raw.get("min_weight"), f"{name}.min_weight"),
         "max_weight": _optional_ratio(raw.get("max_weight"), f"{name}.max_weight"),
+        "pe_percentile": _optional_ratio(raw.get("pe_percentile"), f"{name}.pe_percentile"),
     }
     _validate_allocation_constraints(row)
     return row

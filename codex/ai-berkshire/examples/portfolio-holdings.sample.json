@@ -10,7 +10,8 @@
       "currency": "HKD",
       "themes": ["中国互联网", "AI应用"],
       "expected_return": 0.12,
-      "conviction": 0.8
+      "conviction": 0.8,
+      "pe_percentile": 0.55
     },
     {
       "name": "阿里巴巴",
@@ -21,7 +22,8 @@
       "currency": "HKD",
       "themes": ["中国互联网", "云计算"],
       "expected_return": 0.08,
-      "conviction": 0.65
+      "conviction": 0.65,
+      "pe_percentile": 0.30
     },
     {
       "name": "台积电",
@@ -31,8 +33,9 @@
       "region": "台湾",
       "currency": "USD",
       "themes": ["AI算力", "半导体"],
-      "expected_return": 0.14,
-      "conviction": 0.75
+      "expected_return": 0.16,
+      "conviction": 0.75,
+      "pe_percentile": 0.88
     },
     {
       "name": "英伟达",
@@ -43,7 +46,8 @@
       "currency": "USD",
       "themes": ["AI算力", "半导体"],
       "expected_return": 0.10,
-      "conviction": 0.55
+      "conviction": 0.55,
+      "pe_percentile": 0.92
     },
     {
       "name": "现金",

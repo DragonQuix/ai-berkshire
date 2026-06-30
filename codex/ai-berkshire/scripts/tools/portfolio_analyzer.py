@@ -14,6 +14,7 @@ from portfolio_opportunity import DEFAULT_CASH_HURDLE, build_opportunity_cost
 from portfolio_rebalance import build_rebalance_suggestions
 from portfolio_render import render_markdown
 from portfolio_stress import build_stress_tests
+from portfolio_valuation_sanity import build_valuation_sanity, tension_label
 
 
 EXPOSURE_LIMIT = 0.50
@@ -140,14 +141,19 @@ def _overall_health(
     pairs: list[dict[str, Any]],
     stress_tests: list[dict[str, Any]],
     opportunity_cost: dict[str, Any],
+    valuation_sanity: dict[str, Any],
 ) -> dict[str, Any]:
     high_flags = [flag for flag in flags if flag["level"] == "high"]
     severe_stress = [item for item in stress_tests if item["risk_level"] == "severe"]
     below_cash = opportunity_cost["below_cash_hurdle"]
     missing_inputs = opportunity_cost["missing_inputs"]
+    tensions = valuation_sanity.get("tensions", [])
+    high_valuation_tensions = [
+        t for t in tensions if t["tension_type"] == "high_valuation_high_return"
+    ]
     if high_flags or severe_stress or concentration["assessment"] == "问题严重":
         rating = "问题严重"
-    elif below_cash or flags or pairs or concentration["assessment"] == "需要调整":
+    elif below_cash or flags or pairs or concentration["assessment"] == "需要调整" or high_valuation_tensions:
         rating = "需要调整"
     elif missing_inputs:
         rating = "数据不足"
@@ -157,6 +163,9 @@ def _overall_health(
     if below_cash:
         names = "、".join(item["name"] for item in below_cash)
         drivers.append(f"机会成本：{names} 低于现金门槛")
+    if high_valuation_tensions:
+        names = "、".join(t["name"] for t in high_valuation_tensions)
+        drivers.append(f"估值水位张力：{names} 预期收益与高 PE 分位矛盾")
     drivers.extend(f"单一暴露：{flag['name']} {flag['weight']:.1%}" for flag in flags[:3])
     drivers.extend(
         f"相关性风险：{' / '.join(pair['names'])} {pair['combined_weight']:.1%}"
@@ -178,6 +187,7 @@ def _build_executive_summary(
     overall_health: dict[str, Any],
     rebalance_suggestions: dict[str, Any],
     opportunity_cost: dict[str, Any],
+    valuation_sanity: dict[str, Any],
 ) -> dict[str, str]:
     missing_inputs = opportunity_cost["missing_inputs"]
     data_gap_summary = (
@@ -185,12 +195,20 @@ def _build_executive_summary(
         if missing_inputs
         else "未发现首屏级数据缺口。"
     )
+    tensions = valuation_sanity.get("tensions", [])
+    if tensions:
+        valuation_sanity_summary = "、".join(
+            f"{t['name']}（{tension_label(t['tension_type'])}）" for t in tensions
+        )
+    else:
+        valuation_sanity_summary = "未发现预期收益与估值水位的张力。"
     return {
         "health_rating": overall_health["rating"],
         "primary_risk": overall_health["primary_driver"],
         "primary_action": rebalance_suggestions["primary_action"],
         "action_method": rebalance_suggestions["method"],
         "data_gap_summary": data_gap_summary,
+        "valuation_sanity_summary": valuation_sanity_summary,
         "evidence_summary": overall_health["summary"],
     }
 
@@ -206,6 +224,7 @@ def analyze_portfolio(
     stress_tests = build_stress_tests(rows)
     allocation_drift = build_allocation_drift(rows)
     opportunity_cost = build_opportunity_cost(rows, cash_hurdle=cash_hurdle)
+    valuation_sanity = build_valuation_sanity(rows, opportunity_cost)
     rebalance = build_rebalance_suggestions(
         rows,
         concentration,
@@ -213,8 +232,12 @@ def analyze_portfolio(
         opportunity_cost,
         allocation_drift,
     )
-    overall_health = _overall_health(concentration, flags, pairs, stress_tests, opportunity_cost)
-    executive_summary = _build_executive_summary(overall_health, rebalance, opportunity_cost)
+    overall_health = _overall_health(
+        concentration, flags, pairs, stress_tests, opportunity_cost, valuation_sanity
+    )
+    executive_summary = _build_executive_summary(
+        overall_health, rebalance, opportunity_cost, valuation_sanity
+    )
     return {
         "_source": "portfolio_analyzer",
         "holdings": rows,
@@ -225,6 +248,7 @@ def analyze_portfolio(
         "stress_tests": stress_tests,
         "allocation_drift": allocation_drift,
         "opportunity_cost": opportunity_cost,
+        "valuation_sanity": valuation_sanity,
         "rebalance_suggestions": rebalance,
         "overall_health": overall_health,
         "executive_summary": executive_summary,

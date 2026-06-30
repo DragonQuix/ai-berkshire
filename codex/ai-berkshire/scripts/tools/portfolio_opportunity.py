@@ -65,6 +65,7 @@ def build_opportunity_cost(
                 "conviction": conviction,
                 "risk_adjusted_return": risk_adjusted,
                 "spread_to_cash": risk_adjusted - cash_hurdle,
+                "pe_percentile": row.get("pe_percentile"),
             }
         )
 

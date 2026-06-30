@@ -352,6 +352,7 @@ def test_executive_summary_carries_top_level_report_contract() -> None:
         "primary_action": analysis["rebalance_suggestions"]["primary_action"],
         "action_method": analysis["rebalance_suggestions"]["method"],
         "data_gap_summary": "未发现首屏级数据缺口。",
+        "valuation_sanity_summary": "未发现预期收益与估值水位的张力。",
         "evidence_summary": analysis["overall_health"]["summary"],
     }
 
@@ -386,6 +387,7 @@ def test_render_markdown_uses_executive_summary_for_top_section() -> None:
         "primary_action": "测试首要动作",
         "action_method": "测试口径",
         "data_gap_summary": "测试数据缺口",
+        "valuation_sanity_summary": "测试张力",
         "evidence_summary": "测试依据",
     }
 
@@ -396,6 +398,7 @@ def test_render_markdown_uses_executive_summary_for_top_section() -> None:
     assert "最应该做的一件事：测试首要动作" in summary_section
     assert "首要动作口径：测试口径" in summary_section
     assert "数据缺口：测试数据缺口" in summary_section
+    assert "估值水位张力：测试张力" in summary_section
     assert "健康度依据：测试依据" in summary_section
 
 
@@ -1337,6 +1340,133 @@ def test_sample_portfolio_file_runs_through_cli() -> None:
     assert "rebalance_suggestions" in payload
 
 
+def test_valuation_sanity_flags_high_valuation_high_return() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.25, "conviction": 0.8, "pe_percentile": 0.92},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    tensions = analysis["valuation_sanity"]["tensions"]
+    assert len(tensions) == 1
+    assert tensions[0]["name"] == "腾讯"
+    assert tensions[0]["tension_type"] == "high_valuation_high_return"
+    assert tensions[0]["pe_percentile"] == pytest.approx(0.92)
+    assert tensions[0]["expected_return"] == pytest.approx(0.25)
+    assert analysis["valuation_sanity"]["tension_count"] == 1
+
+
+def test_valuation_sanity_flags_low_valuation_low_return() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.02, "conviction": 0.8, "pe_percentile": 0.15},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    tensions = analysis["valuation_sanity"]["tensions"]
+    assert len(tensions) == 1
+    assert tensions[0]["tension_type"] == "low_valuation_low_return"
+    assert tensions[0]["expected_return"] == pytest.approx(0.02)
+    assert tensions[0]["pe_percentile"] == pytest.approx(0.15)
+
+
+def test_valuation_sanity_skips_when_pe_percentile_missing() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.25, "conviction": 0.8},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    assert analysis["valuation_sanity"]["tensions"] == []
+    assert analysis["valuation_sanity"]["tension_count"] == 0
+
+
+def test_valuation_sanity_skips_when_expected_return_missing() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "pe_percentile": 0.92},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    assert analysis["valuation_sanity"]["tensions"] == []
+
+
+def test_valuation_sanity_no_tension_when_consistent() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.10, "conviction": 0.8, "pe_percentile": 0.5},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    assert analysis["valuation_sanity"]["tensions"] == []
+
+
+def test_overall_health_downgrades_on_valuation_tension() -> None:
+    holdings = [
+        {"name": "A", "code": "A", "weight": 15, "industry": "X", "region": "Y", "currency": "USD", "expected_return": 0.25, "conviction": 0.8, "pe_percentile": 0.92},
+        {"name": "B", "code": "B", "weight": 15, "industry": "P", "region": "Q", "currency": "EUR", "expected_return": 0.10, "conviction": 0.8, "pe_percentile": 0.5},
+        {"name": "C", "code": "C", "weight": 15, "industry": "M", "region": "N", "currency": "JPY", "expected_return": 0.10, "conviction": 0.8},
+        {"name": "D", "code": "D", "weight": 15, "industry": "R", "region": "S", "currency": "GBP", "expected_return": 0.10, "conviction": 0.8},
+        {"name": "现金", "weight": 40, "asset_type": "cash", "currency": "CNY"},
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    assert analysis["overall_health"]["rating"] in {"需要调整", "问题严重"}
+    assert any("估值水位张力" in d for d in analysis["overall_health"]["drivers"])
+
+
+def test_executive_summary_surfaces_valuation_tension() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.25, "conviction": 0.8, "pe_percentile": 0.92, "weight": 5},
+        {**SAMPLE_HOLDINGS[2], "expected_return": 0.10, "conviction": 0.8, "pe_percentile": 0.5, "weight": 10},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    summary = analysis["executive_summary"]["valuation_sanity_summary"]
+    assert "腾讯" in summary
+    assert "高估高预期" in summary
+
+
+def test_render_markdown_includes_valuation_sanity_section() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.25, "conviction": 0.8, "pe_percentile": 0.92, "weight": 5},
+        {**SAMPLE_HOLDINGS[2], "expected_return": 0.10, "conviction": 0.8, "pe_percentile": 0.5, "weight": 10},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+    markdown = pa.render_markdown(analysis)
+
+    assert "## 估值水位张力" in markdown
+    assert "高估高预期" in markdown
+    assert "high_valuation_high_return" not in markdown
+
+
+def test_pe_percentile_optional_ratio_validation() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8, "pe_percentile": 150},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    with pytest.raises(ValueError, match="pe_percentile"):
+        pa.analyze_portfolio(holdings)
+
+
+def test_sample_holdings_run_with_pe_percentile() -> None:
+    raw = json.loads(SAMPLE_FILE.read_text(encoding="utf-8"))
+    analysis = pa.analyze_portfolio(raw["holdings"])
+    assert "valuation_sanity" in analysis
+    assert "tensions" in analysis["valuation_sanity"]
+
+
 def test_codex_tool_copy_stays_in_sync() -> None:
     for filename in [
         "portfolio_allocation.py",
@@ -1346,6 +1476,7 @@ def test_codex_tool_copy_stays_in_sync() -> None:
         "portfolio_rebalance.py",
         "portfolio_render.py",
         "portfolio_stress.py",
+        "portfolio_valuation_sanity.py",
     ]:
         root_tool = TOOLS_DIR / filename
         codex_tool = REPO / "codex" / "ai-berkshire" / "scripts" / "tools" / filename

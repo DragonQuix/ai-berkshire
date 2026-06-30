@@ -151,6 +151,30 @@ def _append_opportunity(lines: list[str], analysis: dict[str, Any]) -> None:
         lines.append(f"\n数据不足：缺少预期收益输入：{names}")
 
 
+def _tension_type_label(tension_type: str) -> str:
+    labels = {
+        "high_valuation_high_return": "高估高预期",
+        "low_valuation_low_return": "低估低预期",
+    }
+    return labels.get(tension_type, tension_type)
+
+
+def _append_valuation_sanity(lines: list[str], analysis: dict[str, Any]) -> None:
+    sanity = analysis.get("valuation_sanity", {})
+    tensions = sanity.get("tensions", [])
+    lines.extend(["", "## 估值水位张力", ""])
+    if not tensions:
+        lines.append("未发现预期收益与估值水位的张力。")
+        return
+    lines.extend(["| 标的 | PE 分位 | 预期年化 | 张力类型 | 说明 |", "|---|---:|---:|---|---|"])
+    for item in tensions:
+        lines.append(
+            f"| {item['name']} | {_pct(item['pe_percentile'])} | "
+            f"{_pct(item['expected_return'])} | {_tension_type_label(item['tension_type'])} | "
+            f"{item['message']} |"
+        )
+
+
 def _append_allocation_drift(lines: list[str], analysis: dict[str, Any]) -> None:
     drift = analysis["allocation_drift"]
     lines.extend(
@@ -238,6 +262,7 @@ def render_markdown(analysis: dict[str, Any]) -> str:
         f"最应该做的一件事：{summary['primary_action']}",
         f"首要动作口径：{summary['action_method']}",
         f"数据缺口：{summary['data_gap_summary']}",
+        f"估值水位张力：{summary['valuation_sanity_summary']}",
         f"健康度依据：{summary['evidence_summary']}",
         "",
         "## 组合集中度",
@@ -260,6 +285,7 @@ def render_markdown(analysis: dict[str, Any]) -> str:
     _append_correlation(lines, analysis)
     _append_stress(lines, analysis)
     _append_opportunity(lines, analysis)
+    _append_valuation_sanity(lines, analysis)
     _append_allocation_drift(lines, analysis)
     _append_rebalance(lines, analysis)
     _append_flags(lines, analysis)
