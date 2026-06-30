@@ -65,6 +65,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "复核暴露",
         "风险等级和暴露权重",
         "优先级跟随该暴露的风险等级",
+        "暴露达到",
         "review_exposure",
         "turnover_to_target",
         "turnover_to_band",

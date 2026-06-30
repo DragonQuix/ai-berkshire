@@ -282,12 +282,13 @@ def _append_exposure_review(items: list[dict[str, Any]], risk_flags: list[dict[s
         risk_flags,
         key=lambda item: (level_order.get(item["level"], 9), -item["weight"], item["name"]),
     )
+    reason = flag.get("message", "存在单一暴露偏高")
     items.append(
         _item(
             "review_exposure",
             flag["name"],
             flag["level"] if flag["level"] in {"high", "medium", "low"} else "low",
-            "存在单一暴露偏高，需结合个股论文判断是否降权。",
+            f"{reason}，需结合个股论文判断是否降权。",
             flag["weight"],
             None,
         )
