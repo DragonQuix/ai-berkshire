@@ -62,6 +62,8 @@ REPORT_OUTPUT_CONTRACTS = {
         "风险等级使用中文",
         "相关性驱动因素使用中文",
         "再平衡表的优先级列和动作列使用中文",
+        "复核暴露",
+        "review_exposure",
         "turnover_to_target",
         "turnover_to_band",
         "opportunity_cost",

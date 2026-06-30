@@ -313,5 +313,5 @@ def build_rebalance_suggestions(
     return {
         "primary_action": _primary_action(items),
         "items": items,
-        "method": "基于机会成本、目标仓位偏离、集中度、估值水位张力和现金缓冲的机械建议；不替代个股研究。",
+        "method": "基于机会成本、目标仓位偏离、集中度、估值水位张力、现金缓冲和单一暴露的机械建议；不替代个股研究。",
     }

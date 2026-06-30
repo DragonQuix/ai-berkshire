@@ -896,6 +896,7 @@ def test_rebalance_primary_action_names_exposure_review() -> None:
     review = next(item for item in suggestions["items"] if item["action"] == "review_exposure")
     assert review["target"] == "互联网"
     assert suggestions["primary_action"] == "复核 互联网 单一暴露"
+    assert "单一暴露" in suggestions["method"]
 
 
 def test_render_markdown_outputs_portfolio_level_sections() -> None:
