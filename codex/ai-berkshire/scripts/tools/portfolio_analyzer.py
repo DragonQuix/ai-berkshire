@@ -139,16 +139,21 @@ def _overall_health(
     flags: list[dict[str, Any]],
     pairs: list[dict[str, Any]],
     stress_tests: list[dict[str, Any]],
+    opportunity_cost: dict[str, Any],
 ) -> dict[str, Any]:
     high_flags = [flag for flag in flags if flag["level"] == "high"]
     severe_stress = [item for item in stress_tests if item["risk_level"] == "severe"]
+    below_cash = opportunity_cost["below_cash_hurdle"]
     if high_flags or severe_stress or concentration["assessment"] == "问题严重":
         rating = "问题严重"
-    elif flags or pairs or concentration["assessment"] == "需要调整":
+    elif below_cash or flags or pairs or concentration["assessment"] == "需要调整":
         rating = "需要调整"
     else:
         rating = concentration["assessment"]
     drivers = [f"严重压力测试：{item['assumption']}" for item in severe_stress]
+    if below_cash:
+        names = "、".join(item["name"] for item in below_cash)
+        drivers.append(f"机会成本：{names} 低于现金门槛")
     drivers.extend(f"单一暴露：{flag['name']} {flag['weight']:.1%}" for flag in flags[:3])
     drivers.extend(
         f"相关性风险：{' / '.join(pair['names'])} {pair['combined_weight']:.1%}"
@@ -202,7 +207,7 @@ def analyze_portfolio(
         opportunity_cost,
         allocation_drift,
     )
-    overall_health = _overall_health(concentration, flags, pairs, stress_tests)
+    overall_health = _overall_health(concentration, flags, pairs, stress_tests, opportunity_cost)
     executive_summary = _build_executive_summary(overall_health, rebalance, opportunity_cost)
     return {
         "_source": "portfolio_analyzer",

@@ -216,6 +216,59 @@ def test_overall_health_explains_exposure_and_correlation_drivers() -> None:
     assert "相关性风险：腾讯 / 阿里巴巴 55.0%" in drivers
 
 
+def test_overall_health_reflects_opportunity_cost_below_cash() -> None:
+    holdings = [
+        {
+            "name": "腾讯",
+            "weight": 20,
+            "industry": "互联网",
+            "region": "中国",
+            "currency": "HKD",
+            "themes": ["平台经济"],
+            "expected_return": 0.08,
+            "conviction": 1.0,
+        },
+        {
+            "name": "台积电",
+            "weight": 20,
+            "industry": "半导体",
+            "region": "台湾",
+            "currency": "TWD",
+            "themes": ["晶圆制造"],
+            "expected_return": 0.09,
+            "conviction": 1.0,
+        },
+        {
+            "name": "Costco",
+            "weight": 20,
+            "industry": "零售",
+            "region": "美国",
+            "currency": "USD",
+            "themes": ["会员制"],
+            "expected_return": 0.03,
+            "conviction": 1.0,
+        },
+        {
+            "name": "ASML",
+            "weight": 20,
+            "industry": "设备",
+            "region": "荷兰",
+            "currency": "EUR",
+            "themes": ["光刻"],
+            "expected_return": 0.07,
+            "conviction": 1.0,
+        },
+        {"name": "现金", "weight": 20, "asset_type": "cash", "region": "现金", "currency": "CNY"},
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    assert analysis["concentration"]["assessment"] == "良好"
+    assert analysis["overall_health"]["rating"] == "需要调整"
+    assert analysis["overall_health"]["primary_driver"] == "机会成本：Costco 低于现金门槛"
+    assert "机会成本：Costco 低于现金门槛" in analysis["overall_health"]["drivers"]
+
+
 def test_render_markdown_answers_top_level_primary_action() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
