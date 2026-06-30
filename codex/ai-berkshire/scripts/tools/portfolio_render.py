@@ -71,7 +71,16 @@ def _append_opportunity(lines: list[str], analysis: dict[str, Any]) -> None:
 
 def _append_allocation_drift(lines: list[str], analysis: dict[str, Any]) -> None:
     drift = analysis["allocation_drift"]
-    lines.extend(["", "## 目标仓位偏离", ""])
+    lines.extend(
+        [
+            "",
+            "## 目标仓位偏离",
+            "",
+            f"理论换手率：{_pct(drift['turnover_to_target'])}",
+            f"目标买入合计：{_pct(drift['buy_to_target'])}，目标卖出合计：{_pct(drift['sell_to_target'])}",
+            "",
+        ]
+    )
     if not drift["has_targets"]:
         lines.append("未提供 `target_weight`、`min_weight` 或 `max_weight`，跳过目标仓位偏离诊断。")
         return

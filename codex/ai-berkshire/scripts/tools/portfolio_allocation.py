@@ -35,12 +35,22 @@ def _build_item(row: dict[str, Any], tolerance: float) -> dict[str, Any]:
     }
 
 
+def _sum_positive_drifts(items: list[dict[str, Any]]) -> float:
+    return sum(max(item["drift_to_target"] or 0.0, 0.0) for item in items)
+
+
+def _sum_negative_drifts(items: list[dict[str, Any]]) -> float:
+    return sum(abs(min(item["drift_to_target"] or 0.0, 0.0)) for item in items)
+
+
 def build_allocation_drift(
     rows: list[dict[str, Any]],
     tolerance: float = 0.03,
 ) -> dict[str, Any]:
     items = [_build_item(row, tolerance) for row in rows if _has_targets(row)]
     attention = [item for item in items if item["status"] != "within_band"]
+    sell_to_target = _sum_positive_drifts(items)
+    buy_to_target = _sum_negative_drifts(items)
     primary = None
     if attention:
         primary = max(
@@ -53,4 +63,8 @@ def build_allocation_drift(
         "items": items,
         "needs_attention": attention,
         "primary_drift": primary,
+        "sell_to_target": sell_to_target,
+        "buy_to_target": buy_to_target,
+        "turnover_to_target": max(sell_to_target, buy_to_target),
+        "unmatched_cash_delta": sell_to_target - buy_to_target,
     }

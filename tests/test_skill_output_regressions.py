@@ -54,6 +54,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "python tools/portfolio_analyzer.py analyze",
         "--cash-hurdle",
         "allocation_drift",
+        "turnover_to_target",
         "opportunity_cost",
         "rebalance_suggestions",
         "stress_tests",
