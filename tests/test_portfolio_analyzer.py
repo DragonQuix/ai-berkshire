@@ -155,6 +155,16 @@ def test_zero_conviction_is_not_treated_as_default_full_conviction() -> None:
     assert [row["name"] for row in analysis["opportunity_cost"]["below_cash_hurdle"]] == ["腾讯"]
 
 
+def test_conviction_ratio_cannot_exceed_full_confidence() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 150},
+        *SAMPLE_HOLDINGS[1:],
+    ]
+
+    with pytest.raises(ValueError, match="腾讯.conviction 不能超过 100%"):
+        pa.analyze_portfolio(holdings)
+
+
 def test_analyze_portfolio_allows_custom_cash_hurdle() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.05, "conviction": 1.0},
