@@ -91,6 +91,8 @@
 > 2026-06-30 继续推进第九切片：`allocation_drift` 新增目标仓位覆盖度诊断，输出 `target_weight_sum`、`target_gap_to_full_allocation`、`targeted_current_weight` 与 `untargeted_current_weight`，用于识别目标仓位是否只覆盖部分组合或目标权重合计偏离 100%；Markdown “目标仓位偏离”章节同步展示目标仓位合计、未分配目标和已/未设目标持仓当前占比，`/portfolio-review` 已要求引用 `allocation_drift.target_weight_sum`。
 >
 > 2026-06-30 继续推进第十切片：`rebalance_suggestions` 接入 `allocation_drift`，在机会成本之后、集中度之前优先输出目标仓位/上下限偏离对应的机械加减仓动作（`trim_to_target` / `add_to_target`），避免“诊断发现目标偏离但调仓建议只看集中度”的断层；`/portfolio-review` 已同步要求再平衡建议引用目标仓位偏离。
+>
+> 2026-06-30 继续推进第十一切片：`allocation_drift` 新增回到约束区间的最小调仓测算，逐项输出 `adjustment_to_band`，聚合输出 `buy_to_band`、`sell_to_band`、`turnover_to_band` 与 `unmatched_band_cash_delta`；该口径优先用于只有 `min_weight` / `max_weight`、没有 `target_weight` 的持仓，保留既有 `turnover_to_target` 精确回到目标仓位语义。Markdown 报告和 `/portfolio-review` 已要求展示 `allocation_drift.turnover_to_band`。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析

@@ -210,6 +210,28 @@ def test_allocation_drift_flags_target_weight_deviations() -> None:
     assert drift["untargeted_current_weight"] == pytest.approx(0.08)
 
 
+def test_allocation_drift_estimates_minimum_band_rebalance_without_targets() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "weight": 45, "max_weight": 40},
+        {**SAMPLE_HOLDINGS[1], "weight": 10, "min_weight": 15},
+        {**SAMPLE_HOLDINGS[2], "weight": 20, "min_weight": 15, "max_weight": 25},
+        {**SAMPLE_HOLDINGS[3], "weight": 5},
+        {**SAMPLE_HOLDINGS[4], "weight": 20},
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    drift = analysis["allocation_drift"]
+    rows = {row["name"]: row for row in drift["items"]}
+    assert rows["腾讯"]["adjustment_to_band"] == pytest.approx(-0.05)
+    assert rows["阿里巴巴"]["adjustment_to_band"] == pytest.approx(0.05)
+    assert rows["台积电"]["adjustment_to_band"] == pytest.approx(0.0)
+    assert drift["sell_to_band"] == pytest.approx(0.05)
+    assert drift["buy_to_band"] == pytest.approx(0.05)
+    assert drift["turnover_to_band"] == pytest.approx(0.05)
+    assert drift["unmatched_band_cash_delta"] == pytest.approx(0.0)
+
+
 def test_rebalance_suggestions_prioritize_allocation_drift_actions() -> None:
     holdings = [
         {
@@ -266,6 +288,7 @@ def test_render_markdown_outputs_portfolio_level_sections() -> None:
     assert "## 目标仓位偏离" in markdown
     assert "目标仓位合计" in markdown
     assert "理论换手率" in markdown
+    assert "约束区间最小换手率" in markdown
     assert "## 再平衡建议" in markdown
     assert "互联网" in markdown
 

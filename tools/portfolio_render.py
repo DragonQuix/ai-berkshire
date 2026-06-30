@@ -80,6 +80,8 @@ def _append_allocation_drift(lines: list[str], analysis: dict[str, Any]) -> None
             f"已设目标持仓当前占比：{_pct(drift['targeted_current_weight'])}，未设目标持仓当前占比：{_pct(drift['untargeted_current_weight'])}",
             f"理论换手率：{_pct(drift['turnover_to_target'])}",
             f"目标买入合计：{_pct(drift['buy_to_target'])}，目标卖出合计：{_pct(drift['sell_to_target'])}",
+            f"约束区间最小换手率：{_pct(drift['turnover_to_band'])}",
+            f"回到约束区间买入合计：{_pct(drift['buy_to_band'])}，卖出合计：{_pct(drift['sell_to_band'])}",
             "",
         ]
     )
@@ -90,8 +92,8 @@ def _append_allocation_drift(lines: list[str], analysis: dict[str, Any]) -> None
         [
             f"容差：{_pct(drift['tolerance'])}",
             "",
-            "| 标的 | 当前占比 | 目标占比 | 下限 | 上限 | 偏离 | 状态 |",
-            "|---|---:|---:|---:|---:|---:|---|",
+            "| 标的 | 当前占比 | 目标占比 | 下限 | 上限 | 偏离 | 回到约束区间调整 | 状态 |",
+            "|---|---:|---:|---:|---:|---:|---:|---|",
         ]
     )
     for item in drift["items"]:
@@ -101,7 +103,8 @@ def _append_allocation_drift(lines: list[str], analysis: dict[str, Any]) -> None
         drift_value = "-" if item["drift_to_target"] is None else _pct(item["drift_to_target"])
         lines.append(
             f"| {item['name']} | {_pct(item['current_weight'])} | {target} | "
-            f"{min_weight} | {max_weight} | {drift_value} | {item['status']} |"
+            f"{min_weight} | {max_weight} | {drift_value} | "
+            f"{_pct(item['adjustment_to_band'])} | {item['status']} |"
         )
 
 

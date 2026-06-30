@@ -56,6 +56,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "allocation_drift",
         "target_weight_sum",
         "turnover_to_target",
+        "turnover_to_band",
         "opportunity_cost",
         "rebalance_suggestions",
         "stress_tests",
