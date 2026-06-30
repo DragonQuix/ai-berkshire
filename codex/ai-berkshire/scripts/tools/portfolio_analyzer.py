@@ -235,7 +235,13 @@ def analyze_portfolio(
     stress_tests = build_stress_tests(rows)
     allocation_drift = build_allocation_drift(rows)
     opportunity_cost = build_opportunity_cost(rows, cash_hurdle=cash_hurdle)
-    rebalance = build_rebalance_suggestions(rows, concentration, flags, opportunity_cost)
+    rebalance = build_rebalance_suggestions(
+        rows,
+        concentration,
+        flags,
+        opportunity_cost,
+        allocation_drift,
+    )
     return {
         "_source": "portfolio_analyzer",
         "holdings": rows,

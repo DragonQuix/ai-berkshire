@@ -50,6 +50,8 @@ def _primary_action(items: list[dict[str, Any]]) -> str:
     target = first["target"]
     labels = {
         "reduce_or_exit": f"减仓/清仓 {target}",
+        "trim_to_target": f"下调 {target} 至目标仓位/上限",
+        "add_to_target": f"提高 {target} 至目标仓位/下限",
         "trim_to_limit": f"下调 {target} 至集中度上限",
         "raise_cash": "提高现金仓位",
         "deploy_cash_review": f"研究现金用途：{target}",
@@ -98,6 +100,52 @@ def _append_concentration(
             TOP1_LIMIT,
         )
     )
+
+
+def _target_or_limit(item: dict[str, Any], status: str) -> float | None:
+    target = item.get("target_weight")
+    min_weight = item.get("min_weight")
+    max_weight = item.get("max_weight")
+    if status == "overweight":
+        candidates = [value for value in (target, max_weight) if value is not None]
+        return min(candidates) if candidates else None
+    candidates = [value for value in (target, min_weight) if value is not None]
+    return max(candidates) if candidates else None
+
+
+def _append_allocation_drift(
+    items: list[dict[str, Any]],
+    allocation_drift: dict[str, Any] | None,
+) -> None:
+    if not allocation_drift:
+        return
+    seen_targets = {item["target"] for item in items}
+    for row in allocation_drift["needs_attention"]:
+        if row["name"] in seen_targets:
+            continue
+        if row["status"] == "overweight":
+            items.append(
+                _item(
+                    "trim_to_target",
+                    row["name"],
+                    "high",
+                    "当前仓位高于目标仓位或上限，应先回到目标约束内。",
+                    row["current_weight"],
+                    _target_or_limit(row, "overweight"),
+                )
+            )
+        elif row["status"] == "underweight":
+            items.append(
+                _item(
+                    "add_to_target",
+                    row["name"],
+                    "medium",
+                    "当前仓位低于目标仓位或下限，若个股论文仍成立，可优先补足。",
+                    row["current_weight"],
+                    _target_or_limit(row, "underweight"),
+                )
+            )
+        seen_targets.add(row["name"])
 
 
 def _append_cash_buffer(
@@ -170,9 +218,11 @@ def build_rebalance_suggestions(
     concentration: dict[str, Any],
     risk_flags: list[dict[str, Any]],
     opportunity_cost: dict[str, Any],
+    allocation_drift: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
     _append_below_cash(items, opportunity_cost)
+    _append_allocation_drift(items, allocation_drift)
     _append_concentration(items, rows, concentration)
     _append_cash_buffer(items, concentration, opportunity_cost)
     _append_missing_inputs(items, _weight_by_name(rows), opportunity_cost)
@@ -180,5 +230,5 @@ def build_rebalance_suggestions(
     return {
         "primary_action": _primary_action(items),
         "items": items,
-        "method": "基于机会成本、集中度和现金缓冲的机械建议；不替代个股研究。",
+        "method": "基于机会成本、目标仓位偏离、集中度和现金缓冲的机械建议；不替代个股研究。",
     }

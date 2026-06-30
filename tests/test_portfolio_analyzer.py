@@ -210,6 +210,44 @@ def test_allocation_drift_flags_target_weight_deviations() -> None:
     assert drift["untargeted_current_weight"] == pytest.approx(0.08)
 
 
+def test_rebalance_suggestions_prioritize_allocation_drift_actions() -> None:
+    holdings = [
+        {
+            **SAMPLE_HOLDINGS[0],
+            "weight": 45,
+            "target_weight": 30,
+            "max_weight": 35,
+            "expected_return": 0.12,
+            "conviction": 0.9,
+        },
+        {
+            **SAMPLE_HOLDINGS[1],
+            "weight": 10,
+            "target_weight": 20,
+            "min_weight": 15,
+            "expected_return": 0.10,
+            "conviction": 0.9,
+        },
+        {**SAMPLE_HOLDINGS[2], "weight": 20, "target_weight": 20},
+        {**SAMPLE_HOLDINGS[3], "weight": 5},
+        {**SAMPLE_HOLDINGS[4], "weight": 20, "target_weight": 20},
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    suggestions = analysis["rebalance_suggestions"]
+    assert suggestions["primary_action"] == "下调 腾讯 至目标仓位/上限"
+    actions = {(item["action"], item["target"]) for item in suggestions["items"]}
+    assert ("trim_to_target", "腾讯") in actions
+    assert ("add_to_target", "阿里巴巴") in actions
+    tencent = next(item for item in suggestions["items"] if item["target"] == "腾讯")
+    alibaba = next(item for item in suggestions["items"] if item["target"] == "阿里巴巴")
+    assert tencent["current_weight"] == pytest.approx(0.45)
+    assert tencent["suggested_weight"] == pytest.approx(0.30)
+    assert alibaba["current_weight"] == pytest.approx(0.10)
+    assert alibaba["suggested_weight"] == pytest.approx(0.20)
+
+
 def test_render_markdown_outputs_portfolio_level_sections() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
