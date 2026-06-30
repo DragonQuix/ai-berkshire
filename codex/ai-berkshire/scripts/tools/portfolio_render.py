@@ -20,6 +20,8 @@ def _target_status_label(status: str) -> str:
 
 def _target_gap_text(drift: dict[str, Any]) -> str:
     gap = drift["target_gap_to_full_allocation"]
+    if drift["target_allocation_status"] == "not_configured":
+        return "目标差额：未配置"
     if drift["target_allocation_status"] == "over_allocated":
         return f"目标超配：{_pct(abs(gap))}"
     if drift["target_allocation_status"] == "fully_allocated":

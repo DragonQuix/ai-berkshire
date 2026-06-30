@@ -57,6 +57,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "target_weight_sum",
         "target_allocation_status",
         "目标超配",
+        "目标差额：未配置",
         "turnover_to_target",
         "turnover_to_band",
         "opportunity_cost",

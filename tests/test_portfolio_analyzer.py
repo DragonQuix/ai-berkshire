@@ -425,6 +425,14 @@ def test_render_markdown_labels_over_allocated_target_gap_as_positive_excess() -
     assert "未分配目标：-10.0%" not in markdown
 
 
+def test_render_markdown_labels_unconfigured_targets_without_fake_gap() -> None:
+    markdown = pa.render_markdown(pa.analyze_portfolio(SAMPLE_HOLDINGS))
+
+    assert "目标覆盖状态：未配置" in markdown
+    assert "目标差额：未配置" in markdown
+    assert "未分配目标：100.0%" not in markdown
+
+
 def test_cli_outputs_json_from_holdings_file(tmp_path: Path) -> None:
     input_path = tmp_path / "holdings.json"
     input_path.write_text(json.dumps({"holdings": SAMPLE_HOLDINGS}, ensure_ascii=False), encoding="utf-8")

@@ -119,6 +119,8 @@
 > 2026-06-30 继续推进第二十三切片：`allocation_drift` 新增 `target_allocation_status`，按目标仓位合计识别 `under_allocated` / `fully_allocated` / `over_allocated` / `not_configured`，避免报告只展示 `target_gap_to_full_allocation` 负数而缺少语义；Markdown “目标仓位偏离”章节同步展示中文目标覆盖状态，`/portfolio-review` 已要求引用该字段。
 >
 > 2026-06-30 继续推进第二十四切片：Markdown “目标仓位偏离”章节对 `over_allocated` 不再显示负的“未分配目标”，改为用正数展示“目标超配”，`under_allocated` 继续展示“未分配目标”；`/portfolio-review` 已同步固化该展示口径，防止报告使用负数缺口表达目标超配。
+>
+> 2026-06-30 继续推进第二十五切片：Markdown “目标仓位偏离”章节对 `not_configured` 不再显示“未分配目标：100.0%”，改为显示“目标差额：未配置”，避免把没有设置目标仓位误读成仍有 100% 目标待分配；`/portfolio-review` 已同步固化该展示口径。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
