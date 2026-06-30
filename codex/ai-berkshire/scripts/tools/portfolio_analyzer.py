@@ -185,7 +185,12 @@ def analyze_portfolio(
     }
 
 def _load_holdings(path: Path) -> list[dict[str, Any]]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        raw_text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        reason = exc.strerror or str(exc)
+        raise ValueError(f"无法读取输入文件 {path}: {reason}") from exc
+    payload = json.loads(raw_text)
     if isinstance(payload, list):
         return payload
     if isinstance(payload, dict) and isinstance(payload.get("holdings"), list):

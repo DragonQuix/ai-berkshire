@@ -105,6 +105,8 @@
 > 2026-06-30 继续推进第十六切片：`portfolio_opportunity` 拆分 `expected_return` 与 `conviction` 的比例解析，保留预期收益超过 100% 的表达能力，但将 `conviction` 严格限制在 0-100%；输入 `conviction=150` 会在机会成本计算前直接打回，避免风险调整后收益被不可能的置信度放大。`/portfolio-review` 已同步说明 `conviction` 不得超过 100%，并用回归测试锁定 root/Codex 工具副本同步。
 >
 > 2026-06-30 继续推进第十七切片：`portfolio_analyzer analyze` 对输入校验类 `ValueError` 改为输出简洁 `错误: ...` 并返回 exit 2，不再把 Python traceback 暴露给报告使用者；无效持仓字段、JSON 结构错误和 `--cash-hurdle` 越界都走同一 CLI 错误出口。新增回归测试锁定无效 `conviction` 不出现 `Traceback`，并继续同步 Codex 工具副本。
+>
+> 2026-06-30 继续推进第十八切片：`portfolio_analyzer analyze` 对输入文件读取失败追加友好错误，缺失文件或无法读取时输出 `错误: 无法读取输入文件 ...` 并返回 exit 2，不再暴露 Python traceback；新增回归测试锁定缺失文件路径、无 traceback 和 root/Codex 工具副本同步。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
