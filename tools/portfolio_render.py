@@ -234,6 +234,7 @@ def render_markdown(analysis: dict[str, Any]) -> str:
         "",
         f"整体健康度：**{analysis['overall_health']['rating']}**",
         f"当前最大风险：{analysis['overall_health']['primary_driver']}",
+        f"最应该做的一件事：{analysis['rebalance_suggestions']['primary_action']}",
         f"健康度依据：{analysis['overall_health']['summary']}",
         "",
         "## 组合集中度",

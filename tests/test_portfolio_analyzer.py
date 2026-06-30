@@ -216,6 +216,21 @@ def test_overall_health_explains_exposure_and_correlation_drivers() -> None:
     assert "相关性风险：腾讯 / 阿里巴巴 55.0%" in drivers
 
 
+def test_render_markdown_answers_top_level_primary_action() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
+        {**SAMPLE_HOLDINGS[1], "expected_return": 0.03, "conviction": 0.7},
+        {**SAMPLE_HOLDINGS[2], "expected_return": 0.10, "conviction": 0.8},
+        {**SAMPLE_HOLDINGS[3], "expected_return": 0.08, "conviction": 0.7},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    markdown = pa.render_markdown(pa.analyze_portfolio(holdings))
+    summary_section = markdown.split("## 组合集中度", 1)[0]
+
+    assert "最应该做的一件事：减仓/清仓 阿里巴巴" in summary_section
+
+
 def test_opportunity_cost_ranks_holdings_against_cash_hurdle() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},

@@ -151,6 +151,8 @@
 > 2026-06-30 继续推进第三十九切片：`overall_health` 新增 `drivers` 与动态 `summary`，把整体健康度评级的触发原因显式输出，覆盖严重压力测试、单一暴露、相关性风险和集中度判断；Markdown 顶部同步展示“健康度依据”，避免读者只看到评级而看不到为什么被降级。`/portfolio-review` 已同步要求引用该依据，Codex 工具副本同步，并用回归测试锁定 JSON 与 Markdown 两层输出。
 >
 > 2026-06-30 继续推进第四十切片：`overall_health` 新增 `primary_driver`，把 `drivers` 中优先级最高的风险提炼为“当前最大风险”；Markdown 顶部同步展示该字段，直接对齐 `/portfolio-review` 结论必须回答“当前最大风险是什么”的准出要求。Codex 工具副本同步，并用回归测试锁定 JSON 与 Markdown 输出。
+>
+> 2026-06-30 继续推进第四十一切片：Markdown 顶部新增“最应该做的一件事”，直接引用 `rebalance_suggestions.primary_action`，让组合报告开头同时回答健康度、当前最大风险和首要动作三项结论问题。`/portfolio-review` 已同步该准出要求，Codex 工具副本同步，并用回归测试锁定。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
