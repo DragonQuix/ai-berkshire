@@ -116,6 +116,50 @@ def test_stress_tests_estimate_scenario_level_drawdowns() -> None:
     assert ai_cycle["risk_level"] == "high"
 
 
+def test_overall_health_reflects_severe_stress_test() -> None:
+    holdings = [
+        {
+            "name": "腾讯",
+            "weight": 25,
+            "industry": "互联网",
+            "region": "中国",
+            "currency": "HKD",
+            "themes": ["平台经济"],
+        },
+        {
+            "name": "台积电",
+            "weight": 25,
+            "industry": "半导体",
+            "region": "台湾",
+            "currency": "TWD",
+            "themes": ["晶圆制造"],
+        },
+        {
+            "name": "Salesforce",
+            "weight": 25,
+            "industry": "软件",
+            "region": "美国",
+            "currency": "USD",
+            "themes": ["云计算"],
+        },
+        {
+            "name": "ASML",
+            "weight": 25,
+            "industry": "设备",
+            "region": "荷兰",
+            "currency": "EUR",
+            "themes": ["AI光刻"],
+        },
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    assert analysis["concentration"]["assessment"] == "需要调整"
+    assert not analysis["risk_flags"]
+    assert any(item["risk_level"] == "severe" for item in analysis["stress_tests"])
+    assert analysis["overall_health"]["rating"] == "问题严重"
+
+
 def test_opportunity_cost_ranks_holdings_against_cash_hurdle() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},

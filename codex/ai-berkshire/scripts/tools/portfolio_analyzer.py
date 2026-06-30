@@ -138,9 +138,11 @@ def _overall_health(
     concentration: dict[str, Any],
     flags: list[dict[str, Any]],
     pairs: list[dict[str, Any]],
+    stress_tests: list[dict[str, Any]],
 ) -> dict[str, str]:
     high_flags = [flag for flag in flags if flag["level"] == "high"]
-    if high_flags or concentration["assessment"] == "问题严重":
+    severe_stress = [item for item in stress_tests if item["risk_level"] == "severe"]
+    if high_flags or severe_stress or concentration["assessment"] == "问题严重":
         rating = "问题严重"
     elif flags or pairs or concentration["assessment"] == "需要调整":
         rating = "需要调整"
@@ -181,7 +183,7 @@ def analyze_portfolio(
         "allocation_drift": allocation_drift,
         "opportunity_cost": opportunity_cost,
         "rebalance_suggestions": rebalance,
-        "overall_health": _overall_health(concentration, flags, pairs),
+        "overall_health": _overall_health(concentration, flags, pairs, stress_tests),
     }
 
 def _load_holdings(path: Path) -> list[dict[str, Any]]:
