@@ -870,6 +870,7 @@ def test_rebalance_deploy_cash_skips_high_valuation_tension_candidate() -> None:
     deploy = next(item for item in suggestions["items"] if item["action"] == "deploy_cash_review")
     assert deploy["target"] == "阿里巴巴"
     assert "现金 45.0% 高于 35%" in deploy["reason"]
+    assert "阿里巴巴 风险调整后 12.0%" in deploy["reason"]
     assert all(
         item["target"] != "腾讯" or item["action"] != "deploy_cash_review"
         for item in suggestions["items"]

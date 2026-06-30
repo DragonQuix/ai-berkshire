@@ -263,13 +263,17 @@ def _append_cash_buffer(
                 )
             )
             return
-        target = eligible[0]["name"]
+        target_row = eligible[0]
+        target = target_row["name"]
         items.append(
             _item(
                 "deploy_cash_review",
                 target,
                 "medium",
-                f"现金 {cash_weight:.1%} 高于 {MAX_CASH:.0%}，可优先研究风险调整后收益最高的已有持仓。",
+                (
+                    f"现金 {cash_weight:.1%} 高于 {MAX_CASH:.0%}，"
+                    f"可优先研究 {target} 风险调整后 {target_row['risk_adjusted_return']:.1%} 的已有持仓。"
+                ),
                 cash_weight,
                 MAX_CASH,
             )
