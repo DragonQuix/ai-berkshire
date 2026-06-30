@@ -38,6 +38,21 @@ def _allocation_item_status_label(status: str) -> str:
     return labels.get(status, status)
 
 
+def _rebalance_action_label(action: str) -> str:
+    labels = {
+        "reduce_or_exit": "减仓/清仓",
+        "trim_to_target": "下调至目标/上限",
+        "add_to_target": "提高至目标/下限",
+        "trim_to_limit": "下调至集中度上限",
+        "raise_cash": "提高现金",
+        "deploy_cash_review": "研究现金用途",
+        "fill_inputs": "补齐输入",
+        "review_exposure": "复核暴露",
+        "hold": "维持观察",
+    }
+    return labels.get(action, action)
+
+
 def _render_group(title: str, groups: dict[str, float]) -> list[str]:
     lines = [f"### {title}", "", "| 分类 | 占比 |", "|---|---:|"]
     lines.extend(f"| {name} | {_pct(weight)} |" for name, weight in groups.items())
@@ -159,7 +174,7 @@ def _append_rebalance(lines: list[str], analysis: dict[str, Any]) -> None:
         current = "-" if item["current_weight"] is None else _pct(item["current_weight"])
         suggested = "-" if item["suggested_weight"] is None else _pct(item["suggested_weight"])
         lines.append(
-            f"| {item['priority']} | {item['action']} | {item['target']} | "
+            f"| {item['priority']} | {_rebalance_action_label(item['action'])} | {item['target']} | "
             f"{current} | {suggested} | {item['reason']} |"
         )
 

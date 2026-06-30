@@ -123,6 +123,8 @@
 > 2026-06-30 继续推进第二十五切片：Markdown “目标仓位偏离”章节对 `not_configured` 不再显示“未分配目标：100.0%”，改为显示“目标差额：未配置”，避免把没有设置目标仓位误读成仍有 100% 目标待分配；`/portfolio-review` 已同步固化该展示口径。
 >
 > 2026-06-30 继续推进第二十六切片：Markdown “目标仓位偏离”明细表状态列从内部枚举 `overweight` / `underweight` / `within_band` 改为中文“超配 / 低配 / 约束内”，JSON 结构字段保持不变；`/portfolio-review` 已同步要求报告状态列使用中文。
+>
+> 2026-06-30 继续推进第二十七切片：Markdown “再平衡建议”动作列从内部枚举 `reduce_or_exit` / `trim_to_limit` / `raise_cash` / `fill_inputs` 等改为中文动作（减仓/清仓、下调至集中度上限、提高现金、补齐输入等），JSON 结构字段保持不变；`/portfolio-review` 已同步要求报告动作列使用中文。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析

@@ -452,6 +452,27 @@ def test_render_markdown_localizes_allocation_item_statuses() -> None:
     assert "within_band" not in markdown
 
 
+def test_render_markdown_localizes_rebalance_actions() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "weight": 55, "expected_return": 0.12, "conviction": 0.8},
+        {**SAMPLE_HOLDINGS[1], "weight": 20, "expected_return": 0.03, "conviction": 0.7},
+        {**SAMPLE_HOLDINGS[2], "weight": 15},
+        {**SAMPLE_HOLDINGS[3], "weight": 8, "expected_return": 0.06, "conviction": 0.5},
+        {**SAMPLE_HOLDINGS[4], "weight": 2},
+    ]
+
+    markdown = pa.render_markdown(pa.analyze_portfolio(holdings))
+
+    assert "| high | 减仓/清仓 | 阿里巴巴 | 20.0% | 0.0% |" in markdown
+    assert "| high | 下调至集中度上限 | 腾讯 | 55.0% | 40.0% |" in markdown
+    assert "| medium | 提高现金 | 现金 | 2.0% | 10.0% |" in markdown
+    assert "| medium | 补齐输入 | 台积电 | 15.0% | - |" in markdown
+    assert "reduce_or_exit" not in markdown
+    assert "trim_to_limit" not in markdown
+    assert "raise_cash" not in markdown
+    assert "fill_inputs" not in markdown
+
+
 def test_cli_outputs_json_from_holdings_file(tmp_path: Path) -> None:
     input_path = tmp_path / "holdings.json"
     input_path.write_text(json.dumps({"holdings": SAMPLE_HOLDINGS}, ensure_ascii=False), encoding="utf-8")
