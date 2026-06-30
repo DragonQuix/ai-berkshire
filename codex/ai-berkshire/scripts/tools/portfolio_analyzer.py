@@ -8,7 +8,7 @@ from itertools import combinations
 from pathlib import Path
 from typing import Any
 
-from portfolio_opportunity import build_opportunity_cost
+from portfolio_opportunity import DEFAULT_CASH_HURDLE, build_opportunity_cost
 from portfolio_rebalance import build_rebalance_suggestions
 from portfolio_render import render_markdown
 from portfolio_stress import build_stress_tests
@@ -31,6 +31,10 @@ def _as_float(value: Any, field: str) -> float:
     if number <= 0:
         raise ValueError(f"{field} 必须大于 0")
     return number
+
+def _as_ratio(value: Any, field: str) -> float:
+    number = _as_float(value, field)
+    return number / 100.0 if number > 1 else number
 
 def _as_themes(value: Any) -> list[str]:
     if value is None:
@@ -210,14 +214,17 @@ def _overall_health(
         "summary": "工具只做组合结构诊断，最终调仓仍需结合个股论文和估值水位。",
     }
 
-def analyze_portfolio(holdings: list[dict[str, Any]]) -> dict[str, Any]:
+def analyze_portfolio(
+    holdings: list[dict[str, Any]],
+    cash_hurdle: float = DEFAULT_CASH_HURDLE,
+) -> dict[str, Any]:
     rows = _normalize_holdings(holdings)
     concentration = _build_concentration(rows)
     exposures = _build_exposures(rows)
     flags = _build_risk_flags(exposures)
     pairs = _build_correlation_risks(rows)
     stress_tests = build_stress_tests(rows)
-    opportunity_cost = build_opportunity_cost(rows)
+    opportunity_cost = build_opportunity_cost(rows, cash_hurdle=cash_hurdle)
     rebalance = build_rebalance_suggestions(rows, concentration, flags, opportunity_cost)
     return {
         "_source": "portfolio_analyzer",
@@ -247,10 +254,19 @@ def main(argv: list[str] | None = None) -> int:
     analyze = subparsers.add_parser("analyze", help="分析 JSON 持仓文件")
     analyze.add_argument("input", type=Path, help="JSON 文件路径")
     analyze.add_argument("--format", choices=["markdown", "json"], default="markdown")
+    analyze.add_argument(
+        "--cash-hurdle",
+        type=float,
+        default=DEFAULT_CASH_HURDLE,
+        help="现金门槛/无风险收益率，可用小数 0.06 或百分数 6",
+    )
     args = parser.parse_args(argv)
 
     if args.command == "analyze":
-        analysis = analyze_portfolio(_load_holdings(args.input))
+        analysis = analyze_portfolio(
+            _load_holdings(args.input),
+            cash_hurdle=_as_ratio(args.cash_hurdle, "--cash-hurdle"),
+        )
         if args.format == "json":
             print(json.dumps(analysis, ensure_ascii=False, indent=2))
         else:

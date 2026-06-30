@@ -52,6 +52,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "examples/portfolio-holdings.sample.json",
         "reports/portfolio-latest.md",
         "python tools/portfolio_analyzer.py analyze",
+        "--cash-hurdle",
         "opportunity_cost",
         "rebalance_suggestions",
         "stress_tests",

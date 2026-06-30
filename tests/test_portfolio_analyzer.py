@@ -140,6 +140,21 @@ def test_opportunity_cost_ranks_holdings_against_cash_hurdle() -> None:
     assert [row["name"] for row in opportunity["below_cash_hurdle"]] == ["阿里巴巴", "英伟达"]
 
 
+def test_analyze_portfolio_allows_custom_cash_hurdle() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.05, "conviction": 1.0},
+        {**SAMPLE_HOLDINGS[1], "expected_return": 0.08, "conviction": 1.0},
+        *SAMPLE_HOLDINGS[2:],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings, cash_hurdle=0.06)
+
+    opportunity = analysis["opportunity_cost"]
+    assert opportunity["cash_hurdle"] == pytest.approx(0.06)
+    assert [row["name"] for row in opportunity["below_cash_hurdle"]] == ["腾讯"]
+    assert analysis["rebalance_suggestions"]["primary_action"] == "减仓/清仓 腾讯"
+
+
 def test_rebalance_suggestions_turn_diagnostics_into_actions() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "weight": 55, "expected_return": 0.12, "conviction": 0.8},
@@ -207,6 +222,39 @@ def test_cli_outputs_json_from_holdings_file(tmp_path: Path) -> None:
     assert payload["_source"] == "portfolio_analyzer"
     assert payload["overall_health"]["rating"] == "需要调整"
     assert payload["concentration"]["top1_weight"] == pytest.approx(0.35)
+
+
+def test_cli_accepts_custom_cash_hurdle(tmp_path: Path) -> None:
+    input_path = tmp_path / "holdings.json"
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.05, "conviction": 1.0},
+        {**SAMPLE_HOLDINGS[1], "expected_return": 0.08, "conviction": 1.0},
+        *SAMPLE_HOLDINGS[2:],
+    ]
+    input_path.write_text(json.dumps({"holdings": holdings}, ensure_ascii=False), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(TOOLS_DIR / "portfolio_analyzer.py"),
+            "analyze",
+            str(input_path),
+            "--format",
+            "json",
+            "--cash-hurdle",
+            "6",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["opportunity_cost"]["cash_hurdle"] == pytest.approx(0.06)
+    assert [row["name"] for row in payload["opportunity_cost"]["below_cash_hurdle"]] == ["腾讯"]
 
 
 def test_sample_portfolio_file_runs_through_cli() -> None:
