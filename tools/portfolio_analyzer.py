@@ -198,7 +198,7 @@ def _load_holdings(path: Path) -> list[dict[str, Any]]:
         return payload
     if isinstance(payload, dict) and isinstance(payload.get("holdings"), list):
         return payload["holdings"]
-    raise ValueError("输入 JSON 必须是持仓数组，或包含 holdings 数组的对象")
+    raise ValueError(f"输入 JSON 结构错误 {path}: 必须是持仓数组，或包含 holdings 数组的对象")
 
 def main(argv: list[str] | None = None) -> int:
     _ensure_utf8_stdio()
