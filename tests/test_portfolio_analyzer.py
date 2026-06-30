@@ -247,6 +247,7 @@ def test_executive_summary_carries_top_level_report_contract() -> None:
         "health_rating": analysis["overall_health"]["rating"],
         "primary_risk": analysis["overall_health"]["primary_driver"],
         "primary_action": analysis["rebalance_suggestions"]["primary_action"],
+        "action_method": analysis["rebalance_suggestions"]["method"],
         "evidence_summary": analysis["overall_health"]["summary"],
     }
 
@@ -265,6 +266,7 @@ def test_render_markdown_uses_executive_summary_for_top_section() -> None:
         "health_rating": "测试健康度",
         "primary_risk": "测试最大风险",
         "primary_action": "测试首要动作",
+        "action_method": "测试口径",
         "evidence_summary": "测试依据",
     }
 
@@ -273,6 +275,7 @@ def test_render_markdown_uses_executive_summary_for_top_section() -> None:
     assert "整体健康度：**测试健康度**" in summary_section
     assert "当前最大风险：测试最大风险" in summary_section
     assert "最应该做的一件事：测试首要动作" in summary_section
+    assert "首要动作口径：测试口径" in summary_section
     assert "健康度依据：测试依据" in summary_section
 
 

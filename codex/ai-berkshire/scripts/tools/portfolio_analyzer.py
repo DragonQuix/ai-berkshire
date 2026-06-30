@@ -171,6 +171,7 @@ def _build_executive_summary(
         "health_rating": overall_health["rating"],
         "primary_risk": overall_health["primary_driver"],
         "primary_action": rebalance_suggestions["primary_action"],
+        "action_method": rebalance_suggestions["method"],
         "evidence_summary": overall_health["summary"],
     }
 

@@ -155,11 +155,13 @@
 > 2026-06-30 继续推进第四十一切片：Markdown 顶部新增“最应该做的一件事”，直接引用 `rebalance_suggestions.primary_action`，让组合报告开头同时回答健康度、当前最大风险和首要动作三项结论问题。`/portfolio-review` 已同步该准出要求，Codex 工具副本同步，并用回归测试锁定。
 >
 > 2026-06-30 继续推进第四十二切片：`portfolio_analyzer` 新增 `executive_summary`，把 `overall_health.rating`、`overall_health.primary_driver`、`rebalance_suggestions.primary_action` 与 `overall_health.summary` 汇总为 JSON 层首屏结论契约；Markdown 顶部改为从 `executive_summary` 渲染整体健康度、当前最大风险、最应该做的一件事和健康度依据，避免 JSON 消费者与报告展示各自拼字段造成漂移。`/portfolio-review` 已同步要求引用该字段，Codex 工具副本同步，并用回归测试锁定 JSON 与 Markdown 两层输出。
+>
+> 2026-06-30 继续推进第四十三切片：`executive_summary` 新增 `action_method`，把 `rebalance_suggestions.method` 提升到首屏摘要契约；Markdown 顶部同步展示“首要动作口径”，明确机械再平衡建议不替代个股研究或最终交易判断，避免读者只看到“最应该做的一件事”而误读为直接交易指令。`/portfolio-review` 已同步要求展示该字段，Codex 工具副本同步，并用回归测试锁定。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
 - 相关性风险检测
-- 机会成本（含负预期收益、字段级输入错误、缺失输入建议与数据不足展示）、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议、首屏结论摘要与可配置现金门槛
+- 机会成本（含负预期收益、字段级输入错误、缺失输入建议与数据不足展示）、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议、首屏结论摘要与动作口径、可配置现金门槛
 
 ### 权限安全架构回归样例
 > 2026-06-29 已启动第一切片：新增 `examples/team-research-regression/tencent-supplement-loop/`，构造腾讯团队研究回归样例，覆盖 `data-pack.json`、`source-index.md`、四份 `role-briefs/`、`audit-results.json`、`最终报告.md` 与 `supplement-loop.md`。样例明确展示“角色只读提出补数请求 -> Team Lead 补 S3 资料 -> 第二轮分析修正结论 -> Team Lead 仲裁并抽检准出”的闭环，且 `audit-results.json.verdict=pass`、抽检项均绑定已定义 ref。同步到 Codex 包内，并新增回归测试验证样例可通过 `team_research_outputs.validate` 且 root/Codex 样例逐文件一致。
