@@ -277,7 +277,11 @@ def _append_missing_inputs(
 def _append_exposure_review(items: list[dict[str, Any]], risk_flags: list[dict[str, Any]]) -> None:
     if items or not risk_flags:
         return
-    flag = risk_flags[0]
+    level_order = {"high": 0, "medium": 1, "low": 2}
+    flag = min(
+        risk_flags,
+        key=lambda item: (level_order.get(item["level"], 9), -item["weight"], item["name"]),
+    )
     items.append(
         _item(
             "review_exposure",

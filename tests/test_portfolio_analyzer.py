@@ -885,9 +885,36 @@ def test_rebalance_reviews_valuation_tension_when_all_cash_deploy_candidates_are
 
 def test_rebalance_primary_action_names_exposure_review() -> None:
     holdings = [
-        {**SAMPLE_HOLDINGS[0], "weight": 30, "expected_return": 0.10, "conviction": 1.0},
-        {**SAMPLE_HOLDINGS[1], "weight": 25, "expected_return": 0.09, "conviction": 1.0},
-        {**SAMPLE_HOLDINGS[2], "weight": 25, "expected_return": 0.08, "conviction": 1.0},
+        {
+            **SAMPLE_HOLDINGS[0],
+            "weight": 30,
+            "industry": "互联网",
+            "region": "中国",
+            "currency": "HKD",
+            "themes": ["平台经济"],
+            "expected_return": 0.10,
+            "conviction": 1.0,
+        },
+        {
+            **SAMPLE_HOLDINGS[1],
+            "weight": 25,
+            "industry": "互联网",
+            "region": "美国",
+            "currency": "USD",
+            "themes": ["云计算"],
+            "expected_return": 0.09,
+            "conviction": 1.0,
+        },
+        {
+            **SAMPLE_HOLDINGS[2],
+            "weight": 25,
+            "industry": "半导体",
+            "region": "台湾",
+            "currency": "TWD",
+            "themes": ["AI算力"],
+            "expected_return": 0.08,
+            "conviction": 1.0,
+        },
         {**SAMPLE_HOLDINGS[4], "weight": 20},
     ]
 
@@ -897,6 +924,56 @@ def test_rebalance_primary_action_names_exposure_review() -> None:
     assert review["target"] == "互联网"
     assert suggestions["primary_action"] == "复核 互联网 单一暴露"
     assert "单一暴露" in suggestions["method"]
+
+
+def test_rebalance_exposure_review_prioritizes_highest_exposure_risk() -> None:
+    holdings = [
+        {
+            **SAMPLE_HOLDINGS[0],
+            "weight": 20,
+            "industry": "互联网",
+            "region": "中国",
+            "currency": "HKD",
+            "themes": ["AI"],
+            "expected_return": 0.10,
+        },
+        {
+            **SAMPLE_HOLDINGS[1],
+            "weight": 20,
+            "industry": "互联网",
+            "region": "美国",
+            "currency": "USD",
+            "themes": ["AI"],
+            "expected_return": 0.09,
+        },
+        {
+            **SAMPLE_HOLDINGS[2],
+            "weight": 15,
+            "industry": "互联网",
+            "region": "台湾",
+            "currency": "TWD",
+            "themes": ["AI"],
+            "expected_return": 0.08,
+        },
+        {
+            **SAMPLE_HOLDINGS[3],
+            "weight": 25,
+            "industry": "半导体",
+            "region": "日本",
+            "currency": "JPY",
+            "themes": ["AI"],
+            "expected_return": 0.07,
+        },
+        {**SAMPLE_HOLDINGS[4], "weight": 20},
+    ]
+
+    suggestions = pa.analyze_portfolio(holdings)["rebalance_suggestions"]
+
+    review = next(item for item in suggestions["items"] if item["action"] == "review_exposure")
+    assert review["target"] == "AI"
+    assert review["priority"] == "low"
+    assert review["current_weight"] == pytest.approx(0.80)
+    assert suggestions["primary_action"] == "复核 AI 单一暴露"
 
 
 def test_render_markdown_outputs_portfolio_level_sections() -> None:
