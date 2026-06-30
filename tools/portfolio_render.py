@@ -147,7 +147,7 @@ def _append_opportunity(lines: list[str], analysis: dict[str, Any]) -> None:
         lines.append(f"\n低于现金门槛：{below_cash}")
     if opportunity["missing_inputs"]:
         names = "、".join(opportunity["missing_inputs"])
-        lines.append(f"\n缺少预期收益输入：{names}")
+        lines.append(f"\n数据不足：缺少预期收益输入：{names}")
 
 
 def _append_allocation_drift(lines: list[str], analysis: dict[str, Any]) -> None:
