@@ -135,11 +135,13 @@
 > 2026-06-30 继续推进第三十一切片：Markdown “机会成本”章节显式展示 `opportunity_cost.weakest_holding` 对应的“最弱持仓”和风险调整后收益，避免读者只能从排序表末行推断；JSON 结构字段保持不变，`/portfolio-review` 已同步要求机会成本段展示最弱持仓。
 >
 > 2026-06-30 继续推进第三十二切片：Markdown “机会成本”章节的“低于现金门槛”列表从只展示名称升级为同时展示每个持仓的风险调整后收益，便于直接判断低于门槛的幅度；JSON 结构字段保持不变，`/portfolio-review` 已同步要求该列表展示风险调整后收益。
+>
+> 2026-06-30 继续推进第三十三切片：`portfolio_opportunity` 放开 `expected_return` 的负数输入，用于表达看跌或论文破产场景；`-5` 与 `-0.05` 均会解析为 -5%，并继续参与机会成本排序、低于现金门槛列表和最弱持仓判断。`conviction` 仍严格限制在 0-100%，`--cash-hurdle` 仍不可为负且不得超过 100%。`/portfolio-review` 已同步说明负预期收益口径，并用回归测试锁定 root/Codex 工具副本同步。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
 - 相关性风险检测
-- 机会成本、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议与可配置现金门槛
+- 机会成本（含负预期收益）、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议与可配置现金门槛
 
 ### 权限安全架构回归样例
 > 2026-06-29 已启动第一切片：新增 `examples/team-research-regression/tencent-supplement-loop/`，构造腾讯团队研究回归样例，覆盖 `data-pack.json`、`source-index.md`、四份 `role-briefs/`、`audit-results.json`、`最终报告.md` 与 `supplement-loop.md`。样例明确展示“角色只读提出补数请求 -> Team Lead 补 S3 资料 -> 第二轮分析修正结论 -> Team Lead 仲裁并抽检准出”的闭环，且 `audit-results.json.verdict=pass`、抽检项均绑定已定义 ref。同步到 Codex 包内，并新增回归测试验证样例可通过 `team_research_outputs.validate` 且 root/Codex 样例逐文件一致。

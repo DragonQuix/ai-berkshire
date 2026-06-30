@@ -165,6 +165,24 @@ def test_conviction_ratio_cannot_exceed_full_confidence() -> None:
         pa.analyze_portfolio(holdings)
 
 
+def test_expected_return_allows_negative_percent_values() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": -5, "conviction": 1.0},
+        {**SAMPLE_HOLDINGS[1], "expected_return": 0.03, "conviction": 1.0},
+        *SAMPLE_HOLDINGS[2:],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    opportunity = analysis["opportunity_cost"]
+    tencent = next(row for row in opportunity["ranked_holdings"] if row["name"] == "腾讯")
+    assert tencent["expected_return"] == pytest.approx(-0.05)
+    assert tencent["risk_adjusted_return"] == pytest.approx(-0.05)
+    assert tencent["spread_to_cash"] == pytest.approx(-0.09)
+    assert [row["name"] for row in opportunity["below_cash_hurdle"]] == ["阿里巴巴", "腾讯"]
+    assert opportunity["weakest_holding"]["name"] == "腾讯"
+
+
 def test_analyze_portfolio_allows_custom_cash_hurdle() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.05, "conviction": 1.0},

@@ -16,6 +16,13 @@ def _as_non_negative_ratio(value: Any, field: str) -> float | None:
     return number / 100.0 if number > 1 else number
 
 
+def _as_signed_ratio(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    number = float(value)
+    return number / 100.0 if abs(number) > 1 else number
+
+
 def _as_confidence_ratio(value: Any, field: str) -> float | None:
     ratio = _as_non_negative_ratio(value, field)
     if ratio is not None and ratio > 1:
@@ -32,10 +39,7 @@ def build_opportunity_cost(
     for row in rows:
         if row.get("is_cash"):
             continue
-        expected_return = _as_non_negative_ratio(
-            row.get("expected_return"),
-            f"{row['name']}.expected_return",
-        )
+        expected_return = _as_signed_ratio(row.get("expected_return"))
         conviction = _as_confidence_ratio(row.get("conviction"), f"{row['name']}.conviction")
         if conviction is None:
             conviction = 1.0
