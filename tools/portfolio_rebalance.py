@@ -70,30 +70,35 @@ def _primary_action(items: list[dict[str, Any]]) -> str:
     return labels.get(first["action"], f"复核 {target}")
 
 
-def _high_valuation_tension_names(valuation_sanity: dict[str, Any] | None) -> set[str]:
+def _tensions_by_type(
+    valuation_sanity: dict[str, Any] | None,
+    tension_type: str,
+) -> dict[str, dict[str, Any]]:
     if not valuation_sanity:
-        return set()
+        return {}
     return {
-        item["name"]
+        item["name"]: item
         for item in valuation_sanity.get("tensions", [])
-        if item.get("tension_type") == "high_valuation_high_return"
+        if item.get("tension_type") == tension_type
     }
 
 
-def _low_valuation_tension_names(valuation_sanity: dict[str, Any] | None) -> set[str]:
-    if not valuation_sanity:
-        return set()
-    return {
-        item["name"]
-        for item in valuation_sanity.get("tensions", [])
-        if item.get("tension_type") == "low_valuation_low_return"
+def _tension_message(tensions_by_name: dict[str, dict[str, Any]], name: str, fallback: str) -> str:
+    tension = tensions_by_name.get(name)
+    if not tension:
+        return fallback
+    labels = {
+        "high_valuation_high_return": "高估高预期",
+        "low_valuation_low_return": "低估低预期",
     }
+    label = labels.get(tension.get("tension_type"), "估值水位张力")
+    return f"{label}：{tension.get('message', fallback)}"
 
 
 def _append_below_cash(
     items: list[dict[str, Any]],
     opportunity_cost: dict[str, Any],
-    low_valuation_tension_names: set[str],
+    low_valuation_tensions: dict[str, dict[str, Any]],
 ) -> None:
     cash_hurdle = opportunity_cost["cash_hurdle"]
     below_cash = sorted(
@@ -102,13 +107,14 @@ def _append_below_cash(
     )
     for row in below_cash:
         below_cash_reason = _below_cash_text(row, cash_hurdle)
-        if row["name"] in low_valuation_tension_names:
+        if row["name"] in low_valuation_tensions:
+            tension = _tension_message(low_valuation_tensions, row["name"], "存在低估低预期张力")
             items.append(
                 _item(
                     "review_valuation_tension",
                     row["name"],
                     "medium",
-                    f"{below_cash_reason}，但存在低估低预期张力，应先复核估值水位与 expected_return。",
+                    f"{below_cash_reason}，但{tension}，应先复核估值水位与 expected_return。",
                     row["weight"],
                     None,
                 )
@@ -164,7 +170,7 @@ def _append_allocation_drift(
     items: list[dict[str, Any]],
     allocation_drift: dict[str, Any] | None,
     missing_input_names: set[str],
-    high_valuation_tension_names: set[str],
+    high_valuation_tensions: dict[str, dict[str, Any]],
 ) -> None:
     if not allocation_drift:
         return
@@ -187,13 +193,16 @@ def _append_allocation_drift(
                 )
             )
         elif row["status"] == "underweight":
-            if row["name"] in high_valuation_tension_names:
+            if row["name"] in high_valuation_tensions:
+                tension = _tension_message(
+                    high_valuation_tensions, row["name"], "存在高估高预期张力"
+                )
                 items.append(
                     _item(
                         "review_valuation_tension",
                         row["name"],
                         "medium",
-                        "当前低配但存在高估高预期张力，应先复核 PE 分位与 expected_return，再决定是否补足。",
+                        f"当前低配但{tension}，应先复核 PE 分位与 expected_return，再决定是否补足。",
                         row["current_weight"],
                         None,
                     )
@@ -218,7 +227,7 @@ def _append_cash_buffer(
     items: list[dict[str, Any]],
     concentration: dict[str, Any],
     opportunity_cost: dict[str, Any],
-    high_valuation_tension_names: set[str],
+    high_valuation_tensions: dict[str, dict[str, Any]],
 ) -> None:
     cash_weight = concentration["cash_weight"]
     if cash_weight < MIN_CASH:
@@ -236,16 +245,19 @@ def _append_cash_buffer(
         eligible = [
             row
             for row in opportunity_cost["ranked_holdings"]
-            if row["name"] not in high_valuation_tension_names
+            if row["name"] not in high_valuation_tensions
         ]
         if not eligible:
             target = opportunity_cost["ranked_holdings"][0]
+            tension = _tension_message(
+                high_valuation_tensions, target["name"], "最高收益候选存在高估高预期张力"
+            )
             items.append(
                 _item(
                     "review_valuation_tension",
                     target["name"],
                     "medium",
-                    f"现金 {cash_weight:.1%} 高于 {MAX_CASH:.0%}，但最高收益候选存在高估高预期张力，应先复核估值水位再部署现金。",
+                    f"现金 {cash_weight:.1%} 高于 {MAX_CASH:.0%}，但{tension}，应先复核估值水位再部署现金。",
                     target["weight"],
                     None,
                 )
@@ -316,14 +328,14 @@ def build_rebalance_suggestions(
 ) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
     missing_input_names = set(opportunity_cost["missing_inputs"])
-    high_valuation_names = _high_valuation_tension_names(valuation_sanity)
-    low_valuation_names = _low_valuation_tension_names(valuation_sanity)
-    _append_below_cash(items, opportunity_cost, low_valuation_names)
+    high_valuation_tensions = _tensions_by_type(valuation_sanity, "high_valuation_high_return")
+    low_valuation_tensions = _tensions_by_type(valuation_sanity, "low_valuation_low_return")
+    _append_below_cash(items, opportunity_cost, low_valuation_tensions)
     _append_allocation_drift(
-        items, allocation_drift, missing_input_names, high_valuation_names
+        items, allocation_drift, missing_input_names, high_valuation_tensions
     )
     _append_concentration(items, rows, concentration)
-    _append_cash_buffer(items, concentration, opportunity_cost, high_valuation_names)
+    _append_cash_buffer(items, concentration, opportunity_cost, high_valuation_tensions)
     _append_missing_inputs(items, _weight_by_name(rows), opportunity_cost)
     _append_exposure_review(items, risk_flags)
     return {

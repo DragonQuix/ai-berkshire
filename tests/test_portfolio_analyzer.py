@@ -821,6 +821,8 @@ def test_rebalance_does_not_add_underweight_high_valuation_tension() -> None:
     assert alibaba["action"] == "review_valuation_tension"
     assert alibaba["suggested_weight"] is None
     assert "高估高预期" in alibaba["reason"]
+    assert "PE 处于历史 92% 分位" in alibaba["reason"]
+    assert "25% 预期年化" in alibaba["reason"]
     assert ("add_to_target", "阿里巴巴") not in {
         (item["action"], item["target"]) for item in suggestions["items"]
     }
@@ -890,6 +892,8 @@ def test_rebalance_reviews_valuation_tension_when_all_cash_deploy_candidates_are
     review = next(item for item in suggestions["items"] if item["action"] == "review_valuation_tension")
     assert review["target"] == "腾讯"
     assert "现金 45.0% 高于 35%" in review["reason"]
+    assert "PE 处于历史 92% 分位" in review["reason"]
+    assert "25% 预期年化" in review["reason"]
     assert suggestions["primary_action"] == "复核 腾讯 估值水位张力"
 
 

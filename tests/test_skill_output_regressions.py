@@ -70,6 +70,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "集中度理由必须展示第一大持仓占比",
         "目标偏离理由必须展示当前仓位与建议仓位",
         "机会成本理由必须展示风险调整后收益与现金门槛",
+        "估值水位张力理由必须展示 PE 分位与预期收益",
         "review_exposure",
         "turnover_to_target",
         "turnover_to_band",
