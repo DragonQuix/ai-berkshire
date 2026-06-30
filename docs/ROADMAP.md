@@ -127,6 +127,8 @@
 > 2026-06-30 继续推进第二十七切片：Markdown “再平衡建议”动作列从内部枚举 `reduce_or_exit` / `trim_to_limit` / `raise_cash` / `fill_inputs` 等改为中文动作（减仓/清仓、下调至集中度上限、提高现金、补齐输入等），JSON 结构字段保持不变；`/portfolio-review` 已同步要求报告动作列使用中文。
 >
 > 2026-06-30 继续推进第二十八切片：Markdown “再平衡建议”优先级列从内部枚举 `high` / `medium` / `low` 改为中文“高 / 中 / 低”，并同步默认无建议行的“维持观察”动作中文化；JSON 结构字段保持不变，`/portfolio-review` 已同步要求优先级列和动作列均使用中文。
+>
+> 2026-06-30 继续推进第二十九切片：Markdown “相关性风险”“压力测试”和“风险提示”中的风险等级从内部枚举 `high` / `medium` / `low` 改为中文“高 / 中 / 低”；JSON 中的 `risk_level` / `level` 字段保持不变，`/portfolio-review` 已同步要求风险等级展示中文化。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析

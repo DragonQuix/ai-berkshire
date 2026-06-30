@@ -62,6 +62,15 @@ def _rebalance_priority_label(priority: str) -> str:
     return labels.get(priority, priority)
 
 
+def _risk_level_label(level: str) -> str:
+    labels = {
+        "high": "高",
+        "medium": "中",
+        "low": "低",
+    }
+    return labels.get(level, level)
+
+
 def _render_group(title: str, groups: dict[str, float]) -> list[str]:
     lines = [f"### {title}", "", "| 分类 | 占比 |", "|---|---:|"]
     lines.extend(f"| {name} | {_pct(weight)} |" for name, weight in groups.items())
@@ -79,7 +88,7 @@ def _append_correlation(lines: list[str], analysis: dict[str, Any]) -> None:
         lines.append(
             "| "
             + " / ".join(pair["names"])
-            + f" | {_pct(pair['combined_weight'])} | {pair['risk_level']} | "
+            + f" | {_pct(pair['combined_weight'])} | {_risk_level_label(pair['risk_level'])} | "
             + ", ".join(pair["drivers"])
             + " |"
         )
@@ -91,7 +100,7 @@ def _append_stress(lines: list[str], analysis: dict[str, Any]) -> None:
         drag = item["largest_impacts"][0]
         lines.append(
             f"| {item['assumption']} | {_pct(item['portfolio_impact'])} | "
-            f"{item['risk_level']} | {drag['name']} {_pct(drag['contribution'])} |"
+            f"{_risk_level_label(item['risk_level'])} | {drag['name']} {_pct(drag['contribution'])} |"
         )
 
 
@@ -194,7 +203,7 @@ def _append_flags(lines: list[str], analysis: dict[str, Any]) -> None:
     lines.extend(["", "## 风险提示", ""])
     flags = analysis["risk_flags"]
     if flags:
-        lines.extend(f"- {flag['message']}（{flag['level']}）" for flag in flags)
+        lines.extend(f"- {flag['message']}（{_risk_level_label(flag['level'])}）" for flag in flags)
     else:
         lines.append("- 未发现超过 50% 的单一暴露。")
 

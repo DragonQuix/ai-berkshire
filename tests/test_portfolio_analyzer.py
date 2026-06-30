@@ -530,6 +530,24 @@ def test_render_markdown_localizes_empty_rebalance_row() -> None:
     assert "| hold |" not in rebalance_section
 
 
+def test_render_markdown_localizes_risk_levels() -> None:
+    markdown = pa.render_markdown(pa.analyze_portfolio(SAMPLE_HOLDINGS))
+    correlation_section = markdown.split("## 相关性风险", 1)[1].split("\n## ", 1)[0]
+    stress_section = markdown.split("## 压力测试", 1)[1].split("\n## ", 1)[0]
+    flags_section = markdown.split("## 风险提示", 1)[1]
+
+    assert "| 腾讯 / 阿里巴巴 | 55.0% | 高 |" in correlation_section
+    assert "| 中美/地缘风险升级：中国与台湾资产折价扩大 | -27.5% | 高 |" in stress_section
+    assert "（中）" in flags_section
+    for section in (correlation_section, stress_section, flags_section):
+        assert "| high |" not in section
+        assert "| medium |" not in section
+        assert "| low |" not in section
+        assert "（high）" not in section
+        assert "（medium）" not in section
+        assert "（low）" not in section
+
+
 def test_cli_outputs_json_from_holdings_file(tmp_path: Path) -> None:
     input_path = tmp_path / "holdings.json"
     input_path.write_text(json.dumps({"holdings": SAMPLE_HOLDINGS}, ensure_ascii=False), encoding="utf-8")
