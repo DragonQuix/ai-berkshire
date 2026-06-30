@@ -500,6 +500,32 @@ def test_cli_rejects_missing_input_file_without_traceback(tmp_path: Path) -> Non
     assert "Traceback" not in completed.stderr
 
 
+def test_cli_rejects_malformed_json_without_traceback(tmp_path: Path) -> None:
+    input_path = tmp_path / "broken-holdings.json"
+    input_path.write_text('{"holdings": [', encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(TOOLS_DIR / "portfolio_analyzer.py"),
+            "analyze",
+            str(input_path),
+            "--format",
+            "json",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        check=False,
+    )
+
+    assert completed.returncode == 2
+    assert "输入 JSON 解析失败" in completed.stderr
+    assert str(input_path) in completed.stderr
+    assert "Traceback" not in completed.stderr
+
+
 def test_sample_portfolio_file_runs_through_cli() -> None:
     sample = json.loads(SAMPLE_FILE.read_text(encoding="utf-8"))
     codex_sample = REPO / "codex" / "ai-berkshire" / "examples" / "portfolio-holdings.sample.json"

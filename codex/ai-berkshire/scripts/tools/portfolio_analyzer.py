@@ -190,7 +190,10 @@ def _load_holdings(path: Path) -> list[dict[str, Any]]:
     except OSError as exc:
         reason = exc.strerror or str(exc)
         raise ValueError(f"无法读取输入文件 {path}: {reason}") from exc
-    payload = json.loads(raw_text)
+    try:
+        payload = json.loads(raw_text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"输入 JSON 解析失败 {path}: 第 {exc.lineno} 行第 {exc.colno} 列") from exc
     if isinstance(payload, list):
         return payload
     if isinstance(payload, dict) and isinstance(payload.get("holdings"), list):

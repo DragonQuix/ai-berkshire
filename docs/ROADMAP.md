@@ -107,6 +107,8 @@
 > 2026-06-30 继续推进第十七切片：`portfolio_analyzer analyze` 对输入校验类 `ValueError` 改为输出简洁 `错误: ...` 并返回 exit 2，不再把 Python traceback 暴露给报告使用者；无效持仓字段、JSON 结构错误和 `--cash-hurdle` 越界都走同一 CLI 错误出口。新增回归测试锁定无效 `conviction` 不出现 `Traceback`，并继续同步 Codex 工具副本。
 >
 > 2026-06-30 继续推进第十八切片：`portfolio_analyzer analyze` 对输入文件读取失败追加友好错误，缺失文件或无法读取时输出 `错误: 无法读取输入文件 ...` 并返回 exit 2，不再暴露 Python traceback；新增回归测试锁定缺失文件路径、无 traceback 和 root/Codex 工具副本同步。
+>
+> 2026-06-30 继续推进第十九切片：`portfolio_analyzer analyze` 对 malformed JSON 追加友好解析错误，输出 `错误: 输入 JSON 解析失败 ... 第 N 行第 M 列` 并返回 exit 2，不再只暴露 Python `JSONDecodeError` 英文信息；新增回归测试锁定损坏 JSON 文件路径、行列提示、无 traceback 和 root/Codex 工具副本同步。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
