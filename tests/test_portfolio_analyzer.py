@@ -922,6 +922,7 @@ def test_rebalance_primary_action_names_exposure_review() -> None:
 
     review = next(item for item in suggestions["items"] if item["action"] == "review_exposure")
     assert review["target"] == "互联网"
+    assert review["priority"] == "medium"
     assert suggestions["primary_action"] == "复核 互联网 单一暴露"
     assert "单一暴露" in suggestions["method"]
 
@@ -971,7 +972,7 @@ def test_rebalance_exposure_review_prioritizes_highest_exposure_risk() -> None:
 
     review = next(item for item in suggestions["items"] if item["action"] == "review_exposure")
     assert review["target"] == "AI"
-    assert review["priority"] == "low"
+    assert review["priority"] == "high"
     assert review["current_weight"] == pytest.approx(0.80)
     assert suggestions["primary_action"] == "复核 AI 单一暴露"
 

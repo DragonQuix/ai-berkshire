@@ -64,6 +64,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "再平衡表的优先级列和动作列使用中文",
         "复核暴露",
         "风险等级和暴露权重",
+        "优先级跟随该暴露的风险等级",
         "review_exposure",
         "turnover_to_target",
         "turnover_to_band",

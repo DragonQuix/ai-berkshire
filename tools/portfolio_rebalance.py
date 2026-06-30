@@ -286,7 +286,7 @@ def _append_exposure_review(items: list[dict[str, Any]], risk_flags: list[dict[s
         _item(
             "review_exposure",
             flag["name"],
-            "low",
+            flag["level"] if flag["level"] in {"high", "medium", "low"} else "low",
             "存在单一暴露偏高，需结合个股论文判断是否降权。",
             flag["weight"],
             None,
