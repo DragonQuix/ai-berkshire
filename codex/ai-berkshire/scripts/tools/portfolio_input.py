@@ -18,6 +18,13 @@ def _as_float(value: Any, field: str) -> float:
     return number
 
 
+def _as_weight(value: Any, field: str) -> float:
+    number = _as_float(value, field)
+    if number > 100:
+        raise ValueError(f"{field} 不能超过 100%")
+    return number
+
+
 def as_ratio(value: Any, field: str) -> float:
     number = _as_float(value, field)
     ratio = number / 100.0 if number > 1 else number
@@ -94,7 +101,7 @@ def normalize_holdings(holdings: list[dict[str, Any]]) -> list[dict[str, Any]]:
         name = str(raw.get("name") or raw.get("code") or "").strip()
         if not name:
             raise ValueError(f"第 {idx} 个持仓缺少 name 或 code")
-        raw_weights.append(_as_float(raw.get("weight"), f"{name}.weight"))
+        raw_weights.append(_as_weight(raw.get("weight"), f"{name}.weight"))
         rows.append(_build_row(raw, name))
 
     divisor = 100.0 if sum(raw_weights) > 1.5 else 1.0

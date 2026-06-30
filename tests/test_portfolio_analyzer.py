@@ -264,6 +264,16 @@ def test_allocation_constraint_ratios_cannot_exceed_full_weight(field: str) -> N
         pa.analyze_portfolio(holdings)
 
 
+def test_holding_weight_ratio_cannot_exceed_full_weight() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "weight": 150},
+        *SAMPLE_HOLDINGS[1:],
+    ]
+
+    with pytest.raises(ValueError, match="腾讯.weight 不能超过 100%"):
+        pa.analyze_portfolio(holdings)
+
+
 def test_rebalance_suggestions_prioritize_allocation_drift_actions() -> None:
     holdings = [
         {
