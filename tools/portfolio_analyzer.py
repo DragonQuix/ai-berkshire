@@ -163,6 +163,17 @@ def _overall_health(
         "drivers": drivers,
     }
 
+def _build_executive_summary(
+    overall_health: dict[str, Any],
+    rebalance_suggestions: dict[str, Any],
+) -> dict[str, str]:
+    return {
+        "health_rating": overall_health["rating"],
+        "primary_risk": overall_health["primary_driver"],
+        "primary_action": rebalance_suggestions["primary_action"],
+        "evidence_summary": overall_health["summary"],
+    }
+
 def analyze_portfolio(
     holdings: list[dict[str, Any]],
     cash_hurdle: float = DEFAULT_CASH_HURDLE,
@@ -182,6 +193,8 @@ def analyze_portfolio(
         opportunity_cost,
         allocation_drift,
     )
+    overall_health = _overall_health(concentration, flags, pairs, stress_tests)
+    executive_summary = _build_executive_summary(overall_health, rebalance)
     return {
         "_source": "portfolio_analyzer",
         "holdings": rows,
@@ -193,7 +206,8 @@ def analyze_portfolio(
         "allocation_drift": allocation_drift,
         "opportunity_cost": opportunity_cost,
         "rebalance_suggestions": rebalance,
-        "overall_health": _overall_health(concentration, flags, pairs, stress_tests),
+        "overall_health": overall_health,
+        "executive_summary": executive_summary,
     }
 
 def _load_holdings(path: Path) -> list[dict[str, Any]]:

@@ -231,6 +231,51 @@ def test_render_markdown_answers_top_level_primary_action() -> None:
     assert "最应该做的一件事：减仓/清仓 阿里巴巴" in summary_section
 
 
+def test_executive_summary_carries_top_level_report_contract() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
+        {**SAMPLE_HOLDINGS[1], "expected_return": 0.03, "conviction": 0.7},
+        {**SAMPLE_HOLDINGS[2], "expected_return": 0.10, "conviction": 0.8},
+        {**SAMPLE_HOLDINGS[3], "expected_return": 0.08, "conviction": 0.7},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+    summary = analysis["executive_summary"]
+
+    assert summary == {
+        "health_rating": analysis["overall_health"]["rating"],
+        "primary_risk": analysis["overall_health"]["primary_driver"],
+        "primary_action": analysis["rebalance_suggestions"]["primary_action"],
+        "evidence_summary": analysis["overall_health"]["summary"],
+    }
+
+
+def test_render_markdown_uses_executive_summary_for_top_section() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
+        {**SAMPLE_HOLDINGS[1], "expected_return": 0.03, "conviction": 0.7},
+        {**SAMPLE_HOLDINGS[2], "expected_return": 0.10, "conviction": 0.8},
+        {**SAMPLE_HOLDINGS[3], "expected_return": 0.08, "conviction": 0.7},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+    analysis["executive_summary"] = {
+        "health_rating": "测试健康度",
+        "primary_risk": "测试最大风险",
+        "primary_action": "测试首要动作",
+        "evidence_summary": "测试依据",
+    }
+
+    summary_section = pa.render_markdown(analysis).split("## 组合集中度", 1)[0]
+
+    assert "整体健康度：**测试健康度**" in summary_section
+    assert "当前最大风险：测试最大风险" in summary_section
+    assert "最应该做的一件事：测试首要动作" in summary_section
+    assert "健康度依据：测试依据" in summary_section
+
+
 def test_opportunity_cost_ranks_holdings_against_cash_hurdle() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},

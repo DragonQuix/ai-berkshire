@@ -229,13 +229,14 @@ def _append_flags(lines: list[str], analysis: dict[str, Any]) -> None:
 
 def render_markdown(analysis: dict[str, Any]) -> str:
     c = analysis["concentration"]
+    summary = analysis["executive_summary"]
     lines = [
         "# 组合级分析",
         "",
-        f"整体健康度：**{analysis['overall_health']['rating']}**",
-        f"当前最大风险：{analysis['overall_health']['primary_driver']}",
-        f"最应该做的一件事：{analysis['rebalance_suggestions']['primary_action']}",
-        f"健康度依据：{analysis['overall_health']['summary']}",
+        f"整体健康度：**{summary['health_rating']}**",
+        f"当前最大风险：{summary['primary_risk']}",
+        f"最应该做的一件事：{summary['primary_action']}",
+        f"健康度依据：{summary['evidence_summary']}",
         "",
         "## 组合集中度",
         "",
