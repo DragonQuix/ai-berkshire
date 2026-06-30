@@ -1331,6 +1331,8 @@ def test_sample_portfolio_file_runs_through_cli() -> None:
 
     assert markdown.returncode == 0, markdown.stderr
     assert "## 机会成本" in markdown.stdout
+    assert "## 估值水位张力" in markdown.stdout
+    assert "高估高预期" in markdown.stdout
     assert "## 压力测试" in markdown.stdout
     assert json_result.returncode == 0, json_result.stderr
     payload = json.loads(json_result.stdout)
@@ -1338,6 +1340,8 @@ def test_sample_portfolio_file_runs_through_cli() -> None:
     assert payload["stress_tests"]
     assert "allocation_drift" in payload
     assert "rebalance_suggestions" in payload
+    assert payload["valuation_sanity"]["tension_count"] == 1
+    assert payload["valuation_sanity"]["tensions"][0]["name"] == "台积电"
 
 
 def test_valuation_sanity_flags_high_valuation_high_return() -> None:
@@ -1465,6 +1469,8 @@ def test_sample_holdings_run_with_pe_percentile() -> None:
     analysis = pa.analyze_portfolio(raw["holdings"])
     assert "valuation_sanity" in analysis
     assert "tensions" in analysis["valuation_sanity"]
+    assert analysis["valuation_sanity"]["tension_count"] == 1
+    assert analysis["valuation_sanity"]["tensions"][0]["tension_type"] == "high_valuation_high_return"
 
 
 def test_codex_tool_copy_stays_in_sync() -> None:

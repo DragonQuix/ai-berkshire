@@ -64,7 +64,8 @@ python tools/portfolio_analyzer.py analyze examples/portfolio-holdings.sample.js
       "target_weight": 0.30,
       "max_weight": 0.40,
       "expected_return": 0.12,
-      "conviction": 0.8
+      "conviction": 0.8,
+      "pe_percentile": 0.55
     },
     {
       "name": "现金",
