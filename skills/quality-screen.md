@@ -97,10 +97,7 @@
 
 ```powershell
 $env:PYTHONIOENCODING='utf-8'
-$out = "$env:TEMP\mx_skills"
-python C:/Users/admin/.claude/skills/mx-xuangu/mx_xuangu.py `
-  "ROE大于8%，净利润同比增长大于0，市盈率小于40，毛利率大于15%，资产负债率小于70%的A股，返回前50只" `
-  --output-dir $out
+python tools/lxr_data.py mx-xuangu "ROE大于8%，净利润同比增长大于0，市盈率小于40，毛利率大于15%，资产负债率小于70%的A股，返回前50只" --ttl 0
 ```
 
 读取 `$out\mx_xuangu_*_raw.json` 或 CSV 得候选代码列表。港股/美股：mx-xuangu 支持有限时降级为个股模式 + 理杏仁。

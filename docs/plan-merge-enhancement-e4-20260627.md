@@ -116,7 +116,7 @@ python tools/verify_channel_capability.py --quick
 python -m compileall -q tools codex/ai-berkshire/scripts/tools
 python -m pytest -q
 $env:PYTHONUTF8='1'
-python C:\Users\admin\.claude\skills\skill-creator\scripts\quick_validate.py codex\ai-berkshire
+python "$env:USERPROFILE\.claude\skills\skill-creator\scripts\quick_validate.py" codex\ai-berkshire
 
 # 5) 状态确认
 git status --short --branch

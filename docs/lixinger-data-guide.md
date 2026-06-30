@@ -87,7 +87,7 @@ for row in cmp["comparison"]["table"]:
 
 ## 六、字段与端点索引
 
-完整 API 文档见 `C:/Users/admin/Documents/lixingren_docs/offline-docs/`：
+完整 API 文档请以本机理杏仁离线文档目录为准；如需在工作流中引用，建议用 `LIXINGER_DOCS_DIR` 指向离线文档根目录：
 - `AGENT-INDEX.md`：248 端点入口索引。
 - `pages/<market>/<resource>.md`：各端点详细字段目录。
 关键端点：`cn|hk/company/fs/{non_financial,insurance,bank,security}`、`cn|hk/company/fundamental/*`、

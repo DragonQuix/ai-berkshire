@@ -39,11 +39,11 @@ python tools/lxr_data.py financials {code} --years 5 --source lixinger  # 回购
 python tools/lxr_data.py valuation {code} --source lixinger
 ```
 
-**妙想补充**（Windows：`$env:PYTHONIOENCODING='utf-8'`，输出目录 `%TEMP%\mx_skills`）：
+**妙想补充**（从仓库根目录运行；如需指定外部妙想脚本，用 `MX_SEARCH_SCRIPT` / `MX_DATA_SCRIPT` 环境变量）：
 
 ```bash
-python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{公司} {CEO姓名} 采访 股东信" --output-dir %TEMP%\mx_skills
-python C:/Users/admin/.claude/skills/mx-data/mx_data.py "{公司} 董事长 持股比例" %TEMP%\mx_skills
+python tools/lxr_data.py mx-search "{公司} {CEO姓名} 采访 股东信" --ttl 0
+python tools/lxr_data.py mx-data "{公司} 董事长 持股比例" --ttl 0
 ```
 
 **定量摘要表**（写入报告第二节之前；表头 **`_source`** 为验收必填字段）：

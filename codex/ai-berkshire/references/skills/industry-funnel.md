@@ -48,8 +48,7 @@
 
 ```powershell
 $env:PYTHONIOENCODING='utf-8'
-python C:/Users/admin/.claude/skills/mx-xuangu/mx_xuangu.py `
-  "{行业/主题}板块市值前30，返回股票列表" --output-dir $env:TEMP\mx_skills
+python tools/lxr_data.py mx-xuangu "{行业/主题}板块市值前30，返回股票列表" --ttl 0
 ```
 
 候选池确定后，理杏仁批量拉估值/财报：

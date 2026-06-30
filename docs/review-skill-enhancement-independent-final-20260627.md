@@ -58,7 +58,7 @@
 首次运行：
 
 ```powershell
-python C:\Users\admin\.claude\skills\skill-creator\scripts\quick_validate.py codex\ai-berkshire
+python "$env:USERPROFILE\.claude\skills\skill-creator\scripts\quick_validate.py" codex\ai-berkshire
 ```
 
 结果：`UnicodeDecodeError: 'gbk' codec can't decode ...`
@@ -67,7 +67,7 @@ python C:\Users\admin\.claude\skills\skill-creator\scripts\quick_validate.py cod
 
 ```powershell
 $env:PYTHONUTF8='1'
-python C:\Users\admin\.claude\skills\skill-creator\scripts\quick_validate.py codex\ai-berkshire
+python "$env:USERPROFILE\.claude\skills\skill-creator\scripts\quick_validate.py" codex\ai-berkshire
 ```
 
 结果：`Skill is valid!`
@@ -176,7 +176,7 @@ git status --short --branch
 
 ```powershell
 $env:PYTHONUTF8='1'
-python C:\Users\admin\.claude\skills\skill-creator\scripts\quick_validate.py codex\ai-berkshire
+python "$env:USERPROFILE\.claude\skills\skill-creator\scripts\quick_validate.py" codex\ai-berkshire
 ```
 
 结果：PASS，`Skill is valid!`。
@@ -191,7 +191,7 @@ python C:\Users\admin\.claude\skills\skill-creator\scripts\quick_validate.py cod
 3. E:\Repos\Skills\ai-berkshire\docs\plan-skill-enhancement.md
 4. E:\Repos\Skills\ai-berkshire\docs\channel-capability-matrix.md
 5. E:\Repos\Skills\ai-berkshire\CLAUDE.md
-6. C:\Users\admin\.claude\skills\skill-creator\SKILL.md
+6. 当前用户 Claude skills 目录下的 `skill-creator/SKILL.md`
 
 必须修复所有独立审核发现的问题，重点是 `_source` 字段规范未全量覆盖：
 
@@ -228,7 +228,7 @@ python tools/lxr_data.py quality-metrics 600132 --years 5 --quiet
 python -m compileall -q tools codex/ai-berkshire/scripts/tools
 python -m pytest -q
 $env:PYTHONUTF8='1'
-python C:\Users\admin\.claude\skills\skill-creator\scripts\quick_validate.py codex\ai-berkshire
+python "$env:USERPROFILE\.claude\skills\skill-creator\scripts\quick_validate.py" codex\ai-berkshire
 git status --short --branch
 ```
 
@@ -255,7 +255,7 @@ git status --short --branch
 3. E:\Repos\Skills\ai-berkshire\docs\plan-skill-enhancement.md
 4. E:\Repos\Skills\ai-berkshire\docs\channel-capability-matrix.md
 5. E:\Repos\Skills\ai-berkshire\CLAUDE.md
-6. C:\Users\admin\.claude\skills\skill-creator\SKILL.md
+6. 当前用户 Claude skills 目录下的 `skill-creator/SKILL.md`
 
 重点复审编程 Agent 是否修复了上一轮剩余问题：
 
@@ -286,7 +286,7 @@ git status --short --branch
      python -m compileall -q tools codex/ai-berkshire/scripts/tools
      python -m pytest -q
      $env:PYTHONUTF8='1'
-     python C:\Users\admin\.claude\skills\skill-creator\scripts\quick_validate.py codex\ai-berkshire
+     python "$env:USERPROFILE\.claude\skills\skill-creator\scripts\quick_validate.py" codex\ai-berkshire
      git status --short --branch
 
 4. 安全与一致性

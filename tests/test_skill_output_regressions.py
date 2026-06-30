@@ -118,6 +118,34 @@ LEGACY_OUTPUT_PATTERNS = [
     "reports/{公司名}-thesis.md",
 ]
 
+PUBLIC_RELEASE_SCAN_ROOTS = [
+    REPO / "README.md",
+    REPO / "README_EN.md",
+    REPO / "skills",
+    REPO / "codex" / "ai-berkshire" / "references" / "skills",
+    REPO / "docs",
+]
+
+AUTHOR_MACHINE_PATH_PATTERNS = [
+    "C:/Users/admin",
+    r"C:\Users\admin",
+    "/Users/linxuan",
+    "~/.claude/projects",
+    "-Users-linxuan",
+    "lixingren_docs",
+]
+
+
+def public_release_files() -> list[Path]:
+    files: list[Path] = []
+    for root in PUBLIC_RELEASE_SCAN_ROOTS:
+        if root.is_file():
+            files.append(root)
+            continue
+        files.extend(path for path in root.rglob("*") if path.is_file())
+    roadmap = REPO / "docs" / "ROADMAP.md"
+    return sorted(path for path in files if path != roadmap)
+
 
 @pytest.mark.parametrize("skill_name, required_snippets", REPORT_OUTPUT_CONTRACTS.items())
 def test_report_skills_pin_project_output_contracts(skill_name: str, required_snippets: list[str]) -> None:
@@ -133,3 +161,15 @@ def test_report_skills_do_not_use_legacy_home_output_paths(skill_name: str) -> N
         text = read_text(rel_path)
         for pattern in LEGACY_OUTPUT_PATTERNS:
             assert pattern not in text, f"{rel_path} still contains legacy output path {pattern!r}"
+
+
+def test_public_release_files_do_not_contain_author_machine_paths() -> None:
+    offenders: list[str] = []
+    for path in public_release_files():
+        text = path.read_text(encoding="utf-8")
+        rel_path = path.relative_to(REPO).as_posix()
+        for pattern in AUTHOR_MACHINE_PATH_PATTERNS:
+            if pattern in text:
+                offenders.append(f"{rel_path}: contains {pattern!r}")
+
+    assert not offenders, "作者机器路径不能进入发布面文件:\n" + "\n".join(offenders)

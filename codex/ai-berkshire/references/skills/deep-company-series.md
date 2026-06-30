@@ -193,7 +193,7 @@ grep -r "linxuan\|/Users/\|<用户公司花名>" reports/ | head
 
 - 所有公开报告**只用公开信息**（财报、官方披露、券商研报、知名第三方机构）
 - 不用任何**用户个人信息**（公司花名、内部 IM、未公开持仓信息）
-- 推送前必须用 grep 扫描 `linxuan` / `/Users/` / 用户公司花名 等隐私字段（参见 `~/.claude/projects/-Users-linxuan/memory/feedback_privacy_upload.md`）
+- 推送前必须用 `rg` 扫描个人用户名、本机绝对路径、内部花名、未公开项目路径等隐私字段；公开报告不得引用个人 Claude 项目记忆路径
 - 公开署名按用户多层身份策略，不混用
 
 ---

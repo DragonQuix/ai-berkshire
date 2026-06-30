@@ -45,7 +45,7 @@ python tools/lxr_data.py financials {code} --years 3 --source lixinger
 ```
 
 ```bash
-python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{公司} 负面 监管 最新" --output-dir %TEMP%\mx_skills
+python tools/lxr_data.py mx-search "{公司} 负面 监管 最新" --ttl 0
 ```
 
 **`_source` 标注**：估值/分位/治理/财报 → `lixinger`；负面事件搜索 → `mx-search`。
@@ -152,8 +152,8 @@ python tools/lxr_data.py financials {code} --years 2 --source lixinger
 ```
 
 ```bash
-python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{公司} 最新公告 负面" --output-dir %TEMP%\mx_skills
-python C:/Users/admin/.claude/skills/mx-data/mx_data.py "{公司} 最新价 涨跌幅" %TEMP%\mx_skills
+python tools/lxr_data.py mx-search "{公司} 最新公告 负面" --ttl 0
+python tools/lxr_data.py mx-data "{公司} 最新价 涨跌幅" --ttl 0
 ```
 
 1. 最新财报：理杏仁 `financials`（有季报则对比论文假设）

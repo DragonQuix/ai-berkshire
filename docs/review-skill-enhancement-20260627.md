@@ -8,7 +8,7 @@
 ## 1. 审核依据
 
 - `docs/plan-skill-enhancement.md`
-- `C:/Users/admin/.claude/skills/skill-creator/SKILL.md`
+- `skill-creator/SKILL.md`（按当前用户的 Claude skills 安装目录解析）
 - `CLAUDE.md`
 - `docs/channel-capability-matrix.md`
 - `docs/plan-lixinger-migration.md`

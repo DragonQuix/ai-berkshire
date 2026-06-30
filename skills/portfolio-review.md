@@ -94,7 +94,7 @@ python tools/lxr_data.py financials {code} --years 2 --source lixinger
 **妙想**（每持仓 1 次 mx-search，注意日限额 150）：
 
 ```bash
-python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{持仓公司} 最新 公告 业绩" --output-dir %TEMP%\mx_skills
+python tools/lxr_data.py mx-search "{持仓公司} 最新 公告 业绩" --ttl 0
 ```
 
 模拟调仓验证（可选）：`mx-moni` 模拟买卖逻辑，非实盘。

@@ -61,10 +61,10 @@ python tools/lxr_data.py valuation {code} --source lixinger   # 估值水位
 
 A股另查（经 `lxr_data.py` 或文档中的 hot 端点）：龙虎榜 `trading-abnormal`、大宗交易 `block-deal`、融资融券与陆股通（如已封装）。
 
-实时异动快照（1 次 MX，Windows 传输出目录）：
+实时异动快照（1 次 MX，从仓库根目录运行；可用 `MX_DATA_SCRIPT` 指定外部妙想脚本）：
 
 ```bash
-python C:/Users/admin/.claude/skills/mx-data/mx_data.py "{公司}最新价 涨跌幅 主力资金" %TEMP%\mx_skills
+python tools/lxr_data.py mx-data "{公司}最新价 涨跌幅 主力资金" --ttl 0
 ```
 
 将触发器结果写入报告「结构化异动摘要」：Agent 只负责解释**无法编码**的新闻与政策，禁止重复查增减持/K线。

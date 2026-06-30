@@ -106,7 +106,7 @@ git log -5 --oneline
 
 ### P0.2 移除作者机器硬编码路径
 
-状态：未完成
+状态：已完成
 
 问题：
 
@@ -345,3 +345,4 @@ P1 不得回填到 P0 之前作为“顺手优化”。
 当前记录：
 
 - 2026-07-01：重写路线图为 Claude Code 可安装即用交付路线图；旧功能扩张式路线图停止作为执行依据；P0 阻塞清单成为唯一推进入口。
+- 2026-07-01：完成 P0.2，提交 `<本轮原子提交>`；验证：`rg -n --glob '!docs/ROADMAP.md' "C:/Users/admin|C:\\Users\\admin|/Users/linxuan|~/.claude/projects|-Users-linxuan|lixingren_docs" README.md README_EN.md skills codex/ai-berkshire/references/skills docs` -> 无命中；`python -m pytest tests/test_skill_output_regressions.py -q` -> 25 passed；`python tools\verify_channel_capability.py --quick` -> 全部通过；`git diff --check` -> 通过；剩余阻塞：P0.1、P0.3、P0.4、P0.5、P0.6、P0.7。

@@ -46,8 +46,8 @@
 涉及上市公司数据点时，嵌入前调用（**每条数据须标注 `_source`**）：
 
 ```bash
-python C:/Users/admin/.claude/skills/mx-data/mx_data.py "{公司或指标} 最新数据" %TEMP%\mx_skills
-python C:/Users/admin/.claude/skills/mx-search/mx_search.py "{主题} 权威来源 数据" --output-dir %TEMP%\mx_skills
+python tools/lxr_data.py mx-data "{公司或指标} 最新数据" --ttl 0
+python tools/lxr_data.py mx-search "{主题} 权威来源 数据" --ttl 0
 ```
 
 | 工具 | `_source` |
