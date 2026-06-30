@@ -99,6 +99,8 @@
 > 2026-06-30 继续推进第十三切片：`portfolio_input.as_ratio()` 新增比例上限校验，`target_weight` / `min_weight` / `max_weight` 与 CLI `--cash-hurdle` 换算后不得超过 100%；输入 `150` 这类超过 100% 的比例会在进入组合分析前直接打回。
 >
 > 2026-06-30 继续推进第十四切片：`portfolio_input` 新增持仓 `weight` 上限校验，单项权重不得超过 100%；此前 `target_weight` / `min_weight` / `max_weight` 已被限制在 0-100%，本切片补齐原始持仓权重字段的同类输入卫生，避免 `weight=150` 被归一化后静默进入组合诊断。`/portfolio-review` 已同步说明 `weight` 必须大于 0 且不得超过 100%，并继续用回归测试锁定 root/Codex 工具副本同步。
+>
+> 2026-06-30 继续推进第十五切片：修复 `portfolio_opportunity` 中显式 `conviction=0` 被 `or 1.0` 误当成缺省 100% 置信度的问题；现在只有缺省 `conviction` 才按 100% 处理，显式 0 会保留为 0%，避免机会成本和再平衡建议高估低置信度持仓。`/portfolio-review` 已同步说明该口径，并用回归测试锁定 root/Codex 工具副本同步。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析

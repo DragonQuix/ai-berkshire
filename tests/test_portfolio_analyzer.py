@@ -140,6 +140,21 @@ def test_opportunity_cost_ranks_holdings_against_cash_hurdle() -> None:
     assert [row["name"] for row in opportunity["below_cash_hurdle"]] == ["阿里巴巴", "英伟达"]
 
 
+def test_zero_conviction_is_not_treated_as_default_full_conviction() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0},
+        *SAMPLE_HOLDINGS[1:],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    tencent = analysis["opportunity_cost"]["ranked_holdings"][0]
+    assert tencent["name"] == "腾讯"
+    assert tencent["conviction"] == pytest.approx(0.0)
+    assert tencent["risk_adjusted_return"] == pytest.approx(0.0)
+    assert [row["name"] for row in analysis["opportunity_cost"]["below_cash_hurdle"]] == ["腾讯"]
+
+
 def test_analyze_portfolio_allows_custom_cash_hurdle() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "expected_return": 0.05, "conviction": 1.0},

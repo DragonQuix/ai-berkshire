@@ -26,7 +26,9 @@ def build_opportunity_cost(
         if row.get("is_cash"):
             continue
         expected_return = _ratio(row.get("expected_return"))
-        conviction = _ratio(row.get("conviction")) or 1.0
+        conviction = _ratio(row.get("conviction"))
+        if conviction is None:
+            conviction = 1.0
         if expected_return is None:
             missing.append(row["name"])
             continue
