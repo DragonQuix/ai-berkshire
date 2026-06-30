@@ -140,8 +140,11 @@ def _append_opportunity(lines: list[str], analysis: dict[str, Any]) -> None:
     if weakest:
         lines.append(f"\n最弱持仓：{weakest['name']}（风险调整后 {_pct(weakest['risk_adjusted_return'])}）")
     if opportunity["below_cash_hurdle"]:
-        names = "、".join(row["name"] for row in opportunity["below_cash_hurdle"])
-        lines.append(f"\n低于现金门槛：{names}")
+        below_cash = "、".join(
+            f"{row['name']}（风险调整后 {_pct(row['risk_adjusted_return'])}）"
+            for row in opportunity["below_cash_hurdle"]
+        )
+        lines.append(f"\n低于现金门槛：{below_cash}")
     if opportunity["missing_inputs"]:
         names = "、".join(opportunity["missing_inputs"])
         lines.append(f"\n缺少预期收益输入：{names}")

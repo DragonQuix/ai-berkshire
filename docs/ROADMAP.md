@@ -133,6 +133,8 @@
 > 2026-06-30 继续推进第三十切片：Markdown “相关性风险”驱动因素列从内部枚举 `same_industry` / `same_region` / `same_currency` / `shared_theme:*` 改为中文“同行业 / 同地区 / 同货币 / 共同主题：*”；JSON 中的 `drivers` 字段保持不变，`/portfolio-review` 已同步要求相关性驱动因素展示中文化。
 >
 > 2026-06-30 继续推进第三十一切片：Markdown “机会成本”章节显式展示 `opportunity_cost.weakest_holding` 对应的“最弱持仓”和风险调整后收益，避免读者只能从排序表末行推断；JSON 结构字段保持不变，`/portfolio-review` 已同步要求机会成本段展示最弱持仓。
+>
+> 2026-06-30 继续推进第三十二切片：Markdown “机会成本”章节的“低于现金门槛”列表从只展示名称升级为同时展示每个持仓的风险调整后收益，便于直接判断低于门槛的幅度；JSON 结构字段保持不变，`/portfolio-review` 已同步要求该列表展示风险调整后收益。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析

@@ -575,6 +575,21 @@ def test_render_markdown_highlights_weakest_holding_in_opportunity_cost() -> Non
     assert "最弱持仓：英伟达（风险调整后 2.8%）" in opportunity_section
 
 
+def test_render_markdown_shows_returns_for_below_cash_hurdle_holdings() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
+        {**SAMPLE_HOLDINGS[1], "expected_return": 0.05, "conviction": 0.6},
+        {**SAMPLE_HOLDINGS[2], "expected_return": 0.18, "conviction": 0.5},
+        {**SAMPLE_HOLDINGS[3], "expected_return": 0.07, "conviction": 0.4},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    markdown = pa.render_markdown(pa.analyze_portfolio(holdings))
+    opportunity_section = markdown.split("## 机会成本", 1)[1].split("\n## ", 1)[0]
+
+    assert "低于现金门槛：阿里巴巴（风险调整后 3.0%）、英伟达（风险调整后 2.8%）" in opportunity_section
+
+
 def test_cli_outputs_json_from_holdings_file(tmp_path: Path) -> None:
     input_path = tmp_path / "holdings.json"
     input_path.write_text(json.dumps({"holdings": SAMPLE_HOLDINGS}, ensure_ascii=False), encoding="utf-8")
