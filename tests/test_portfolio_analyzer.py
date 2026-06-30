@@ -248,8 +248,23 @@ def test_executive_summary_carries_top_level_report_contract() -> None:
         "primary_risk": analysis["overall_health"]["primary_driver"],
         "primary_action": analysis["rebalance_suggestions"]["primary_action"],
         "action_method": analysis["rebalance_suggestions"]["method"],
+        "data_gap_summary": "未发现首屏级数据缺口。",
         "evidence_summary": analysis["overall_health"]["summary"],
     }
+
+
+def test_executive_summary_surfaces_missing_expected_return() -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], "expected_return": 0.12, "conviction": 0.8},
+        {**SAMPLE_HOLDINGS[1], "expected_return": 0.03, "conviction": 0.7},
+        SAMPLE_HOLDINGS[2],
+        {**SAMPLE_HOLDINGS[3], "expected_return": 0.08, "conviction": 0.7},
+        SAMPLE_HOLDINGS[4],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    assert analysis["executive_summary"]["data_gap_summary"] == "缺少预期收益输入：台积电"
 
 
 def test_render_markdown_uses_executive_summary_for_top_section() -> None:
@@ -267,6 +282,7 @@ def test_render_markdown_uses_executive_summary_for_top_section() -> None:
         "primary_risk": "测试最大风险",
         "primary_action": "测试首要动作",
         "action_method": "测试口径",
+        "data_gap_summary": "测试数据缺口",
         "evidence_summary": "测试依据",
     }
 
@@ -276,6 +292,7 @@ def test_render_markdown_uses_executive_summary_for_top_section() -> None:
     assert "当前最大风险：测试最大风险" in summary_section
     assert "最应该做的一件事：测试首要动作" in summary_section
     assert "首要动作口径：测试口径" in summary_section
+    assert "数据缺口：测试数据缺口" in summary_section
     assert "健康度依据：测试依据" in summary_section
 
 

@@ -237,6 +237,7 @@ def render_markdown(analysis: dict[str, Any]) -> str:
         f"当前最大风险：{summary['primary_risk']}",
         f"最应该做的一件事：{summary['primary_action']}",
         f"首要动作口径：{summary['action_method']}",
+        f"数据缺口：{summary['data_gap_summary']}",
         f"健康度依据：{summary['evidence_summary']}",
         "",
         "## 组合集中度",

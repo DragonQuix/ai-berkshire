@@ -166,12 +166,20 @@ def _overall_health(
 def _build_executive_summary(
     overall_health: dict[str, Any],
     rebalance_suggestions: dict[str, Any],
+    opportunity_cost: dict[str, Any],
 ) -> dict[str, str]:
+    missing_inputs = opportunity_cost["missing_inputs"]
+    data_gap_summary = (
+        f"缺少预期收益输入：{'、'.join(missing_inputs)}"
+        if missing_inputs
+        else "未发现首屏级数据缺口。"
+    )
     return {
         "health_rating": overall_health["rating"],
         "primary_risk": overall_health["primary_driver"],
         "primary_action": rebalance_suggestions["primary_action"],
         "action_method": rebalance_suggestions["method"],
+        "data_gap_summary": data_gap_summary,
         "evidence_summary": overall_health["summary"],
     }
 
@@ -195,7 +203,7 @@ def analyze_portfolio(
         allocation_drift,
     )
     overall_health = _overall_health(concentration, flags, pairs, stress_tests)
-    executive_summary = _build_executive_summary(overall_health, rebalance)
+    executive_summary = _build_executive_summary(overall_health, rebalance, opportunity_cost)
     return {
         "_source": "portfolio_analyzer",
         "holdings": rows,
