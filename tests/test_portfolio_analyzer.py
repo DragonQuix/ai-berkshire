@@ -820,6 +820,32 @@ def test_rebalance_does_not_add_underweight_high_valuation_tension() -> None:
     assert suggestions["primary_action"] == "复核 阿里巴巴 估值水位张力"
 
 
+def test_rebalance_does_not_exit_low_valuation_low_return_without_review() -> None:
+    holdings = [
+        {
+            **SAMPLE_HOLDINGS[0],
+            "weight": 20,
+            "expected_return": 0.03,
+            "pe_percentile": 0.15,
+        },
+        {**SAMPLE_HOLDINGS[1], "weight": 20, "expected_return": 0.08},
+        {**SAMPLE_HOLDINGS[2], "weight": 20, "expected_return": 0.09},
+        {**SAMPLE_HOLDINGS[3], "weight": 20, "expected_return": 0.07},
+        {**SAMPLE_HOLDINGS[4], "weight": 20},
+    ]
+
+    suggestions = pa.analyze_portfolio(holdings)["rebalance_suggestions"]
+
+    tencent = next(item for item in suggestions["items"] if item["target"] == "腾讯")
+    assert tencent["action"] == "review_valuation_tension"
+    assert tencent["suggested_weight"] is None
+    assert "低估低预期" in tencent["reason"]
+    assert ("reduce_or_exit", "腾讯") not in {
+        (item["action"], item["target"]) for item in suggestions["items"]
+    }
+    assert suggestions["primary_action"] == "复核 腾讯 估值水位张力"
+
+
 def test_rebalance_deploy_cash_skips_high_valuation_tension_candidate() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "weight": 15, "expected_return": 0.25, "pe_percentile": 0.92},

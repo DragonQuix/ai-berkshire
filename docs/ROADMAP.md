@@ -173,11 +173,13 @@
 > 2026-06-30 继续推进第五十切片：`portfolio_analyzer` 新增 `valuation_sanity` 估值水位张力校验，闭合"`percentiles` 已取但未回流约束机会成本"的端到端断层。新增可选输入字段 `pe_percentile`（自身 PE 历史分位点，0-100%，缺省不校验，复用 `_optional_ratio` 口径），新增纯计算层 `tools/portfolio_valuation_sanity.py`，检测两类张力：高估高预期（PE 分位 ≥ 80% 且预期年化 ≥ 15%，风险信号，触发整体健康度降级）与低估低预期（PE 分位 ≤ 20% 且预期年化 ≤ 4%，机会信号，不降级健康度）。张力通过 `overall_health.drivers` / `primary_driver` 输出并触发至少"需要调整"降级，`executive_summary.valuation_sanity_summary` 前置标注存在张力的持仓，Markdown 新增"估值水位张力"小节（类型列中文"高估高预期 / 低估低预期"，不暴露 `high_valuation_high_return` / `low_valuation_low_return` 枚举）并紧随"机会成本"之后。`/portfolio-review` 已同步说明 `pe_percentile` 用法、张力检测阈值与"张力提示不替代个股估值判断，分析者需结合 D1/D2 人工裁决"口径，Codex 工具副本与样例同步，并用回归测试锁定 9 个新增场景与 root/Codex 副本同步。
 >
 > 2026-06-30 继续推进第五十一切片：`rebalance_suggestions` 接入 `valuation_sanity` 的高估高预期张力，避免目标仓位偏离和现金缓冲继续把高估张力标的作为机械加仓对象。低配但存在 `high_valuation_high_return` 的持仓不再输出 `add_to_target`，改为 `review_valuation_tension`，提示先复核 PE 分位与 `expected_return`；现金偏高时的 `deploy_cash_review` 会跳过高估高预期候选，优先研究无张力的高收益持仓，若所有候选都有高估张力则输出复核估值张力动作。Markdown 再平衡表新增中文动作“复核估值张力”，不暴露内部枚举。`/portfolio-review` 已同步说明该软门禁口径，Codex 工具副本同步，并用回归测试锁定低配门禁、现金部署候选过滤和 Markdown 中文化。
+>
+> 2026-06-30 继续推进第五十二切片：`rebalance_suggestions` 继续接入 `valuation_sanity` 的低估低预期张力，避免 PE 处于低估区但主观预期低于现金门槛的标的被机械建议直接减仓/清仓。低于现金门槛且存在 `low_valuation_low_return` 的持仓不再输出 `reduce_or_exit`，改为 `review_valuation_tension`，提示先复核估值水位与 `expected_return` 是否过低；普通低于现金门槛且无低估张力的持仓仍保持减仓/清仓建议。`/portfolio-review` 已同步说明该软门禁口径，Codex 工具副本同步，并用回归测试锁定。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
 - 相关性风险检测
-- 机会成本（含负预期收益、字段级输入错误、缺失输入建议与数据不足展示，并纳入整体健康度降级/数据不足判断）、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议（含低配缺输入冲突消解与高估高预期加仓软门禁）、首屏结论摘要、动作口径与数据缺口、可配置现金门槛、持仓名称/代码唯一性校验、估值水位张力校验（PE 分位与预期收益的张力，含不替代人工裁决口径）
+- 机会成本（含负预期收益、字段级输入错误、缺失输入建议与数据不足展示，并纳入整体健康度降级/数据不足判断）、压力测试、目标仓位偏离、目标调仓测算、目标覆盖度、机械再平衡建议（含低配缺输入冲突消解、高估高预期加仓软门禁、低估低预期减仓软门禁）、首屏结论摘要、动作口径与数据缺口、可配置现金门槛、持仓名称/代码唯一性校验、估值水位张力校验（PE 分位与预期收益的张力，含不替代人工裁决口径）
 
 ### 权限安全架构回归样例
 > 2026-06-29 已启动第一切片：新增 `examples/team-research-regression/tencent-supplement-loop/`，构造腾讯团队研究回归样例，覆盖 `data-pack.json`、`source-index.md`、四份 `role-briefs/`、`audit-results.json`、`最终报告.md` 与 `supplement-loop.md`。样例明确展示“角色只读提出补数请求 -> Team Lead 补 S3 资料 -> 第二轮分析修正结论 -> Team Lead 仲裁并抽检准出”的闭环，且 `audit-results.json.verdict=pass`、抽检项均绑定已定义 ref。同步到 Codex 包内，并新增回归测试验证样例可通过 `team_research_outputs.validate` 且 root/Codex 样例逐文件一致。

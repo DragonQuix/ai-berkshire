@@ -71,13 +71,39 @@ def _high_valuation_tension_names(valuation_sanity: dict[str, Any] | None) -> se
     }
 
 
-def _append_below_cash(items: list[dict[str, Any]], opportunity_cost: dict[str, Any]) -> None:
+def _low_valuation_tension_names(valuation_sanity: dict[str, Any] | None) -> set[str]:
+    if not valuation_sanity:
+        return set()
+    return {
+        item["name"]
+        for item in valuation_sanity.get("tensions", [])
+        if item.get("tension_type") == "low_valuation_low_return"
+    }
+
+
+def _append_below_cash(
+    items: list[dict[str, Any]],
+    opportunity_cost: dict[str, Any],
+    low_valuation_tension_names: set[str],
+) -> None:
     cash_hurdle = opportunity_cost["cash_hurdle"]
     below_cash = sorted(
         opportunity_cost["below_cash_hurdle"],
         key=lambda item: (-_weighted_cash_drag(item, cash_hurdle), item["name"]),
     )
     for row in below_cash:
+        if row["name"] in low_valuation_tension_names:
+            items.append(
+                _item(
+                    "review_valuation_tension",
+                    row["name"],
+                    "medium",
+                    "风险调整后收益低于现金门槛，但存在低估低预期张力，应先复核估值水位与 expected_return。",
+                    row["weight"],
+                    None,
+                )
+            )
+            continue
         items.append(
             _item(
                 "reduce_or_exit",
@@ -274,7 +300,8 @@ def build_rebalance_suggestions(
     items: list[dict[str, Any]] = []
     missing_input_names = set(opportunity_cost["missing_inputs"])
     high_valuation_names = _high_valuation_tension_names(valuation_sanity)
-    _append_below_cash(items, opportunity_cost)
+    low_valuation_names = _low_valuation_tension_names(valuation_sanity)
+    _append_below_cash(items, opportunity_cost, low_valuation_names)
     _append_allocation_drift(
         items, allocation_drift, missing_input_names, high_valuation_names
     )
@@ -285,5 +312,5 @@ def build_rebalance_suggestions(
     return {
         "primary_action": _primary_action(items),
         "items": items,
-        "method": "基于机会成本、目标仓位偏离、集中度和现金缓冲的机械建议；不替代个股研究。",
+        "method": "基于机会成本、目标仓位偏离、集中度、估值水位张力和现金缓冲的机械建议；不替代个股研究。",
     }
