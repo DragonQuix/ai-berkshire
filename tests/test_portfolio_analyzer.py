@@ -462,15 +462,72 @@ def test_render_markdown_localizes_rebalance_actions() -> None:
     ]
 
     markdown = pa.render_markdown(pa.analyze_portfolio(holdings))
+    rebalance_section = markdown.split("## 再平衡建议", 1)[1].split("\n## ", 1)[0]
 
-    assert "| high | 减仓/清仓 | 阿里巴巴 | 20.0% | 0.0% |" in markdown
-    assert "| high | 下调至集中度上限 | 腾讯 | 55.0% | 40.0% |" in markdown
-    assert "| medium | 提高现金 | 现金 | 2.0% | 10.0% |" in markdown
-    assert "| medium | 补齐输入 | 台积电 | 15.0% | - |" in markdown
+    assert "| 高 | 减仓/清仓 | 阿里巴巴 | 20.0% | 0.0% |" in rebalance_section
+    assert "| 高 | 下调至集中度上限 | 腾讯 | 55.0% | 40.0% |" in rebalance_section
+    assert "| 中 | 提高现金 | 现金 | 2.0% | 10.0% |" in rebalance_section
+    assert "| 中 | 补齐输入 | 台积电 | 15.0% | - |" in rebalance_section
+    assert "| high |" not in rebalance_section
+    assert "| medium |" not in rebalance_section
+    assert "| low |" not in rebalance_section
     assert "reduce_or_exit" not in markdown
     assert "trim_to_limit" not in markdown
     assert "raise_cash" not in markdown
     assert "fill_inputs" not in markdown
+
+
+def test_render_markdown_localizes_empty_rebalance_row() -> None:
+    holdings = [
+        {
+            "name": "腾讯",
+            "weight": 20,
+            "industry": "互联网",
+            "region": "中国",
+            "currency": "HKD",
+            "themes": ["平台经济"],
+            "expected_return": 0.08,
+            "conviction": 1.0,
+        },
+        {
+            "name": "台积电",
+            "weight": 20,
+            "industry": "半导体",
+            "region": "台湾",
+            "currency": "USD",
+            "themes": ["制造"],
+            "expected_return": 0.09,
+            "conviction": 1.0,
+        },
+        {
+            "name": "Costco",
+            "weight": 20,
+            "industry": "零售",
+            "region": "美国",
+            "currency": "USD",
+            "themes": ["会员制"],
+            "expected_return": 0.07,
+            "conviction": 1.0,
+        },
+        {
+            "name": "茅台",
+            "weight": 20,
+            "industry": "消费",
+            "region": "中国",
+            "currency": "CNY",
+            "themes": ["白酒"],
+            "expected_return": 0.06,
+            "conviction": 1.0,
+        },
+        {"name": "现金", "weight": 20, "asset_type": "cash", "region": "现金", "currency": "CNY"},
+    ]
+
+    markdown = pa.render_markdown(pa.analyze_portfolio(holdings))
+    rebalance_section = markdown.split("## 再平衡建议", 1)[1].split("\n## ", 1)[0]
+
+    assert "| 低 | 维持观察 | 组合 | - | - | 暂无机械调仓建议，维持观察。 |" in rebalance_section
+    assert "| low |" not in rebalance_section
+    assert "| hold |" not in rebalance_section
 
 
 def test_cli_outputs_json_from_holdings_file(tmp_path: Path) -> None:

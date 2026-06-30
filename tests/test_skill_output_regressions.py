@@ -59,7 +59,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "目标超配",
         "目标差额：未配置",
         "状态列使用中文",
-        "再平衡动作列使用中文",
+        "再平衡表的优先级列和动作列使用中文",
         "turnover_to_target",
         "turnover_to_band",
         "opportunity_cost",

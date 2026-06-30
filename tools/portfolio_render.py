@@ -53,6 +53,15 @@ def _rebalance_action_label(action: str) -> str:
     return labels.get(action, action)
 
 
+def _rebalance_priority_label(priority: str) -> str:
+    labels = {
+        "high": "高",
+        "medium": "中",
+        "low": "低",
+    }
+    return labels.get(priority, priority)
+
+
 def _render_group(title: str, groups: dict[str, float]) -> list[str]:
     lines = [f"### {title}", "", "| 分类 | 占比 |", "|---|---:|"]
     lines.extend(f"| {name} | {_pct(weight)} |" for name, weight in groups.items())
@@ -168,14 +177,16 @@ def _append_rebalance(lines: list[str], analysis: dict[str, Any]) -> None:
         ]
     )
     if not suggestions["items"]:
-        lines.append("| low | hold | 组合 | - | - | 暂无机械调仓建议，维持观察。 |")
+        lines.append("| 低 | 维持观察 | 组合 | - | - | 暂无机械调仓建议，维持观察。 |")
         return
     for item in suggestions["items"]:
         current = "-" if item["current_weight"] is None else _pct(item["current_weight"])
         suggested = "-" if item["suggested_weight"] is None else _pct(item["suggested_weight"])
+        priority = _rebalance_priority_label(item["priority"])
+        action = _rebalance_action_label(item["action"])
         lines.append(
-            f"| {item['priority']} | {_rebalance_action_label(item['action'])} | {item['target']} | "
-            f"{current} | {suggested} | {item['reason']} |"
+            f"| {priority} | {action} | {item['target']} | {current} | {suggested} | "
+            f"{item['reason']} |"
         )
 
 
