@@ -520,8 +520,10 @@ def test_rebalance_suggestions_turn_diagnostics_into_actions() -> None:
     assert ("raise_cash", "现金") in actions
     assert ("fill_inputs", "台积电") in actions
     ali = next(item for item in suggestions["items"] if item["target"] == "阿里巴巴")
+    cash = next(item for item in suggestions["items"] if item["action"] == "raise_cash")
     assert ali["current_weight"] == pytest.approx(0.20)
     assert ali["suggested_weight"] == pytest.approx(0.0)
+    assert "现金 2.0% 低于 3%" in cash["reason"]
 
 
 def test_rebalance_missing_input_reason_only_mentions_expected_return() -> None:
@@ -859,6 +861,7 @@ def test_rebalance_deploy_cash_skips_high_valuation_tension_candidate() -> None:
 
     deploy = next(item for item in suggestions["items"] if item["action"] == "deploy_cash_review")
     assert deploy["target"] == "阿里巴巴"
+    assert "现金 45.0% 高于 35%" in deploy["reason"]
     assert all(
         item["target"] != "腾讯" or item["action"] != "deploy_cash_review"
         for item in suggestions["items"]
@@ -880,6 +883,7 @@ def test_rebalance_reviews_valuation_tension_when_all_cash_deploy_candidates_are
     assert not any(item["action"] == "deploy_cash_review" for item in suggestions["items"])
     review = next(item for item in suggestions["items"] if item["action"] == "review_valuation_tension")
     assert review["target"] == "腾讯"
+    assert "现金 45.0% 高于 35%" in review["reason"]
     assert suggestions["primary_action"] == "复核 腾讯 估值水位张力"
 
 

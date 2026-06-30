@@ -216,7 +216,7 @@ def _append_cash_buffer(
                 "raise_cash",
                 "现金",
                 "medium",
-                f"现金低于 {MIN_CASH:.0%}，组合抗冲击缓冲不足。",
+                f"现金 {cash_weight:.1%} 低于 {MIN_CASH:.0%}，组合抗冲击缓冲不足。",
                 cash_weight,
                 TARGET_CASH,
             )
@@ -234,7 +234,7 @@ def _append_cash_buffer(
                     "review_valuation_tension",
                     target["name"],
                     "medium",
-                    "现金偏高但最高收益候选存在高估高预期张力，应先复核估值水位再部署现金。",
+                    f"现金 {cash_weight:.1%} 高于 {MAX_CASH:.0%}，但最高收益候选存在高估高预期张力，应先复核估值水位再部署现金。",
                     target["weight"],
                     None,
                 )
@@ -246,7 +246,7 @@ def _append_cash_buffer(
                 "deploy_cash_review",
                 target,
                 "medium",
-                "现金占比偏高，可优先研究风险调整后收益最高的已有持仓。",
+                f"现金 {cash_weight:.1%} 高于 {MAX_CASH:.0%}，可优先研究风险调整后收益最高的已有持仓。",
                 cash_weight,
                 MAX_CASH,
             )
