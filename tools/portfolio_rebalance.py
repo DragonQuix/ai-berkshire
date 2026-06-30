@@ -43,6 +43,10 @@ def _item(
     }
 
 
+def _weight_text(value: float | None) -> str:
+    return "-" if value is None else f"{value:.1%}"
+
+
 def _primary_action(items: list[dict[str, Any]]) -> str:
     if not items:
         return "维持观察"
@@ -166,14 +170,15 @@ def _append_allocation_drift(
         if row["status"] == "underweight" and row["name"] in missing_input_names:
             continue
         if row["status"] == "overweight":
+            suggested_weight = _target_or_limit(row, "overweight")
             items.append(
                 _item(
                     "trim_to_target",
                     row["name"],
                     "high",
-                    "当前仓位高于目标仓位或上限，应先回到目标约束内。",
+                    f"当前 {_weight_text(row['current_weight'])}，建议回到 {_weight_text(suggested_weight)}；当前仓位高于目标仓位或上限。",
                     row["current_weight"],
-                    _target_or_limit(row, "overweight"),
+                    suggested_weight,
                 )
             )
         elif row["status"] == "underweight":
@@ -190,14 +195,15 @@ def _append_allocation_drift(
                 )
                 seen_targets.add(row["name"])
                 continue
+            suggested_weight = _target_or_limit(row, "underweight")
             items.append(
                 _item(
                     "add_to_target",
                     row["name"],
                     "medium",
-                    "当前仓位低于目标仓位或下限，若个股论文仍成立，可优先补足。",
+                    f"当前 {_weight_text(row['current_weight'])}，建议补足到 {_weight_text(suggested_weight)}；若个股论文仍成立，可优先补足。",
                     row["current_weight"],
-                    _target_or_limit(row, "underweight"),
+                    suggested_weight,
                 )
             )
         seen_targets.add(row["name"])

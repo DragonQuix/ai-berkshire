@@ -751,6 +751,8 @@ def test_rebalance_suggestions_prioritize_allocation_drift_actions() -> None:
     assert tencent["suggested_weight"] == pytest.approx(0.30)
     assert alibaba["current_weight"] == pytest.approx(0.10)
     assert alibaba["suggested_weight"] == pytest.approx(0.20)
+    assert "当前 45.0%，建议回到 30.0%" in tencent["reason"]
+    assert "当前 10.0%，建议补足到 20.0%" in alibaba["reason"]
 
 
 def test_rebalance_does_not_add_underweight_holding_without_expected_return() -> None:
