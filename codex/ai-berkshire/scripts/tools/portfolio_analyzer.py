@@ -9,91 +9,19 @@ from pathlib import Path
 from typing import Any
 
 from portfolio_allocation import build_allocation_drift
+from portfolio_input import UNKNOWN, as_ratio, normalize_holdings
 from portfolio_opportunity import DEFAULT_CASH_HURDLE, build_opportunity_cost
 from portfolio_rebalance import build_rebalance_suggestions
 from portfolio_render import render_markdown
 from portfolio_stress import build_stress_tests
 
 
-UNKNOWN = "未知"
-CASH_NAMES = {"现金", "cash", "CASH"}
 EXPOSURE_LIMIT = 0.50
 
 def _ensure_utf8_stdio() -> None:
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8")
-
-def _as_float(value: Any, field: str) -> float:
-    try:
-        number = float(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{field} 必须是数字") from exc
-    if number <= 0:
-        raise ValueError(f"{field} 必须大于 0")
-    return number
-
-def _as_ratio(value: Any, field: str) -> float:
-    number = _as_float(value, field)
-    return number / 100.0 if number > 1 else number
-
-def _optional_ratio(value: Any, field: str) -> float | None:
-    if value is None or value == "":
-        return None
-    return _as_ratio(value, field)
-
-def _as_themes(value: Any) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, str):
-        return [item.strip() for item in value.split(",") if item.strip()]
-    if isinstance(value, list):
-        return [str(item).strip() for item in value if str(item).strip()]
-    raise ValueError("themes 必须是字符串或字符串数组")
-
-def _is_cash(raw: dict[str, Any]) -> bool:
-    asset_type = str(raw.get("asset_type", "")).lower()
-    name = str(raw.get("name", "")).strip()
-    code = str(raw.get("code", "")).strip()
-    return asset_type == "cash" or name in CASH_NAMES or code in CASH_NAMES
-
-def _normalize_holdings(holdings: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    if not isinstance(holdings, list) or not holdings:
-        raise ValueError("holdings 必须是非空数组")
-
-    rows: list[dict[str, Any]] = []
-    raw_weights: list[float] = []
-    for idx, raw in enumerate(holdings, start=1):
-        if not isinstance(raw, dict):
-            raise ValueError(f"第 {idx} 个持仓必须是对象")
-        name = str(raw.get("name") or raw.get("code") or "").strip()
-        if not name:
-            raise ValueError(f"第 {idx} 个持仓缺少 name 或 code")
-        raw_weights.append(_as_float(raw.get("weight"), f"{name}.weight"))
-        rows.append(
-            {
-                "name": name,
-                "code": str(raw.get("code", "")).strip(),
-                "weight": 0.0,
-                "industry": str(raw.get("industry") or UNKNOWN).strip(),
-                "region": str(raw.get("region") or UNKNOWN).strip(),
-                "currency": str(raw.get("currency") or UNKNOWN).strip(),
-                "themes": _as_themes(raw.get("themes")),
-                "is_cash": _is_cash(raw),
-                "expected_return": raw.get("expected_return"),
-                "conviction": raw.get("conviction"),
-                "target_weight": _optional_ratio(raw.get("target_weight"), f"{name}.target_weight"),
-                "min_weight": _optional_ratio(raw.get("min_weight"), f"{name}.min_weight"),
-                "max_weight": _optional_ratio(raw.get("max_weight"), f"{name}.max_weight"),
-            }
-        )
-
-    divisor = 100.0 if sum(raw_weights) > 1.5 else 1.0
-    scaled = [weight / divisor for weight in raw_weights]
-    total = sum(scaled)
-    for row, weight in zip(rows, scaled):
-        row["weight"] = weight / total
-    return rows
 
 def _sorted_weights(mapping: dict[str, float]) -> dict[str, float]:
     return dict(sorted(mapping.items(), key=lambda item: (-item[1], item[0])))
@@ -227,7 +155,7 @@ def analyze_portfolio(
     holdings: list[dict[str, Any]],
     cash_hurdle: float = DEFAULT_CASH_HURDLE,
 ) -> dict[str, Any]:
-    rows = _normalize_holdings(holdings)
+    rows = normalize_holdings(holdings)
     concentration = _build_concentration(rows)
     exposures = _build_exposures(rows)
     flags = _build_risk_flags(exposures)
@@ -282,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "analyze":
         analysis = analyze_portfolio(
             _load_holdings(args.input),
-            cash_hurdle=_as_ratio(args.cash_hurdle, "--cash-hurdle"),
+            cash_hurdle=as_ratio(args.cash_hurdle, "--cash-hurdle"),
         )
         if args.format == "json":
             print(json.dumps(analysis, ensure_ascii=False, indent=2))

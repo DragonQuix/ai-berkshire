@@ -232,6 +232,27 @@ def test_allocation_drift_estimates_minimum_band_rebalance_without_targets() -> 
     assert drift["unmatched_band_cash_delta"] == pytest.approx(0.0)
 
 
+@pytest.mark.parametrize(
+    "override, message",
+    [
+        ({"min_weight": 40, "max_weight": 30}, "腾讯.min_weight 不能大于 max_weight"),
+        ({"target_weight": 20, "min_weight": 30}, "腾讯.target_weight 不能低于 min_weight"),
+        ({"target_weight": 50, "max_weight": 40}, "腾讯.target_weight 不能高于 max_weight"),
+    ],
+)
+def test_allocation_constraints_must_be_internally_consistent(
+    override: dict[str, float],
+    message: str,
+) -> None:
+    holdings = [
+        {**SAMPLE_HOLDINGS[0], **override},
+        *SAMPLE_HOLDINGS[1:],
+    ]
+
+    with pytest.raises(ValueError, match=message):
+        pa.analyze_portfolio(holdings)
+
+
 def test_rebalance_suggestions_prioritize_allocation_drift_actions() -> None:
     holdings = [
         {
@@ -410,6 +431,7 @@ def test_codex_tool_copy_stays_in_sync() -> None:
     for filename in [
         "portfolio_allocation.py",
         "portfolio_analyzer.py",
+        "portfolio_input.py",
         "portfolio_opportunity.py",
         "portfolio_rebalance.py",
         "portfolio_render.py",

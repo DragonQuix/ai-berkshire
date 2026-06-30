@@ -93,6 +93,8 @@
 > 2026-06-30 继续推进第十切片：`rebalance_suggestions` 接入 `allocation_drift`，在机会成本之后、集中度之前优先输出目标仓位/上下限偏离对应的机械加减仓动作（`trim_to_target` / `add_to_target`），避免“诊断发现目标偏离但调仓建议只看集中度”的断层；`/portfolio-review` 已同步要求再平衡建议引用目标仓位偏离。
 >
 > 2026-06-30 继续推进第十一切片：`allocation_drift` 新增回到约束区间的最小调仓测算，逐项输出 `adjustment_to_band`，聚合输出 `buy_to_band`、`sell_to_band`、`turnover_to_band` 与 `unmatched_band_cash_delta`；该口径优先用于只有 `min_weight` / `max_weight`、没有 `target_weight` 的持仓，保留既有 `turnover_to_target` 精确回到目标仓位语义。Markdown 报告和 `/portfolio-review` 已要求展示 `allocation_drift.turnover_to_band`。
+>
+> 2026-06-30 继续推进第十二切片：组合输入解析拆分为 `tools/portfolio_input.py`，并新增目标仓位约束一致性校验；`min_weight > max_weight`、`target_weight < min_weight`、`target_weight > max_weight` 会在分析前直接打回，避免自相矛盾的约束进入 `allocation_drift` 和 `rebalance_suggestions`。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
