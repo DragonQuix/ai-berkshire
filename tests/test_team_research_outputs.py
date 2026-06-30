@@ -654,6 +654,9 @@ ROLE_REQUIRED_SECTIONS = [
 REGRESSION_SAMPLE_DIR = (
     REPO / "examples" / "team-research-regression" / "tencent-supplement-loop"
 )
+CONFLICT_SAMPLE_DIR = (
+    REPO / "examples" / "team-research-regression" / "pinduoduo-conflict-arbitration"
+)
 
 
 def test_permission_safe_supplement_loop_regression_sample_validates() -> None:
@@ -696,6 +699,48 @@ def test_permission_safe_supplement_loop_sample_synced_to_codex() -> None:
     assert codex_files == root_files
     for rel in root_files:
         assert (codex_dir / rel).read_bytes() == (REGRESSION_SAMPLE_DIR / rel).read_bytes()
+
+
+def test_permission_safe_conflict_arbitration_sample_validates() -> None:
+    """第二个回归样例必须展示角色冲突与 Team Lead 仲裁，而非只有补数闭环。"""
+    result = tro.validate_team_research_outputs(CONFLICT_SAMPLE_DIR)
+
+    assert result["status"] == "pass"
+    data_pack = json.loads((CONFLICT_SAMPLE_DIR / "data-pack.json").read_text(encoding="utf-8"))
+    audit = json.loads((CONFLICT_SAMPLE_DIR / "audit-results.json").read_text(encoding="utf-8"))
+    final_report = (CONFLICT_SAMPLE_DIR / "最终报告.md").read_text(encoding="utf-8")
+    loop = (CONFLICT_SAMPLE_DIR / "supplement-loop.md").read_text(encoding="utf-8")
+
+    assert data_pack["meta"]["company"] == "拼多多"
+    assert data_pack["meta"]["owner"] == "Team Lead"
+    assert data_pack["known_gaps"] == []
+    assert audit["verdict"] == "pass"
+    assert audit["items"] and all(item["status"] == "pass" for item in audit["items"])
+    assert "角色冲突" in loop
+    assert "Team Lead 仲裁" in loop
+    assert "价格竞争" in final_report
+    assert "S3" in final_report and "E1" in final_report
+
+
+def test_permission_safe_conflict_arbitration_sample_synced_to_codex() -> None:
+    codex_dir = (
+        REPO / "codex" / "ai-berkshire" / "examples" / "team-research-regression"
+        / "pinduoduo-conflict-arbitration"
+    )
+    root_files = sorted(
+        p.relative_to(CONFLICT_SAMPLE_DIR)
+        for p in CONFLICT_SAMPLE_DIR.rglob("*")
+        if p.is_file()
+    )
+    codex_files = sorted(
+        p.relative_to(codex_dir)
+        for p in codex_dir.rglob("*")
+        if p.is_file()
+    )
+
+    assert codex_files == root_files
+    for rel in root_files:
+        assert (codex_dir / rel).read_bytes() == (CONFLICT_SAMPLE_DIR / rel).read_bytes()
 
 
 def _strip_role_brief_section(company_dir: Path, filename: str, section: str) -> None:

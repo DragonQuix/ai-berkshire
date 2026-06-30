@@ -1,0 +1,35 @@
+{
+  "report": "examples/team-research-regression/pinduoduo-conflict-arbitration/最终报告.md",
+  "generated_at": "2026-06-30",
+  "sample_ratio": 0.25,
+  "items": [
+    {
+      "claim": "2025 年收入为 3900 亿元",
+      "report_location": "核心数据速览",
+      "source_ref": "S1",
+      "expected_value": "3900亿元",
+      "verified_value": "3900亿元",
+      "status": "pass",
+      "note": "年报口径核对通过。"
+    },
+    {
+      "claim": "价格竞争是最终报告的核心反面证据",
+      "report_location": "投资论点（Bull vs Bear）",
+      "source_ref": "E1",
+      "expected_value": "多平台低价策略加剧",
+      "verified_value": "多平台低价策略加剧",
+      "status": "pass",
+      "note": "反证已进入最终报告。"
+    },
+    {
+      "claim": "Team Lead 仲裁使用 S3",
+      "report_location": "角色冲突与 Team Lead 仲裁",
+      "source_ref": "S3",
+      "expected_value": "低价心智仍强但补贴压力不可忽略",
+      "verified_value": "低价心智仍强但补贴压力不可忽略",
+      "status": "pass",
+      "note": "仲裁依据已绑定补充资料。"
+    }
+  ],
+  "verdict": "pass"
+}

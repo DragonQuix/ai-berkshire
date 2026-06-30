@@ -93,6 +93,9 @@
 > 2026-06-29 已启动第一切片：新增 `examples/team-research-regression/tencent-supplement-loop/`，构造腾讯团队研究回归样例，覆盖 `data-pack.json`、`source-index.md`、四份 `role-briefs/`、`audit-results.json`、`最终报告.md` 与 `supplement-loop.md`。样例明确展示“角色只读提出补数请求 -> Team Lead 补 S3 资料 -> 第二轮分析修正结论 -> Team Lead 仲裁并抽检准出”的闭环，且 `audit-results.json.verdict=pass`、抽检项均绑定已定义 ref。同步到 Codex 包内，并新增回归测试验证样例可通过 `team_research_outputs.validate` 且 root/Codex 样例逐文件一致。
 >
 > 2026-06-29 继续推进第二切片：`tools/verify_channel_capability.py --quick` 接入 `examples/team-research-regression/*` 自动校验，逐个样例调用 `team_research_outputs.validate`，并递归比对 root/Codex 样例目录文件列表与内容，防止补数闭环样例失效或双平台漂移。
+>
+> 2026-06-30 继续推进第三切片：新增 `examples/team-research-regression/pinduoduo-conflict-arbitration/`，覆盖“商业角色强调低价心智 vs 风险角色强调价格竞争 -> Team Lead 补 S3 -> 最终报告双边保留并仲裁”的角色冲突样例。样例包含完整 `data-pack.json`、`source-index.md`、四份 `role-briefs/`、`audit-results.json`、`最终报告.md` 与 `supplement-loop.md`，`audit-results.json.verdict=pass` 且抽检项绑定 S1/S3/E1；同步到 Codex 包内，并新增回归测试验证样例可通过 `team_research_outputs.validate` 且 root/Codex 逐文件一致。
 
 - 用腾讯、新华保险、拼多多、AI算力等历史案例验证新架构不会降低证据密度
 - 至少一个样例展示“补数请求 -> Team Lead 补资料 -> 第二轮分析”的闭环
+- 至少一个样例展示“角色冲突 -> Team Lead 补资料 -> 仲裁写入最终报告”的闭环

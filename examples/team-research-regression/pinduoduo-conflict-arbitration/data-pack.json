@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "company": "拼多多",
+    "ticker": "PDD",
+    "market": "us",
+    "generated_at": "2026-06-30",
+    "owner": "Team Lead"
+  },
+  "financials": {
+    "currency": "RMB",
+    "unit": "亿元",
+    "periods": ["2025"],
+    "source_refs": ["S1"]
+  },
+  "valuation": {
+    "price": 142,
+    "market_cap_checked": {
+      "reported": "约1900亿美元",
+      "checked_by": "Team Lead",
+      "source_ref": "S2"
+    },
+    "source_refs": ["S2"]
+  },
+  "business_segments": [
+    {
+      "segment": "国内电商与 Temu",
+      "evidence": "S1 显示交易服务收入仍增长，但管理层提示补贴和商家生态投入上升。",
+      "source_ref": "S1"
+    },
+    {
+      "segment": "价格竞争仲裁补充",
+      "evidence": "Team Lead 增补 S3，确认低价心智仍是优势，但不能忽略商家补贴压力。",
+      "source_ref": "S3"
+    }
+  ],
+  "management_and_governance": [
+    {
+      "topic": "资本配置",
+      "evidence": "管理层强调长期投入优先，短期利润率可能波动。",
+      "source_ref": "S1"
+    }
+  ],
+  "industry_and_competition": [
+    {
+      "topic": "电商价格竞争",
+      "evidence": "E1 显示多平台低价策略加剧，获客和补贴压力可能反噬利润率。",
+      "source_ref": "E1"
+    }
+  ],
+  "risks_and_counterevidence": [
+    {
+      "risk": "价格竞争拖累利润率",
+      "counterevidence": "S3 显示拼多多低价心智仍强，但 E1 表明竞争压力不可忽视。",
+      "source_ref": "E1"
+    }
+  ],
+  "tool_outputs": [
+    {
+      "tool": "financial_rigor.py",
+      "command": "python tools/financial_rigor.py verify-market-cap --price 142 --shares 13.4 --reported 1900 --currency USD",
+      "summary": "市值验算在样例容差内。",
+      "source_ref": "A1"
+    }
+  ],
+  "known_gaps": []
+}
