@@ -208,10 +208,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "analyze":
-        analysis = analyze_portfolio(
-            _load_holdings(args.input),
-            cash_hurdle=as_ratio(args.cash_hurdle, "--cash-hurdle"),
-        )
+        try:
+            analysis = analyze_portfolio(
+                _load_holdings(args.input),
+                cash_hurdle=as_ratio(args.cash_hurdle, "--cash-hurdle"),
+            )
+        except ValueError as exc:
+            print(f"错误: {exc}", file=sys.stderr)
+            return 2
         if args.format == "json":
             print(json.dumps(analysis, ensure_ascii=False, indent=2))
         else:
