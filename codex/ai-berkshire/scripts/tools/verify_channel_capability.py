@@ -21,9 +21,13 @@ C) 权限安全多 Agent 静态校验（`--quick` 即执行，纯静态）
      - 调用 tools/verify_multi_agent_permissions.py
      - 扫描后台 Agent 自行联网、取数、命令执行和写文件等旧句式
 
+D) 团队研究回归样例校验（`--quick` 即执行，纯静态）
+     - 校验 examples/team-research-regression/* 通过 team_research_outputs.validate
+     - 校验 root/Codex 样例目录逐文件同步
+
 用法:
-    python tools/verify_channel_capability.py --quick     # 仅 B/C 类静态校验，不联网
-    python tools/verify_channel_capability.py             # A+B+C 全部校验（需 quality-metrics 子命令与网络）
+    python tools/verify_channel_capability.py --quick     # 静态校验，不联网
+    python tools/verify_channel_capability.py             # 静态校验 + quality-metrics（需网络/token）
 
 退出码: 0 = 全部通过；非 0 = 有失败项。
 """
@@ -307,6 +311,55 @@ def check_depth_profile_sync() -> int:
     return rc
 
 
+def _relative_files(root: Path) -> list[Path]:
+    return sorted(p.relative_to(root) for p in root.rglob("*") if p.is_file())
+
+
+def _check_tree_sync(root: Path, codex: Path, label: str) -> int:
+    if not root.is_dir() or not codex.is_dir():
+        _fail(f"{label} root/Codex 样例目录缺失")
+        return 1
+    root_files = _relative_files(root)
+    codex_files = _relative_files(codex)
+    if root_files != codex_files:
+        _fail(f"{label} root/Codex 文件列表不一致")
+        return 1
+    for rel in root_files:
+        if (root / rel).read_bytes() != (codex / rel).read_bytes():
+            _fail(f"{label} 文件不同步: {rel.as_posix()}")
+            return 1
+    _pass(f"{label} root/Codex 样例同步一致 ({len(root_files)} files)")
+    return 0
+
+
+def check_team_research_regression_samples() -> int:
+    print("\n-- F) 团队研究回归样例校验 --")
+    rc = 0
+    root_dir = REPO / "examples" / "team-research-regression"
+    codex_dir = REPO / "codex" / "ai-berkshire" / "examples" / "team-research-regression"
+    if not root_dir.is_dir():
+        _fail("examples/team-research-regression 不存在")
+        return 1
+    samples = sorted(p for p in root_dir.iterdir() if p.is_dir())
+    if not samples:
+        _fail("examples/team-research-regression 下没有样例")
+        return 1
+    try:
+        from team_research_outputs import validate_team_research_outputs
+    except Exception as exc:
+        _fail(f"无法导入 team_research_outputs.py: {exc}")
+        return 1
+    for sample in samples:
+        result = validate_team_research_outputs(sample)
+        if result.get("status") == "pass":
+            _pass(f"{sample.name} contract validate pass")
+        else:
+            _fail(f"{sample.name} contract validate fail: {result}")
+            rc |= 1
+        rc |= _check_tree_sync(sample, codex_dir / sample.name, sample.name)
+    return rc
+
+
 def check_global_static_markers() -> int:
     print("\n-- C) 全量静态规范检查 --")
     rc = 0
@@ -338,7 +391,7 @@ def main() -> int:
                     help="仅静态校验 Skill _source 覆盖与根/Codex 同步，不联网、不调用 quality-metrics")
     args = ap.parse_args()
 
-    mode = "quick (offline)" if args.quick else "full (A+B+C)"
+    mode = "quick (offline)" if args.quick else "full (static + quality-metrics)"
     print(f"== verify_channel_capability.py ({mode}, repo={REPO}) ==")
     rc = 0
     rc |= check_skills_source_and_sync()
@@ -346,6 +399,7 @@ def main() -> int:
     rc |= check_global_static_markers()
     rc |= check_multi_agent_permissions()
     rc |= check_depth_profile_sync()
+    rc |= check_team_research_regression_samples()
     if not args.quick:
         rc |= check_quality_metrics_json()
 

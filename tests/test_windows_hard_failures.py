@@ -58,3 +58,26 @@ def test_verify_channel_quick_outputs_under_gbk_encoding() -> None:
 
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "UnicodeEncodeError" not in proc.stdout + proc.stderr
+
+
+def test_verify_channel_quick_validates_team_regression_samples() -> None:
+    env = dict(os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "verify_channel_capability.py"),
+            "--quick",
+        ],
+        cwd=str(REPO),
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=60,
+    )
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "-- F) 团队研究回归样例校验 --" in proc.stdout
+    assert "tencent-supplement-loop" in proc.stdout
