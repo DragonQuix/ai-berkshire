@@ -18,6 +18,16 @@ def _as_float(value: Any, field: str) -> float:
     return number
 
 
+def _as_non_negative_float(value: Any, field: str) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} 必须是数字") from exc
+    if number < 0:
+        raise ValueError(f"{field} 不可为负数")
+    return number
+
+
 def _as_weight(value: Any, field: str) -> float:
     number = _as_float(value, field)
     if number > 100:
@@ -26,7 +36,7 @@ def _as_weight(value: Any, field: str) -> float:
 
 
 def as_ratio(value: Any, field: str) -> float:
-    number = _as_float(value, field)
+    number = _as_non_negative_float(value, field)
     ratio = number / 100.0 if number > 1 else number
     if ratio > 1:
         raise ValueError(f"{field} 不能超过 100%")

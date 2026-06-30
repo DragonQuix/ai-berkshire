@@ -61,6 +61,7 @@ REPORT_OUTPUT_CONTRACTS = {
         "rebalance_suggestions",
         "stress_tests",
         "输入持仓字段错误",
+        "可显式填 0",
         "tools/financial_rigor.py verify-valuation",
         "tools/financial_rigor.py three-scenario",
     ],

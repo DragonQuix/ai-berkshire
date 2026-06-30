@@ -289,6 +289,27 @@ def test_allocation_constraint_ratios_cannot_exceed_full_weight(field: str) -> N
         pa.analyze_portfolio(holdings)
 
 
+def test_allocation_constraints_allow_zero_target_and_bounds() -> None:
+    holdings = [
+        {
+            **SAMPLE_HOLDINGS[0],
+            "target_weight": 0,
+            "min_weight": 0,
+            "max_weight": 0,
+        },
+        *SAMPLE_HOLDINGS[1:],
+    ]
+
+    analysis = pa.analyze_portfolio(holdings)
+
+    tencent = analysis["allocation_drift"]["items"][0]
+    assert tencent["name"] == "腾讯"
+    assert tencent["target_weight"] == pytest.approx(0.0)
+    assert tencent["min_weight"] == pytest.approx(0.0)
+    assert tencent["max_weight"] == pytest.approx(0.0)
+    assert tencent["status"] == "overweight"
+
+
 def test_holding_weight_ratio_cannot_exceed_full_weight() -> None:
     holdings = [
         {**SAMPLE_HOLDINGS[0], "weight": 150},
@@ -418,6 +439,33 @@ def test_cli_accepts_custom_cash_hurdle(tmp_path: Path) -> None:
     payload = json.loads(completed.stdout)
     assert payload["opportunity_cost"]["cash_hurdle"] == pytest.approx(0.06)
     assert [row["name"] for row in payload["opportunity_cost"]["below_cash_hurdle"]] == ["腾讯"]
+
+
+def test_cli_accepts_zero_cash_hurdle(tmp_path: Path) -> None:
+    input_path = tmp_path / "holdings.json"
+    input_path.write_text(json.dumps({"holdings": SAMPLE_HOLDINGS}, ensure_ascii=False), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(TOOLS_DIR / "portfolio_analyzer.py"),
+            "analyze",
+            str(input_path),
+            "--format",
+            "json",
+            "--cash-hurdle",
+            "0",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["opportunity_cost"]["cash_hurdle"] == pytest.approx(0.0)
 
 
 def test_cli_rejects_cash_hurdle_above_full_weight(tmp_path: Path) -> None:

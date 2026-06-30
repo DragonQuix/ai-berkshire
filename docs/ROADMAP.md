@@ -113,6 +113,8 @@
 > 2026-06-30 继续推进第二十切片：`portfolio_analyzer analyze` 对 JSON 语法合法但结构不符合契约的输入追加文件上下文，输出 `错误: 输入 JSON 结构错误 <path>: 必须是持仓数组，或包含 holdings 数组的对象` 并返回 exit 2；新增回归测试锁定错误文件路径、结构错误前缀、无 traceback 和 root/Codex 工具副本同步。
 >
 > 2026-06-30 继续推进第二十一切片：`portfolio_analyzer analyze` 对合法 JSON 但持仓字段不符合契约的输入追加文件上下文，输出 `错误: 输入持仓字段错误 <path>: ...` 并返回 exit 2；`--cash-hurdle` 等 CLI 参数错误仍保持参数级提示，不混入文件路径。新增回归测试锁定字段错误路径、错误前缀、无 traceback，并同步 `/portfolio-review` 文档契约与 Codex 工具副本。
+>
+> 2026-06-30 继续推进第二十二切片：`portfolio_input.as_ratio()` 从“必须大于 0”调整为“不可为负数且不得超过 100%”，使 `target_weight` / `min_weight` / `max_weight` 可显式填 0，对应清仓目标或 0% 约束边界；`portfolio_analyzer analyze --cash-hurdle 0` 也可用于零现金门槛场景。持仓 `weight` 仍必须大于 0，避免空仓位进入归一化。新增回归测试锁定 0% 目标/上下限和 CLI 零现金门槛，并同步 `/portfolio-review` 文档契约与 Codex 工具副本。
 
 - 持仓组合健康度评估
 - 行业/地域集中度分析
