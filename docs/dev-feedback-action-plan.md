@@ -435,6 +435,45 @@ python -m pytest tests/test_lxr_data.py -q
 python tools\verify_channel_capability.py --quick
 ```
 
+### P2-E5：`report_audit` 口径列覆盖率检查
+
+状态：已完成（2026-07-01）
+
+来源反馈：
+
+- `docs/dev-feedback-investment-research-deep-20260701.md` §3.3。
+- `investment-research` 要求核心数据表保留「口径/来源」列，但实际 deep 档报告 29 个表中只有 1 个表头含该列，说明文档软约束执行力不足。
+
+目标文件：
+
+- `tools/report_audit.py`
+- `codex/ai-berkshire/scripts/tools/report_audit.py`
+- `tests/test_report_audit.py`
+- `skills/investment-research.md`
+- `codex/ai-berkshire/references/skills/investment-research.md`
+- `docs/ROADMAP.md`
+- `docs/dev-feedback-action-plan.md`
+
+验收点：
+
+- `extract_data_points()` 能识别含 PE/PB/营收/归母净利润/市值/现金流等核心字段、但表头缺少「口径」或「来源」的 Markdown 表格。
+- 来自缺列核心表格的抽检项带 `caliber_column_warning` 与 `caliber_column_note`。
+- `verdict` 将该标记输出为 `metadata_warn_items` / `metadata_warn_count`，不改变准出/打回结果。
+- `investment-research` 文档把要求细化为“凡含理杏仁/妙想取数或核心财务字段的数据表必须带口径/来源列，纯历史趋势表或定性对比表可省”。
+
+完成记录：
+
+- 新增核心表格关键词与表头检查，抽检 JSON 模板透传 `caliber_column_warning`。
+- `render_verdict()` 增加「元数据警告」摘要和 JSON 字段，提示回补表头但不阻塞准出。
+- root 工具、Codex bundled 副本、root skill 与 Codex reference 已同步。
+
+验证命令：
+
+```powershell
+python -m pytest tests/test_report_audit.py -q
+python tools\verify_channel_capability.py --quick
+```
+
 ## 5. 反馈入口动作
 
 本次已将“执行 agent 的代码级复盘”从普通 `usage-feedback` 中分离，新增：
@@ -481,6 +520,6 @@ python tools\verify_channel_capability.py --quick
 - **P1-E2**：`report_audit` CLI `-o/--output`（§3.2）——verdict stdout 混日志头需清洗。参考 `lxr_data.py datapack -o`。=> 已完成。
 - **P1-E3**：`report_audit` verdict `caliber_ack` 通道（§3.4）——已知口径差异占警告额度，缺认可通道。=> 已完成。
 - **P2-E4**：港股 `--no-mx` 路径透 alternatives（§3.5）——文档示例路径的覆盖盲点。=> 已完成。
-- **P2-E5**：口径列覆盖率检查（§3.3）——让"所有核心数据表"从软约束变机器检查。
+- **P2-E5**：口径列覆盖率检查（§3.3）——让"所有核心数据表"从软约束变机器检查。=> 已完成。
 - **P2-E6**：港股年报 `reportType` 兜底（§3.6）——本次主 Agent 内联修复，应固化。
 - **P3-E7/E8**：Agent 降级"必要信息"标准示例（§3.7）、action-plan 二次验证字段（§3.8，本节已示范）。

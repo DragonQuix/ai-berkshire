@@ -71,6 +71,37 @@ def test_extract_data_points_preserves_signed_table_percentages() -> None:
     assert labels["悲观涨跌幅 · 数值"]["reported_value"] == -46.5
 
 
+def test_extract_data_points_flags_core_table_without_caliber_source_column() -> None:
+    text = """# 数据摘要
+
+| 指标 | 2025 | 2024 |
+|---|---:|---:|
+| 营业收入 | 6600亿 | 5900亿 |
+| 归母净利润 | 1800亿 | 1600亿 |
+"""
+
+    points = audit.extract_data_points(text)
+
+    flagged = [p for p in points if p.get("caliber_column_warning")]
+    assert flagged
+    assert all("口径/来源" in p["caliber_column_note"] for p in flagged)
+
+
+def test_extract_data_points_does_not_flag_core_table_with_caliber_source_column() -> None:
+    text = """# 数据摘要
+
+| 指标 | 2025 | 口径/来源 |
+|---|---:|---|
+| 营业收入 | 6600亿 | 理杏仁 toi=营业总收入 |
+| 归母净利润 | 1800亿 | 理杏仁 npatoshopc |
+"""
+
+    points = audit.extract_data_points(text)
+
+    assert points
+    assert all(not p.get("caliber_column_warning") for p in points)
+
+
 def test_sample_points_respects_minimum_cap_seed_and_line_order() -> None:
     points = [
         {"id": i, "label": f"指标{i}", "line_number": 100 - i}
@@ -301,6 +332,32 @@ def test_render_verdict_rejects_caliber_ack_without_note() -> None:
     assert result["verdict"] == "FAIL"
     assert result["fail_count"] == 1
     assert "打回" in out
+
+
+def test_render_verdict_surfaces_caliber_column_metadata_warning() -> None:
+    result, out = _capture_stdout(
+        audit.render_verdict,
+        [
+            {
+                "id": 1,
+                "label": "营业收入",
+                "reported_value": 100.0,
+                "unit": "亿",
+                "fetched_value": 100.0,
+                "fetched_source": "annual-report",
+                "line_number": 8,
+                "caliber_column_warning": True,
+                "caliber_column_note": "核心数据表缺少口径/来源列",
+            }
+        ],
+    )
+
+    assert result["verdict"] == "PASS"
+    assert result["warn_count"] == 0
+    assert result["metadata_warn_count"] == 1
+    assert result["metadata_warn_items"][0]["line_number"] == 8
+    assert "元数据警告" in out
+    assert "口径/来源" in out
 
 
 def test_cli_extract_outputs_json_template(tmp_path: Path) -> None:

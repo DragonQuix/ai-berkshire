@@ -122,6 +122,65 @@ _KV_LABEL_RE = re.compile(
     rf'(?P<num>{_SIGNED_NUM})\s*(?P<unit>亿[元美港]?元?|万亿|[xX倍]|%|[BMT])?'
 )
 
+_CORE_TABLE_KEYWORD_RE = re.compile(
+    r'(PE|PB|PS|ROE|ROA|EPS|BVPS|营收|收入|收益|归母|净利润|市值|估值|'
+    r'毛利率|净利率|现金流|自由现金流|股息|股利|利润|资产|负债)',
+    re.I,
+)
+_CALIBER_HEADER_RE = re.compile(r'(口径|来源|source|caliber)', re.I)
+
+
+def _split_table_cells(line: str) -> list:
+    return [
+        c.strip().strip('*_').strip()
+        for c in line.strip().strip('|').split('|')
+    ]
+
+
+def _table_has_core_metric(headers: list, row_lines: list) -> bool:
+    haystack = ' '.join(headers + row_lines)
+    return bool(_CORE_TABLE_KEYWORD_RE.search(haystack))
+
+
+def _table_has_caliber_header(headers: list) -> bool:
+    return any(_CALIBER_HEADER_RE.search(h) for h in headers)
+
+
+def _caliber_warning_ranges(lines: list) -> list:
+    ranges = []
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        is_header = '|' in line and not re.match(r'^\|[\-\s\|:]+\|$', line)
+        has_sep = i + 1 < len(lines) and re.match(r'^\|[\-\s\|:]+\|$', lines[i + 1].strip())
+        if not (is_header and has_sep):
+            i += 1
+            continue
+        headers = [h for h in _split_table_cells(line) if h]
+        row_lines = []
+        j = i + 2
+        while j < len(lines):
+            dline = lines[j].strip()
+            if not dline or not dline.startswith('|'):
+                break
+            row_lines.append(dline)
+            j += 1
+        if _table_has_core_metric(headers, row_lines) and not _table_has_caliber_header(headers):
+            ranges.append({
+                'start': i + 3,
+                'end': j,
+                'note': '核心数据表缺少口径/来源列，请补充字段口径、数据来源、币种或单位',
+            })
+        i = j
+    return ranges
+
+
+def _caliber_warning_for_line(lineno: int, ranges: list):
+    for item in ranges:
+        if item['start'] <= lineno <= item['end']:
+            return item['note']
+    return None
+
 
 def _parse_md_tables(lines: list) -> list:
     """解析 Markdown 中所有表格，返回 (row_label, col_header, value, unit, lineno, raw) 列表。"""
@@ -178,8 +237,10 @@ def extract_data_points(md_text: str) -> list:
     """
     points = []
     seen = set()
+    lines = md_text.split('\n')
+    caliber_ranges = _caliber_warning_ranges(lines)
 
-    def _add(label, val, unit, lineno, raw):
+    def _add(label, val, unit, lineno, raw, caliber_note=None):
         label = re.sub(r'[\*_`]+', '', label).strip()
         if not _is_valid_label(label):
             return
@@ -192,16 +253,19 @@ def extract_data_points(md_text: str) -> list:
         if key in seen:
             return
         seen.add(key)
-        points.append({
+        point = {
             'id': len(points) + 1,
             'label': label,
             'reported_value': val,
             'unit': unit,
             'raw_text': raw[:120],
             'line_number': lineno,
-        })
+        }
+        if caliber_note:
+            point['caliber_column_warning'] = True
+            point['caliber_column_note'] = caliber_note
+        points.append(point)
 
-    lines = md_text.split('\n')
     in_code = False
 
     # --- 1. 多列表格 ---
@@ -217,7 +281,7 @@ def extract_data_points(md_text: str) -> list:
             label = f"{row_label} · {col_header}"
         else:
             label = row_label
-        _add(label, val, unit, lineno, raw)
+        _add(label, val, unit, lineno, raw, _caliber_warning_for_line(lineno, caliber_ranges))
 
     # --- 2. KV 冒号行 ---
     for lineno, line in enumerate(lines, start=1):
@@ -392,10 +456,18 @@ def render_verdict(results: list, report_name: str = "") -> dict:
     fail_items = []
     warn_items = []
     caliber_ack_items = []
+    metadata_warn_items = []
     compared_count = 0
 
     for item in results:
         label = item.get('label', '?')
+        if item.get('caliber_column_warning'):
+            metadata_warn_items.append({
+                'id': item.get('id'),
+                'label': label,
+                'line_number': item.get('line_number', 0),
+                'note': str(item.get('caliber_column_note') or '核心数据表缺少口径/来源列').strip(),
+            })
         reported = _to_numeric(item.get('reported_value', 0))
         if reported is None:
             print(f'  ⬜ [{item["id"]:>2}] {label[:35]:35s}  →  [报告值非数值，跳过]')
@@ -524,12 +596,15 @@ def render_verdict(results: list, report_name: str = "") -> dict:
     fail_count = len(fail_items)
     warn_count = len(warn_items)
     caliber_ack_count = len(caliber_ack_items)
+    metadata_warn_count = len(metadata_warn_items)
     pass_count = total - fail_count - warn_count - caliber_ack_count
 
     print(
         f'  抽检总数: {total}  |  通过: {GREEN}{pass_count}{RESET}'
         f'  |  口径认可: {YELLOW}{caliber_ack_count}{RESET}'
-        f'  |  警告: {YELLOW}{warn_count}{RESET}  |  不通过: {RED}{fail_count}{RESET}'
+        f'  |  警告: {YELLOW}{warn_count}{RESET}'
+        f'  |  元数据警告: {YELLOW}{metadata_warn_count}{RESET}'
+        f'  |  不通过: {RED}{fail_count}{RESET}'
     )
     print()
 
@@ -556,6 +631,11 @@ def render_verdict(results: list, report_name: str = "") -> dict:
             print(f'  📝 {ci["label"]}  报告:{ci["reported"]} {ci["unit"]}  偏差: {ci["diff1_pct"]}% / {ci["diff2_pct"]}%')
             print(f'     说明：{ci["caliber_note"]}')
 
+    if metadata_warn_count > 0:
+        print(f'{YELLOW}元数据警告：{metadata_warn_count} 个抽检点来自缺少口径/来源列的核心数据表，不阻塞准出但需补表头。{RESET}')
+        for mi in metadata_warn_items:
+            print(f'  ⚠️  第 {mi["line_number"]} 行 | {mi["label"]} | {mi["note"]}')
+
     if warn_count > 0:
         print(f'{YELLOW}注意：{warn_count} 个数据点两来源结果不一致（超过2%），可能是口径差异（GAAP/Non-GAAP或汇率），请人工复核。{RESET}')
         for wi in warn_items:
@@ -568,11 +648,13 @@ def render_verdict(results: list, report_name: str = "") -> dict:
         'pass_count': pass_count,
         'caliber_ack_count': caliber_ack_count,
         'warn_count': warn_count,
+        'metadata_warn_count': metadata_warn_count,
         'fail_count': fail_count,
         'total': total,
         'fail_items': fail_items,
         'caliber_ack_items': caliber_ack_items,
         'warn_items': warn_items,
+        'metadata_warn_items': metadata_warn_items,
     }
 
 
@@ -664,7 +746,7 @@ def main():
             # 输出可填写的 JSON 模板
             template = []
             for p in sampled:
-                template.append({
+                row = {
                     'id': p['id'],
                     'label': p['label'],
                     'reported_value': p['reported_value'],
@@ -680,7 +762,11 @@ def main():
                     'fetched_source2': '',       # ← 填入副来源名称（可选）
                     'caliber_ack': False,        # ← 已知口径差异且报告已脚注时设为 true
                     'caliber_note': '',          # ← caliber_ack 为 true 时必填口径说明
-                })
+                }
+                if p.get('caliber_column_warning'):
+                    row['caliber_column_warning'] = True
+                    row['caliber_column_note'] = p.get('caliber_column_note', '')
+                template.append(row)
             print('抽检清单 JSON（填入 fetched_value 后，传给 verdict 命令）：')
             print()
             print(json.dumps(template, ensure_ascii=False, indent=2))
