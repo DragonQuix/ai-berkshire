@@ -323,17 +323,18 @@ python tools/report_audit.py extract \
 **Step 2 — 取数核验：**
 对清单中每个数据点，按 `skills/financial-data.md` 规范从可靠信源取数
 （美股：macrotrends+stockanalysis；港股：aastocks+macrotrends；A股：东方财富+巨潮资讯），
-填入 `fetched_value` / `fetched_source` / `fetched_value2` / `fetched_source2`。
+填入 `fetched_value` / `fetched_unit` / `fetched_source` / `fetched_value2` / `fetched_unit2` / `fetched_source2`。若超阈值差异已经在报告脚注或「口径/来源」列中解释，必须同时填 `caliber_ack: true` 与非空 `caliber_note`；空说明不得视为口径认可。
 
 **Step 3 — 输出判决：**
 ```bash
 python tools/report_audit.py verdict \
   --results '<填好的JSON>' \
-  --report <报告文件名>
+  --report <报告文件名> \
+  -o _tmp_verdict.json
 ```
 
-- **【准出】**：所有抽检点按 `skills/financial-data.md` 交叉验证阈值通过（同口径结构化双源 ≤2%）→ 报告可发布
-- **【打回】**：任意抽检点超阈或口径冲突未说明 → 修正后重新抽检
+- **【准出】**：所有抽检点按 `skills/financial-data.md` 交叉验证阈值通过（同口径结构化双源 ≤2%），或超阈值口径差异已用 `caliber_ack` + `caliber_note` 认可 → 报告可发布
+- **【打回】**：任意抽检点超阈且无有效口径说明，或口径冲突未在报告中解释 → 修正后重新抽检
 
 ## 数据源配置（增强后）
 

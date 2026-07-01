@@ -391,6 +391,7 @@ def render_verdict(results: list, report_name: str = "") -> dict:
 
     fail_items = []
     warn_items = []
+    caliber_ack_items = []
     compared_count = 0
 
     for item in results:
@@ -408,6 +409,9 @@ def render_verdict(results: list, report_name: str = "") -> dict:
         fetched_unit = item.get('fetched_unit', '')
         fetched_unit2 = item.get('fetched_unit2', item.get('fetched2_unit', ''))
         compare_mode = item.get('compare_mode', '')
+        caliber_ack = bool(item.get('caliber_ack'))
+        caliber_note = str(item.get('caliber_note') or '').strip()
+        caliber_ack_valid = caliber_ack and bool(caliber_note)
 
         # --- 主来源比对 ---
         if fetched is None:
@@ -462,6 +466,21 @@ def render_verdict(results: list, report_name: str = "") -> dict:
             detail = _detail(source, fetched, fetched_raw, fetched_unit, diff1, unit_note1, unit_warning1)
             if diff2 is not None:
                 detail += '  |  ' + _detail(source2, fetched2, fetched2_raw, fetched_unit2, diff2, unit_note2, unit_warning2)
+        elif caliber_ack_valid:
+            status = f'{YELLOW}📝 口径认可{RESET}'
+            detail = _detail(source, fetched, fetched_raw, fetched_unit, diff1, unit_note1, unit_warning1)
+            if diff2 is not None:
+                detail += '  |  ' + _detail(source2, fetched2, fetched2_raw, fetched_unit2, diff2, unit_note2, unit_warning2)
+            detail += f'；口径说明：{caliber_note}'
+            caliber_ack_items.append({
+                'id': item['id'],
+                'label': label,
+                'reported': reported,
+                'unit': unit,
+                'diff1_pct': round(diff1 * 100, 2),
+                'diff2_pct': round(diff2 * 100, 2) if diff2 is not None else None,
+                'caliber_note': caliber_note,
+            })
         elif not pass1 and not soft_warn1 and (pass2 is None or (not pass2 and not soft_warn2)):
             status = f'{RED}❌ 不通过{RESET}'
             detail = _detail(source, fetched, fetched_raw, fetched_unit, diff1, unit_note1, unit_warning1)
@@ -504,9 +523,14 @@ def render_verdict(results: list, report_name: str = "") -> dict:
     total = compared_count
     fail_count = len(fail_items)
     warn_count = len(warn_items)
-    pass_count = total - fail_count - warn_count
+    caliber_ack_count = len(caliber_ack_items)
+    pass_count = total - fail_count - warn_count - caliber_ack_count
 
-    print(f'  抽检总数: {total}  |  通过: {GREEN}{pass_count}{RESET}  |  警告: {YELLOW}{warn_count}{RESET}  |  不通过: {RED}{fail_count}{RESET}')
+    print(
+        f'  抽检总数: {total}  |  通过: {GREEN}{pass_count}{RESET}'
+        f'  |  口径认可: {YELLOW}{caliber_ack_count}{RESET}'
+        f'  |  警告: {YELLOW}{warn_count}{RESET}  |  不通过: {RED}{fail_count}{RESET}'
+    )
     print()
 
     if fail_count == 0:
@@ -526,6 +550,12 @@ def render_verdict(results: list, report_name: str = "") -> dict:
             print()
         verdict = 'FAIL'
 
+    if caliber_ack_count > 0:
+        print(f'{YELLOW}口径认可：{caliber_ack_count} 个数据点提供了 caliber_note，不占用警告或失败额度。{RESET}')
+        for ci in caliber_ack_items:
+            print(f'  📝 {ci["label"]}  报告:{ci["reported"]} {ci["unit"]}  偏差: {ci["diff1_pct"]}% / {ci["diff2_pct"]}%')
+            print(f'     说明：{ci["caliber_note"]}')
+
     if warn_count > 0:
         print(f'{YELLOW}注意：{warn_count} 个数据点两来源结果不一致（超过2%），可能是口径差异（GAAP/Non-GAAP或汇率），请人工复核。{RESET}')
         for wi in warn_items:
@@ -536,10 +566,12 @@ def render_verdict(results: list, report_name: str = "") -> dict:
     return {
         'verdict': verdict,
         'pass_count': pass_count,
+        'caliber_ack_count': caliber_ack_count,
         'warn_count': warn_count,
         'fail_count': fail_count,
         'total': total,
         'fail_items': fail_items,
+        'caliber_ack_items': caliber_ack_items,
         'warn_items': warn_items,
     }
 
@@ -646,6 +678,8 @@ def main():
                     'fetched_value2': None,      # ← 填入副来源核验值（可选）
                     'fetched_unit2': None,       # ← 填入副来源核验值单位（可选）
                     'fetched_source2': '',       # ← 填入副来源名称（可选）
+                    'caliber_ack': False,        # ← 已知口径差异且报告已脚注时设为 true
+                    'caliber_note': '',          # ← caliber_ack 为 true 时必填口径说明
                 })
             print('抽检清单 JSON（填入 fetched_value 后，传给 verdict 命令）：')
             print()

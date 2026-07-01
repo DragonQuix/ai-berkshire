@@ -356,6 +356,46 @@ python -m pytest tests/test_report_audit.py -q
 python tools\verify_channel_capability.py --quick
 ```
 
+### P1-E3：`report_audit verdict` 口径认可通道
+
+状态：已完成（2026-07-01）
+
+来源反馈：
+
+- `docs/dev-feedback-investment-research-deep-20260701.md` §3.4。
+- 已知口径差异已经在报告脚注解释时，`report_audit verdict` 仍把超阈值差异列为警告或失败，主 Agent 需要额外人工说明。
+
+目标文件：
+
+- `tools/report_audit.py`
+- `codex/ai-berkshire/scripts/tools/report_audit.py`
+- `tests/test_report_audit.py`
+- `skills/investment-research.md`
+- `codex/ai-berkshire/references/skills/investment-research.md`
+- `docs/ROADMAP.md`
+- `docs/dev-feedback-action-plan.md`
+
+验收点：
+
+- results JSON 每项支持可选 `caliber_ack: true` 与非空 `caliber_note`。
+- 超阈值差异在 `caliber_ack` 有效时不计入警告或失败，而是进入单独的「口径认可」计数。
+- 空 `caliber_note` 不认可，避免滥用。
+- verdict 输出 JSON 保留 `caliber_ack_count` 与 `caliber_ack_items`，便于 Agent/CI 后续读取。
+
+完成记录：
+
+- `render_verdict()` 新增 `caliber_ack_items` 分类，摘要区分「通过/口径认可/警告/不通过」。
+- extract JSON 模板新增 `caliber_ack` 与 `caliber_note` 字段提示。
+- `/investment-research` 抽检流程要求超阈值口径差异必须在报告中解释，并在 JSON 中填写 `caliber_ack` + `caliber_note`。
+- root 工具、Codex bundled 副本、root skill 与 Codex reference 已同步。
+
+验证命令：
+
+```powershell
+python -m pytest tests/test_report_audit.py -q
+python tools\verify_channel_capability.py --quick
+```
+
 ## 5. 反馈入口动作
 
 本次已将“执行 agent 的代码级复盘”从普通 `usage-feedback` 中分离，新增：
@@ -400,7 +440,7 @@ python tools\verify_channel_capability.py --quick
 
 - **P1-E1**：`report_audit` 单位归一化（§3.1）——extract 保留 unit 但 verdict 不归一化，fetched_value 单位错配触发 9900% 假偏差。目标 `tools/report_audit.py`，加 `report_unit`/`fetched_unit` 字段与已知换算归一化。=> 已完成。
 - **P1-E2**：`report_audit` CLI `-o/--output`（§3.2）——verdict stdout 混日志头需清洗。参考 `lxr_data.py datapack -o`。=> 已完成。
-- **P1-E3**：`report_audit` verdict `caliber_ack` 通道（§3.4）——已知口径差异占警告额度，缺认可通道。
+- **P1-E3**：`report_audit` verdict `caliber_ack` 通道（§3.4）——已知口径差异占警告额度，缺认可通道。=> 已完成。
 - **P2-E4**：港股 `--no-mx` 路径透 alternatives（§3.5）——文档示例路径的覆盖盲点。
 - **P2-E5**：口径列覆盖率检查（§3.3）——让"所有核心数据表"从软约束变机器检查。
 - **P2-E6**：港股年报 `reportType` 兜底（§3.6）——本次主 Agent 内联修复，应固化。

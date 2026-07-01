@@ -255,6 +255,54 @@ def test_render_verdict_warns_on_missing_unit_with_large_magnitude_gap() -> None
     assert "fetched_unit" in out
 
 
+def test_render_verdict_accepts_documented_caliber_ack() -> None:
+    result, out = _capture_stdout(
+        audit.render_verdict,
+        [
+            {
+                "id": 1,
+                "label": "营业收入",
+                "reported_value": 7518.0,
+                "unit": "亿",
+                "fetched_value": 8365.0,
+                "fetched_source": "lixinger",
+                "caliber_ack": True,
+                "caliber_note": "理杏仁 toi 为营业总收入，已在报告脚注说明。",
+            }
+        ],
+    )
+
+    assert result["verdict"] == "PASS"
+    assert result["pass_count"] == 0
+    assert result["warn_count"] == 0
+    assert result["fail_count"] == 0
+    assert result["caliber_ack_count"] == 1
+    assert result["caliber_ack_items"][0]["caliber_note"].startswith("理杏仁 toi")
+    assert "口径认可" in out
+
+
+def test_render_verdict_rejects_caliber_ack_without_note() -> None:
+    result, out = _capture_stdout(
+        audit.render_verdict,
+        [
+            {
+                "id": 1,
+                "label": "营业收入",
+                "reported_value": 7518.0,
+                "unit": "亿",
+                "fetched_value": 8365.0,
+                "fetched_source": "lixinger",
+                "caliber_ack": True,
+                "caliber_note": " ",
+            }
+        ],
+    )
+
+    assert result["verdict"] == "FAIL"
+    assert result["fail_count"] == 1
+    assert "打回" in out
+
+
 def test_cli_extract_outputs_json_template(tmp_path: Path) -> None:
     report = tmp_path / "report.md"
     report.write_text(
