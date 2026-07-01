@@ -211,6 +211,50 @@ def test_render_verdict_preserves_sign_unless_absolute_magnitude_requested() -> 
     assert magnitude_result["verdict"] == "PASS"
 
 
+def test_render_verdict_normalizes_fetched_unit_before_comparison() -> None:
+    result, out = _capture_stdout(
+        audit.render_verdict,
+        [
+            {
+                "id": 1,
+                "label": "MAU",
+                "reported_value": 14.3,
+                "unit": "亿",
+                "fetched_value": 1430,
+                "fetched_unit": "百万",
+                "fetched_source": "annual-report",
+            }
+        ],
+    )
+
+    assert result["verdict"] == "PASS"
+    assert result["pass_count"] == 1
+    assert result["fail_count"] == 0
+    assert "单位换算" in out
+
+
+def test_render_verdict_warns_on_missing_unit_with_large_magnitude_gap() -> None:
+    result, out = _capture_stdout(
+        audit.render_verdict,
+        [
+            {
+                "id": 1,
+                "label": "MAU",
+                "reported_value": 14.3,
+                "unit": "亿",
+                "fetched_value": 1430,
+                "fetched_source": "annual-report",
+            }
+        ],
+    )
+
+    assert result["verdict"] == "PASS"
+    assert result["warn_count"] == 1
+    assert result["fail_count"] == 0
+    assert "疑似单位不一致" in out
+    assert "fetched_unit" in out
+
+
 def test_cli_extract_outputs_json_template(tmp_path: Path) -> None:
     report = tmp_path / "report.md"
     report.write_text(
@@ -241,6 +285,8 @@ def test_cli_extract_outputs_json_template(tmp_path: Path) -> None:
     assert proc.returncode == 0, proc.stderr
     assert "抽检清单 JSON" in proc.stdout
     assert '"fetched_value": null' in proc.stdout
+    assert '"report_unit": "亿"' in proc.stdout
+    assert '"fetched_unit": null' in proc.stdout
 
 
 def test_cli_verdict_exit_code_reflects_pass_or_fail() -> None:

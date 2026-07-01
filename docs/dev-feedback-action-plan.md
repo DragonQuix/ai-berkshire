@@ -283,6 +283,42 @@ python -m pytest tests/test_release_notes.py tests/test_release_smoke.py -q
 python tools\release_smoke.py
 ```
 
+### P1-E1：`report_audit` 单位归一化
+
+状态：已完成（2026-07-01）
+
+来源反馈：
+
+- `docs/dev-feedback-investment-research-deep-20260701.md` §3.1。
+- `extract_data_points` 对"14.3亿MAU"能保留 `unit: 亿`，但 verdict 的 `fetched_value` 是裸数字；核验者填 `1430`（百万）时会触发 9900% 假偏差。
+
+目标文件：
+
+- `tools/report_audit.py`
+- `codex/ai-berkshire/scripts/tools/report_audit.py`
+- `tests/test_report_audit.py`
+- `docs/ROADMAP.md`
+- `docs/dev-feedback-action-plan.md`
+
+验收点：
+
+- verdict 支持 `report_unit` / `fetched_unit`，能把 `1430 百万` 归一为 `14.30 亿` 后比较。
+- 无 `fetched_unit` 且 `reported_value` 与 `fetched_value` 量级差超过 50 倍时，不直接打回，而是输出「疑似单位不一致，请补 fetched_unit」并降为 warning。
+- extract JSON 模板带 `report_unit`、`fetched_unit`、`fetched_unit2`，提示核验者保留单位。
+
+完成记录：
+
+- 新增常见数量单位换算表，覆盖 `亿`、`万亿`、`百万`、`million/M`、`billion/B`、`trillion/T` 等。
+- verdict 在比较前将核验值归一到报告单位，并在输出 detail 中保留「单位换算」说明。
+- root 工具与 Codex bundled 副本已同步。
+
+验证命令：
+
+```powershell
+python -m pytest tests/test_report_audit.py -q
+python tools\verify_channel_capability.py --quick
+```
+
 ## 5. 反馈入口动作
 
 本次已将“执行 agent 的代码级复盘”从普通 `usage-feedback` 中分离，新增：
@@ -325,7 +361,7 @@ python tools\release_smoke.py
 
 按准出摩擦优先级排序，详见 `docs/dev-feedback-investment-research-deep-20260701.md` §3 与 §5：
 
-- **P1-E1**：`report_audit` 单位归一化（§3.1）——extract 保留 unit 但 verdict 不归一化，fetched_value 单位错配触发 9900% 假偏差。目标 `tools/report_audit.py`，加 `report_unit`/`fetched_unit` 字段与已知换算归一化。
+- **P1-E1**：`report_audit` 单位归一化（§3.1）——extract 保留 unit 但 verdict 不归一化，fetched_value 单位错配触发 9900% 假偏差。目标 `tools/report_audit.py`，加 `report_unit`/`fetched_unit` 字段与已知换算归一化。=> 已完成。
 - **P1-E2**：`report_audit` CLI `-o/--output`（§3.2）——verdict stdout 混日志头需清洗。参考 `lxr_data.py datapack -o`。
 - **P1-E3**：`report_audit` verdict `caliber_ack` 通道（§3.4）——已知口径差异占警告额度，缺认可通道。
 - **P2-E4**：港股 `--no-mx` 路径透 alternatives（§3.5）——文档示例路径的覆盖盲点。

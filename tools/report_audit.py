@@ -273,6 +273,72 @@ def _to_numeric(value):
         return None
 
 
+def _unit_scale(unit: str):
+    """返回数量单位相对 1 的倍率；未知单位返回 None。"""
+    text = str(unit or "").strip().lower()
+    text = text.replace(" ", "").replace("（", "").replace("）", "")
+    if not text:
+        return None
+    scales = {
+        "%": 1.0,
+        "x": 1.0,
+        "倍": 1.0,
+        "万": 1e4,
+        "千万": 1e7,
+        "亿": 1e8,
+        "亿元": 1e8,
+        "亿人民币": 1e8,
+        "亿港元": 1e8,
+        "亿港币": 1e8,
+        "亿美元": 1e8,
+        "亿美金": 1e8,
+        "百万": 1e6,
+        "百万元": 1e6,
+        "百万港元": 1e6,
+        "百万美元": 1e6,
+        "million": 1e6,
+        "mn": 1e6,
+        "m": 1e6,
+        "十亿": 1e9,
+        "billion": 1e9,
+        "bn": 1e9,
+        "b": 1e9,
+        "千亿": 1e11,
+        "万亿": 1e12,
+        "trillion": 1e12,
+        "tn": 1e12,
+        "t": 1e12,
+    }
+    return scales.get(text)
+
+
+def _normalize_fetched_unit(value: float, fetched_unit: str, report_unit: str):
+    """把 fetched_value 从 fetched_unit 换算到 report_unit。"""
+    fetched_scale = _unit_scale(fetched_unit)
+    report_scale = _unit_scale(report_unit)
+    if fetched_scale is None or report_scale is None:
+        return value, ""
+    if fetched_scale == report_scale:
+        return value, ""
+    normalized = value * fetched_scale / report_scale
+    note = f"单位换算: {value:.2f} {fetched_unit} → {normalized:.2f} {report_unit}"
+    return normalized, note
+
+
+def _magnitude_ratio(a: float, b: float):
+    values = [abs(x) for x in (a, b) if x is not None and abs(x) > 0]
+    if len(values) < 2:
+        return None
+    return max(values) / min(values)
+
+
+def _unit_gap_warning(reported: float, fetched: float, report_unit: str, fetched_unit: str) -> bool:
+    if not report_unit or fetched_unit:
+        return False
+    ratio = _magnitude_ratio(reported, fetched)
+    return ratio is not None and ratio > 50
+
+
 def _pct_diff(reported: float, fetched: float, compare_mode: str = "") -> float:
     """相对偏差 (absolute)。"""
     if compare_mode == "absolute_magnitude":
@@ -325,10 +391,13 @@ def render_verdict(results: list, report_name: str = "") -> dict:
             print(f'  ⬜ [{item["id"]:>2}] {label[:35]:35s}  →  [报告值非数值，跳过]')
             continue
         unit = item.get('unit', '')
+        report_unit = item.get('report_unit', unit)
         fetched = item.get('fetched_value')
         source = item.get('fetched_source', '?')
         fetched2 = item.get('fetched_value2')
         source2 = item.get('fetched_source2', '')
+        fetched_unit = item.get('fetched_unit', '')
+        fetched_unit2 = item.get('fetched_unit2', item.get('fetched2_unit', ''))
         compare_mode = item.get('compare_mode', '')
 
         # --- 主来源比对 ---
@@ -337,34 +406,58 @@ def render_verdict(results: list, report_name: str = "") -> dict:
             print(f'  ⬜ [{item["id"]:>2}] {label[:35]:35s} {reported:>12.2f} {unit}  →  [未提供核验值，跳过]')
             continue
 
-        fetched = _to_numeric(fetched)
-        if fetched is None:
+        fetched_raw = _to_numeric(fetched)
+        if fetched_raw is None:
             print(f'  ⬜ [{item["id"]:>2}] {label[:35]:35s} {reported:>12.2f} {unit}  →  [{source} 非数值核验值，跳过]')
             continue
         compared_count += 1
+        fetched, unit_note1 = _normalize_fetched_unit(fetched_raw, fetched_unit, report_unit)
         diff1 = _pct_diff(reported, fetched, compare_mode)
+        unit_warning1 = (diff1 > _TOLERANCE) and _unit_gap_warning(
+            reported, fetched_raw, report_unit, fetched_unit
+        )
 
         # --- 第二来源比对（如有）---
         diff2 = None
+        fetched2_raw = None
+        unit_note2 = ""
+        unit_warning2 = False
         if fetched2 is not None:
-            fetched2 = _to_numeric(fetched2)
-            if fetched2 is not None:
+            fetched2_raw = _to_numeric(fetched2)
+            if fetched2_raw is not None:
+                fetched2, unit_note2 = _normalize_fetched_unit(
+                    fetched2_raw, fetched_unit2, report_unit
+                )
                 diff2 = _pct_diff(reported, fetched2, compare_mode)
+                unit_warning2 = (diff2 > _TOLERANCE) and _unit_gap_warning(
+                    reported, fetched2_raw, report_unit, fetched_unit2
+                )
 
         # 判断
         pass1 = diff1 <= _TOLERANCE
         pass2 = None if diff2 is None else diff2 <= _TOLERANCE
+        soft_warn1 = (not pass1) and unit_warning1
+        soft_warn2 = False if diff2 is None else ((not pass2) and unit_warning2)
+
+        def _detail(src, value, original, src_unit, diff, note, unit_warning):
+            if note:
+                detail_text = f'{src}: {original:.2f} {src_unit} → {value:.2f} {unit} (偏差 {diff*100:.2f}%; {note})'
+            else:
+                detail_text = f'{src}: {value:.2f} (偏差 {diff*100:.2f}%)'
+            if unit_warning:
+                detail_text += '；疑似单位不一致，请补 fetched_unit'
+            return detail_text
 
         if pass1 and (pass2 is None or pass2):
             status = f'{GREEN}✅ 通过{RESET}'
-            detail = f'{source}: {fetched:.2f} (偏差 {diff1*100:.2f}%)'
+            detail = _detail(source, fetched, fetched_raw, fetched_unit, diff1, unit_note1, unit_warning1)
             if diff2 is not None:
-                detail += f'  |  {source2}: {fetched2:.2f} (偏差 {diff2*100:.2f}%)'
-        elif not pass1 and (pass2 is None or not pass2):
+                detail += '  |  ' + _detail(source2, fetched2, fetched2_raw, fetched_unit2, diff2, unit_note2, unit_warning2)
+        elif not pass1 and not soft_warn1 and (pass2 is None or (not pass2 and not soft_warn2)):
             status = f'{RED}❌ 不通过{RESET}'
-            detail = f'{source}: {fetched:.2f} (偏差 {diff1*100:.2f}%)'
+            detail = _detail(source, fetched, fetched_raw, fetched_unit, diff1, unit_note1, unit_warning1)
             if diff2 is not None:
-                detail += f'  |  {source2}: {fetched2:.2f} (偏差 {diff2*100:.2f}%)'
+                detail += '  |  ' + _detail(source2, fetched2, fetched2_raw, fetched_unit2, diff2, unit_note2, unit_warning2)
             fail_items.append({
                 'id': item['id'],
                 'label': label,
@@ -382,14 +475,15 @@ def render_verdict(results: list, report_name: str = "") -> dict:
         else:
             # 一个来源通过，一个不通过 → 警告，不计入失败
             status = f'{YELLOW}⚠️  警告{RESET}'
-            detail = f'{source}: {fetched:.2f} (偏差 {diff1*100:.2f}%)'
+            detail = _detail(source, fetched, fetched_raw, fetched_unit, diff1, unit_note1, unit_warning1)
             if diff2 is not None:
-                detail += f'  |  {source2}: {fetched2:.2f} (偏差 {diff2*100:.2f}%)'
+                detail += '  |  ' + _detail(source2, fetched2, fetched2_raw, fetched_unit2, diff2, unit_note2, unit_warning2)
             warn_items.append({
                 'id': item['id'], 'label': label,
                 'reported': reported, 'unit': unit,
                 'diff1_pct': round(diff1 * 100, 2),
                 'diff2_pct': round(diff2 * 100, 2) if diff2 is not None else None,
+                'unit_warning': unit_warning1 or unit_warning2,
             })
 
         print(f'  {status} [{item["id"]:>2}] {label[:35]:35s}  报告: {reported:>12.2f} {unit}')
@@ -532,11 +626,14 @@ def main():
                     'label': p['label'],
                     'reported_value': p['reported_value'],
                     'unit': p['unit'],
+                    'report_unit': p['unit'],
                     'line_number': p['line_number'],
                     'raw_text': p['raw_text'],
                     'fetched_value': None,       # ← 填入主来源核验值
+                    'fetched_unit': None,        # ← 填入主来源核验值单位，默认应与 report_unit 一致
                     'fetched_source': '',        # ← 填入主来源名称
                     'fetched_value2': None,      # ← 填入副来源核验值（可选）
+                    'fetched_unit2': None,       # ← 填入副来源核验值单位（可选）
                     'fetched_source2': '',       # ← 填入副来源名称（可选）
                 })
             print('抽检清单 JSON（填入 fetched_value 后，传给 verdict 命令）：')
