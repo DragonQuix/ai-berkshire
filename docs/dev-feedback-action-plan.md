@@ -214,6 +214,40 @@ python -m pytest tests/test_financial_rigor.py tests/test_lxr_data.py -q
 python tools\verify_channel_capability.py --quick
 ```
 
+### P1-C1：离线 fixture 与 CI 回归门禁
+
+状态：已完成（2026-07-01）
+
+目标文件：
+
+- `.github/workflows/ci.yml`
+- `tests/test_ci_and_fixture_contract.py`
+- `tests/fixtures/investment_research_smoke/datapack.json`
+- `tests/fixtures/investment_research_smoke/expected_report_skeleton.md`
+- `docs/ROADMAP.md`
+- `docs/dev-feedback-action-plan.md`
+
+验收点：
+
+- GitHub Actions 在 `pull_request` 和 `main` push 上运行离线门禁：全量 pytest、`verify_channel_capability --quick`、compileall、release smoke、`git diff --check`。
+- CI 不依赖理杏仁 token、私有 `tools/lxr_config.json`、Playwright 或 GitHub secrets。
+- `tests/fixtures/investment_research_smoke/` 固化一份预录 datapack 与报告骨架，覆盖 `caliber_metadata`、`口径/来源`、币种、单位、Task Agent 降级记录和抽检字段。
+
+完成记录：
+
+- 新增 `.github/workflows/ci.yml`，把本地 P0/P1 关键门禁转为 PR/push 自动检查。
+- 新增 `tests/test_ci_and_fixture_contract.py`，防止 CI workflow 被删减为只跑局部测试，也防止 investment-research 离线 fixture 退化。
+- 新增 `investment_research_smoke` fixture，作为后续技能行为 smoke 的离线输入基线。
+
+验证命令：
+
+```powershell
+python -m pytest tests/test_ci_and_fixture_contract.py -q
+python -m pytest -q
+python tools\verify_channel_capability.py --quick
+python tools\release_smoke.py
+```
+
 ## 5. 反馈入口动作
 
 本次已将“执行 agent 的代码级复盘”从普通 `usage-feedback` 中分离，新增：
@@ -235,4 +269,4 @@ python tools\verify_channel_capability.py --quick
 2. 再做 P1-A2，让完整投研数据包可落盘复现。
 3. 再做 P1-A3，降低三情景估值和交叉验证的误用概率。
 4. 然后做 P1-B1/B2/B3，把 skill 文档和口径/降级元数据补齐。
-5. 最后做离线 fixture 和 CI，把这些问题变成长期回归测试。
+5. 最后做离线 fixture 和 CI，把这些问题变成长期回归测试。=> 已完成 P1-C1。

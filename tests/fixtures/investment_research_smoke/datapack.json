@@ -1,0 +1,123 @@
+{
+  "_fixture": {
+    "offline": true,
+    "purpose": "investment-research smoke datapack for CI contract tests",
+    "created": "2026-07-01"
+  },
+  "_source": "offline_fixture",
+  "code": "600000",
+  "name": "离线样例公司",
+  "market": "cn",
+  "sections": {
+    "financials": {
+      "_source": "lixinger_fixture",
+      "report_type": "non_financial",
+      "records": [
+        {
+          "date": "2025-12-31",
+          "q": {
+            "ps": {
+              "toi": {
+                "t": 1234567890
+              },
+              "npatoshopc": {
+                "t": 234567890
+              }
+            }
+          }
+        }
+      ],
+      "caliber_metadata": {
+        "source": "lixinger",
+        "market": "cn",
+        "report_type": "non_financial",
+        "currency": "CNY",
+        "unit": "raw_yuan",
+        "fields": {
+          "q.ps.toi.t": {
+            "name": "toi",
+            "caliber": "营业总收入",
+            "report_label": "收入/收益",
+            "currency": "CNY",
+            "unit": "raw_yuan",
+            "unit_note": "理杏仁返回原始货币单位；报告写亿元时必须显式换算"
+          },
+          "q.ps.npatoshopc.t": {
+            "name": "npatoshopc",
+            "caliber": "归母净利润",
+            "report_label": "归母净利润",
+            "currency": "CNY",
+            "unit": "raw_yuan",
+            "unit_note": "理杏仁返回原始货币单位；报告写亿元时必须显式换算"
+          }
+        },
+        "notes": [
+          "toi=营业总收入；年报“收益”可能按披露口径包含或剔除特定业务，需要逐项核对。",
+          "跨来源比较必须同时保留字段口径、币种和单位；无法确认同口径时使用 cross-validate --caliber 标注。"
+        ]
+      }
+    },
+    "valuation": {
+      "_source": "lixinger_fixture",
+      "pe_ttm": 12.3,
+      "pb": 1.1,
+      "currency": "CNY",
+      "unit": "ratio"
+    },
+    "verify_inputs": {
+      "_source": "lixinger_fixture",
+      "price": 12.34,
+      "shares": 1000000000,
+      "market_cap": 12340000000,
+      "currency": "CNY",
+      "unit": "raw_yuan"
+    },
+    "industry_compare": {
+      "_source": "offline_fixture",
+      "note": "离线 fixture 仅用于验证报告骨架和降级字段，不代表真实行业结论。",
+      "alternatives": [
+        "mx-xuangu 辅助筛选",
+        "手工指定同业列表",
+        "行业龙头/主要可比公司"
+      ],
+      "industry": {
+        "alternatives": [
+          "mx-xuangu 辅助筛选",
+          "手工指定同业列表",
+          "行业龙头/主要可比公司"
+        ]
+      }
+    }
+  },
+  "caliber_metadata": {
+    "financials": {
+      "source": "lixinger",
+      "market": "cn",
+      "report_type": "non_financial",
+      "currency": "CNY",
+      "unit": "raw_yuan",
+      "fields": {
+        "q.ps.toi.t": {
+          "name": "toi",
+          "caliber": "营业总收入",
+          "report_label": "收入/收益",
+          "currency": "CNY",
+          "unit": "raw_yuan",
+          "unit_note": "理杏仁返回原始货币单位；报告写亿元时必须显式换算"
+        },
+        "q.ps.npatoshopc.t": {
+          "name": "npatoshopc",
+          "caliber": "归母净利润",
+          "report_label": "归母净利润",
+          "currency": "CNY",
+          "unit": "raw_yuan",
+          "unit_note": "理杏仁返回原始货币单位；报告写亿元时必须显式换算"
+        }
+      },
+      "notes": [
+        "toi=营业总收入；年报“收益”可能按披露口径包含或剔除特定业务，需要逐项核对。",
+        "跨来源比较必须同时保留字段口径、币种和单位；无法确认同口径时使用 cross-validate --caliber 标注。"
+      ]
+    }
+  }
+}
