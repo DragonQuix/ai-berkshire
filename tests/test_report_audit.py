@@ -102,6 +102,26 @@ def test_extract_data_points_does_not_flag_core_table_with_caliber_source_column
     assert all(not p.get("caliber_column_warning") for p in points)
 
 
+def test_extract_data_points_does_not_flag_stress_or_bias_tables_as_core_caliber_tables() -> None:
+    text = """# 压力测试
+
+| 情景 | 触发条件 | 估值影响 | 应对 |
+|---|---|---:|---|
+| 资产负债压力 | 长端利率下行，负债久期拉长 | -15% | 降低仓位 |
+
+# 偏误自查
+
+| 自查项 | 触发条件 | 修正动作 | 影响 |
+|---|---|---|---:|
+| 市值锚定偏误 | 只看历史市值高点 | 改用 EV/NBV 与 ROE 交叉验证 | 20% |
+"""
+
+    points = audit.extract_data_points(text)
+
+    assert points
+    assert all(not p.get("caliber_column_warning") for p in points)
+
+
 def test_sample_points_respects_minimum_cap_seed_and_line_order() -> None:
     points = [
         {"id": i, "label": f"指标{i}", "line_number": 100 - i}
@@ -392,6 +412,44 @@ def test_cli_extract_outputs_json_template(tmp_path: Path) -> None:
     assert '"fetched_value": null' in proc.stdout
     assert '"report_unit": "亿"' in proc.stdout
     assert '"fetched_unit": null' in proc.stdout
+
+
+def test_cli_extract_output_writes_clean_json_file(tmp_path: Path) -> None:
+    report = tmp_path / "report.md"
+    output = tmp_path / "extract.json"
+    report.write_text(
+        "| 指标 | 2025 |\n|---|---:|\n| 营业收入 | 6600亿 |\n| 毛利率 | 55% |\n",
+        encoding="utf-8",
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "report_audit.py"),
+            "extract",
+            "--report",
+            str(report),
+            "--ratio",
+            "1.0",
+            "--seed",
+            "1",
+            "-o",
+            str(output),
+        ],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert output.exists()
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert data
+    assert data[0]["fetched_value"] is None
+    assert "抽检清单 JSON" not in proc.stdout
+    assert "抽检清单 JSON 已写入" in proc.stderr
 
 
 def test_cli_verdict_exit_code_reflects_pass_or_fail() -> None:

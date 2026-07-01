@@ -134,6 +134,21 @@ class TestEndpointRouting(unittest.TestCase):
         self.assertEqual(meta["fields"]["q.ps.toi.t"]["caliber"], "营业总收入")
         self.assertIn("年报“收益”", "\n".join(meta["notes"]))
 
+    def test_financials_lixinger_insurance_caliber_metadata_uses_oi(self):
+        cli = FakeClient({
+            "cn/company/fs/insurance": [[{"date": "2025-12-31", "q": {}}]],
+        })
+        d = lxd.LxrData(client=cli, verbose=False)
+        r = d.get_financials("601336", years=1, source="lixinger", report_type="insurance")
+
+        meta = r["caliber_metadata"]
+        notes = "\n".join(meta["notes"])
+        self.assertEqual(meta["report_type"], "insurance")
+        self.assertIn("q.ps.oi.t", meta["fields"])
+        self.assertEqual(meta["fields"]["q.ps.oi.t"]["name"], "oi")
+        self.assertIn("oi=营业收入", notes)
+        self.assertIn("保险股", notes)
+
     def test_valuation_routes_cn(self):
         cli = FakeClient({
             "cn/company": [{"list": [{"fsTableType": "non_financial"}]}],

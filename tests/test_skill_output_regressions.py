@@ -297,6 +297,7 @@ FINANCIAL_CALIBER_METADATA_CONTRACTS = {
         "口径/来源",
         "caliber_metadata",
         "toi=营业总收入",
+        "保险股用 oi=营业收入",
         "年报“收益”",
         "币种",
         "单位",

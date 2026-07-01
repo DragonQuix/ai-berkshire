@@ -57,7 +57,7 @@ python tools/lxr_data.py datapack {code} --years 5 -o _tmp_{code}_datapack.json
 # 跳过妙想（省日限额）：python tools/lxr_data.py datapack {code} --no-mx -o _tmp_{code}_datapack.json
 ```
 
-主 Agent 随后读取 `_tmp_{code}_datapack.json`，从 `sections.financials/valuation/verify_inputs/...` 中取数；不要用 `glob datapack_*.json` 猜缓存文件名。若只想看 stdout，可省略 `-o`。财报字段必须同时读取 `sections.financials.caliber_metadata` 或顶层 `caliber_metadata.financials`，保留 `toi=营业总收入`、年报“收益”差异、币种和单位信息。
+主 Agent 随后读取 `_tmp_{code}_datapack.json`，从 `sections.financials/valuation/verify_inputs/...` 中取数；不要用 `glob datapack_*.json` 猜缓存文件名。若只想看 stdout，可省略 `-o`。财报字段必须同时读取 `sections.financials.caliber_metadata` 或顶层 `caliber_metadata.financials`，保留非保险股 `toi=营业总收入`、保险股用 `oi=营业收入`、年报“收益”差异、币种和单位信息。
 
 或按维度分拆（理杏仁为主，妙想补 tick/资讯；单次研究约 5–8 次理杏仁 + 2 次 MX）：
 
@@ -96,7 +96,7 @@ Windows 终端：`$env:PYTHONIOENCODING='utf-8'`；MX 脚本**必须**传 `--out
 |------|--------|-----------|------|------|
 | 市值 / PE-TTM / PB | ... | lixinger | ... | ... |
 | PE 历史分位（10年） | ...% | lixinger | ... | ... |
-| 营收 / 归母净利润（近5年） | 表 | caliber_metadata：toi=营业总收入；年报“收益”需核对 | CNY/HKD | raw_yuan → 亿元/亿港元 |
+| 营收 / 归母净利润（近5年） | 表 | caliber_metadata：非保险 toi=营业总收入；保险股用 oi=营业收入；年报“收益”需核对 | CNY/HKD | raw_yuan → 亿元/亿港元 |
 | [保险] EV / NBV / 偿付能力 | ... | lixinger / industry-deep | ... | ... |
 | 前十大股东（最新） | 表 | lixinger | ... | ... |
 | 高管/大股东增减持（2年） | 表 | lixinger | ... | ... |

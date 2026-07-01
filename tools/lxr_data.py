@@ -164,6 +164,11 @@ METRICS_BY_TYPE = {
 
 def _financial_caliber_metadata(market: str, report_type: str) -> dict:
     currency = "HKD" if market == "hk" else "CNY"
+    revenue_note = (
+        "保险股用 oi=营业收入；保险财报无通用 toi=营业总收入字段，年报“收益”仍需逐项核对。"
+        if report_type == "insurance"
+        else "toi=营业总收入；年报“收益”可能按披露口径包含或剔除特定业务，需要逐项核对。"
+    )
     fields = {}
     for key, item in FINANCIAL_FIELD_CALIBERS.items():
         fields[key] = {
@@ -180,7 +185,7 @@ def _financial_caliber_metadata(market: str, report_type: str) -> dict:
         "unit": "raw_yuan",
         "fields": fields,
         "notes": [
-            "toi=营业总收入；年报“收益”可能按披露口径包含或剔除特定业务，需要逐项核对。",
+            revenue_note,
             "跨来源比较必须同时保留字段口径、币种和单位；无法确认同口径时使用 cross-validate --caliber 标注。",
         ],
     }

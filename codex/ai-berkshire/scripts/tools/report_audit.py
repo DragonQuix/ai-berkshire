@@ -123,10 +123,13 @@ _KV_LABEL_RE = re.compile(
 )
 
 _CORE_TABLE_KEYWORD_RE = re.compile(
-    r'(PE|PB|PS|ROE|ROA|EPS|BVPS|营收|收入|收益|归母|净利润|市值|估值|'
-    r'毛利率|净利率|现金流|自由现金流|股息|股利|利润|资产|负债)',
+    r'(PE|PB|PS|ROE|ROA|EPS|BVPS|EV/NBV|NBV|内含价值|新业务价值|'
+    r'营收|营业收入|收入|收益|归母|净利润|市值|估值|毛利率|净利率|'
+    r'现金流|自由现金流|股息率|股息|股利|利润|资产总计|总资产|'
+    r'负债合计|总负债|资产负债率)',
     re.I,
 )
+_NON_CORE_TABLE_HEADER_RE = re.compile(r'(触发条件|自查|修正动作|应对|情景|路径|概率|偏误|压力测试)', re.I)
 _CALIBER_HEADER_RE = re.compile(r'(口径|来源|source|caliber)', re.I)
 
 
@@ -138,6 +141,9 @@ def _split_table_cells(line: str) -> list:
 
 
 def _table_has_core_metric(headers: list, row_lines: list) -> bool:
+    header_text = ' '.join(headers)
+    if _NON_CORE_TABLE_HEADER_RE.search(header_text):
+        return False
     haystack = ' '.join(headers + row_lines)
     return bool(_CORE_TABLE_KEYWORD_RE.search(haystack))
 
@@ -320,7 +326,7 @@ def sample_points(points: list, ratio: float = 0.15, seed: int = None) -> list:
 _TOLERANCE = 0.02   # 2% 容差（与 financial-data.md / plan-skill-enhancement §4.3 一致）
 
 
-def _write_json_output(path: str, payload: dict) -> None:
+def _write_json_output(path: str, payload) -> None:
     directory = os.path.dirname(os.path.abspath(path))
     if directory:
         os.makedirs(directory, exist_ok=True)
@@ -702,6 +708,7 @@ def main():
     ext.add_argument('--ratio', type=float, default=0.15, help='抽样比例，默认 0.15')
     ext.add_argument('--seed', type=int, default=None, help='随机种子（可选，用于复现）')
     ext.add_argument('--dry-run', action='store_true', help='只打印，不输出 JSON')
+    ext.add_argument('-o', '--output', help='将抽检清单 JSON 写入文件')
 
     # verdict
     vrd = sub.add_parser('verdict', help='根据核验结果输出准出/打回判决')
@@ -767,9 +774,13 @@ def main():
                     row['caliber_column_warning'] = True
                     row['caliber_column_note'] = p.get('caliber_column_note', '')
                 template.append(row)
-            print('抽检清单 JSON（填入 fetched_value 后，传给 verdict 命令）：')
-            print()
-            print(json.dumps(template, ensure_ascii=False, indent=2))
+            if args.output:
+                _write_json_output(args.output, template)
+                print(f'抽检清单 JSON 已写入: {args.output}', file=sys.stderr)
+            else:
+                print('抽检清单 JSON（填入 fetched_value 后，传给 verdict 命令）：')
+                print()
+                print(json.dumps(template, ensure_ascii=False, indent=2))
 
     elif args.command == 'verdict':
         try:

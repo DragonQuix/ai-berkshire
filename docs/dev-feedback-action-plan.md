@@ -631,6 +631,20 @@ python -m pytest tests/test_skill_output_regressions.py -q
 - **P2-E6**：港股年报 `reportType` 兜底（§3.6）——本次主 Agent 内联修复，应固化。=> 已完成。
 - **P3-E7/E8**：Agent 降级"必要信息"标准示例（§3.7）、action-plan 二次验证字段（§3.8，本节已示范）。=> 已完成。
 
+## 8.1 第三次运行反馈处置（来自新华保险 deep 档）
+
+来源：`docs/dev-feedback-investment-research-deep-20260701-xinhua.md`。本次反馈作为真实运行后的第三次验证处理，优先级按是否影响报告准出摩擦排序。
+
+| 反馈项 | 处置 | 说明 |
+|---|---|---|
+| P1-F1 `report_audit extract` 可复现落盘 | 已完成 | `extract` 新增 `-o/--output`，写出纯 JSON 抽检清单，stdout 保留人类可读表格 |
+| P1-F2 口径列检查过度匹配 | 已完成 | 表头含压力测试、偏误自查、触发条件、情景等非核心表信号时跳过口径列警告 |
+| P1-F3 保险股 `oi/toi` 口径不一致 | 已完成 | insurance `caliber_metadata` 与 `/investment-research` 统一说明保险股用 `oi=营业收入` |
+| P2-F4 extract 误抽情景标题与列对齐错位 | 候选 | 需保留真实样本后再收窄解析器规则，避免误伤常规表格抽检 |
+| P2-F5 Agent 路由间歇性说明 | 候选 | 现有降级记录与脱敏标准已覆盖准出；后续补“每次派发独立捕获”说明 |
+| P3-F6 deep 档抽检点数量下限自适应 | 候选 | 当前可显式 `--ratio 0.25`，后续再评估是否按数据点数量提高默认下限 |
+| P3-F7 datapack `_generated_at` TTL 可观测 | 候选 | 属可观测性增强，不阻断本轮准出 |
+
 ## 9. 二次验证跟踪字段
 
 本节用于区分「代码/文档已修复并通过自动回归」与「已在真实技能完整运行中二次验证」。后续每次完整运行产生新的 dev-feedback 文件时，应回填对应行；未真实运行验证的项必须标记「待补」，不得用单元测试结果冒充真实运行闭环。
@@ -645,9 +659,12 @@ python -m pytest tests/test_skill_output_regressions.py -q
 | P1-B3 | 已二次验证但报告执行力不足 | `docs/dev-feedback-investment-research-deep-20260701.md` §1 E12 / §3.3：口径元数据进入 datapack，报告口径列覆盖不足后续由 P2-E5 修复 |
 | P1-C1 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260701.md` §2.8：fixture 与 workflow 就位 |
 | P1-D1 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260701.md` §2.9：release notes 工具可用 |
-| P1-E1 | 待真实运行二次验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py -q`；等待下一次完整报告运行回填 |
-| P1-E2 | 待真实运行二次验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py -q`；等待下一次完整报告运行回填 |
-| P1-E3 | 待真实运行二次验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py -q`；等待下一次完整报告运行回填 |
-| P2-E4 | 待真实运行二次验证 | 当前已有自动回归：`python -m pytest tests/test_lxr_data.py -q`；等待下一次完整报告运行回填 |
-| P2-E5 | 待真实运行二次验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py -q`；等待下一次完整报告运行回填 |
-| P2-E6 | 待真实运行二次验证 | 当前已有自动回归：`python -m pytest tests/test_lxr_data.py -q`；等待下一次完整报告运行回填 |
+| P1-E1 | 已三次验证 | `docs/dev-feedback-investment-research-deep-20260701-xinhua.md` §0：单位归一化生效，本次无单位陷阱 |
+| P1-E2 | 已三次验证 | `docs/dev-feedback-investment-research-deep-20260701-xinhua.md` §0/§1：`verdict -o _tmp_verdict.json` 直接落盘纯 JSON |
+| P1-E3 | 已三次验证 | `docs/dev-feedback-investment-research-deep-20260701-xinhua.md` §0：4 个基准日差异点用 `caliber_ack + caliber_note` 认可 |
+| P2-E4 | 已三次验证 | `docs/dev-feedback-investment-research-deep-20260701-xinhua.md` §0：`industry-compare 00700 --no-mx` 透出 alternatives |
+| P2-E5 | 已三次验证但发现误报 | `docs/dev-feedback-investment-research-deep-20260701-xinhua.md` §0/§3.2：口径列检查生效但过度匹配，后续由 P1-F2 修复 |
+| P2-E6 | 待港股真实运行验证 | 当前已有自动回归；新华保险为 A 股，仅确认测试覆盖而非港股真实运行触发 |
+| P1-F1 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py::test_cli_extract_output_writes_clean_json_file -q`；等待下一次完整报告运行回填 |
+| P1-F2 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py::test_extract_data_points_does_not_flag_stress_or_bias_tables_as_core_caliber_tables -q`；等待下一次完整报告运行回填 |
+| P1-F3 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_lxr_data.py::TestEndpointRouting::test_financials_lixinger_insurance_caliber_metadata_uses_oi tests/test_skill_output_regressions.py::test_financial_caliber_metadata_contracts_are_documented -q`；等待下一次完整报告运行回填 |
