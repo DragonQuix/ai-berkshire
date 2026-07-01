@@ -188,8 +188,17 @@ def _financial_caliber_metadata(market: str, report_type: str) -> dict:
 _SKIP_INTEREST_COVERAGE = frozenset({"bank", "insurance", "security", "other_financial"})
 
 
+def _is_annual_fs_record(record: Any) -> bool:
+    if not isinstance(record, dict):
+        return False
+    report_type = str(record.get("reportType") or record.get("report_type") or "").strip().lower()
+    if report_type == "annual_report":
+        return True
+    return str(record.get("date", ""))[:10].endswith("-12-31")
+
+
 def _annual_fs_records(records: list) -> list:
-    annual = [r for r in records if str(r.get("date", ""))[:10].endswith("-12-31")]
+    annual = [r for r in records if _is_annual_fs_record(r)]
     annual.sort(key=lambda r: r.get("date", ""))
     return annual
 
@@ -863,7 +872,7 @@ class LxrData:
             tsc = self._dig(latest_record.get("q", {}), "bs.tsc.t")
         else:
             tsc = None
-        annual = [r for r in fs_records if str(r.get("date", ""))[:10].endswith("-12-31")]
+        annual = _annual_fs_records(fs_records)
         annual.sort(key=lambda r: r.get("date", ""), reverse=True)
         annual_beps = None
         annual_bvps = None
@@ -1093,7 +1102,7 @@ class LxrData:
             "endDate": end.strftime("%Y-%m-%d"),
         }
         records, used = self._post_fs(endpoint, base, metrics, self._ttl("financials", 86400))
-        annual = [r for r in records if str(r.get("date", ""))[:10].endswith("-12-31")]
+        annual = _annual_fs_records(records)
         annual.sort(key=lambda r: r.get("date", ""), reverse=True)
         summary = self._industry_deep_summary(fs_type, annual)
         return {

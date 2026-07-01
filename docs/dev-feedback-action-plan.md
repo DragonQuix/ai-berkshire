@@ -474,6 +474,43 @@ python -m pytest tests/test_report_audit.py -q
 python tools\verify_channel_capability.py --quick
 ```
 
+### P2-E6：港股年报 `reportType` 兜底
+
+状态：已完成（2026-07-01）
+
+来源反馈：
+
+- `docs/dev-feedback-investment-research-deep-20260701.md` §3.6。
+- 理杏仁港股财报可能返回 fiscal year 非 12-31 的 `reportType=annual_report` 记录；原逻辑只按 `date.endswith("-12-31")` 过滤，导致年报序列为空。
+
+目标文件：
+
+- `tools/lxr_data.py`
+- `codex/ai-berkshire/scripts/tools/lxr_data.py`
+- `tests/test_lxr_data.py`
+- `docs/ROADMAP.md`
+- `docs/dev-feedback-action-plan.md`
+
+验收点：
+
+- `_annual_fs_records()` 支持 `reportType=annual_report` 作为年报判定兜底，同时保留 `-12-31` 兼容路径。
+- `verify-inputs` 的 EPS/BVPS 取最近年报时不再漏掉港股 `annual_report`。
+- `industry-deep` 的 `annual_count` 与 deep summary 复用同一判定，避免重复日期过滤。
+
+完成记录：
+
+- 新增 `_is_annual_fs_record()`，统一识别 `reportType` / `report_type` 为 `annual_report` 的记录。
+- `get_verification_inputs()` 与 `get_industry_deep()` 改为复用 `_annual_fs_records()`。
+- 新增三条回归测试，覆盖 helper、`verify-inputs` 和 `industry-deep`。
+- root 工具与 Codex bundled 副本已同步。
+
+验证命令：
+
+```powershell
+python -m pytest tests/test_lxr_data.py -q
+python tools\verify_channel_capability.py --quick
+```
+
 ## 5. 反馈入口动作
 
 本次已将“执行 agent 的代码级复盘”从普通 `usage-feedback` 中分离，新增：
@@ -521,5 +558,5 @@ python tools\verify_channel_capability.py --quick
 - **P1-E3**：`report_audit` verdict `caliber_ack` 通道（§3.4）——已知口径差异占警告额度，缺认可通道。=> 已完成。
 - **P2-E4**：港股 `--no-mx` 路径透 alternatives（§3.5）——文档示例路径的覆盖盲点。=> 已完成。
 - **P2-E5**：口径列覆盖率检查（§3.3）——让"所有核心数据表"从软约束变机器检查。=> 已完成。
-- **P2-E6**：港股年报 `reportType` 兜底（§3.6）——本次主 Agent 内联修复，应固化。
+- **P2-E6**：港股年报 `reportType` 兜底（§3.6）——本次主 Agent 内联修复，应固化。=> 已完成。
 - **P3-E7/E8**：Agent 降级"必要信息"标准示例（§3.7）、action-plan 二次验证字段（§3.8，本节已示范）。

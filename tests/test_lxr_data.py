@@ -176,6 +176,17 @@ class TestEndpointRouting(unittest.TestCase):
         self.assertEqual(cli.calls, [])
 
 
+def test_annual_fs_records_accepts_hk_report_type_annual_report():
+    records = [
+        {"date": "2025-06-30", "reportType": "annual_report", "q": {"ps": {"np": {"t": 1}}}},
+        {"date": "2025-09-30", "reportType": "third_quarter_report", "q": {"ps": {"np": {"t": 2}}}},
+    ]
+
+    annual = lxd._annual_fs_records(records)
+
+    assert [r["date"] for r in annual] == ["2025-06-30"]
+
+
 class TestPostFsAutoPrune(unittest.TestCase):
     def test_prune_invalid_and_retry(self):
         err = _val_err("(q.ps.op.t) are invalid fs metrics")
@@ -259,6 +270,19 @@ class TestIndustryDeepAndGovernance(unittest.TestCase):
         ]
         ds = lxd.LxrData._industry_deep_summary("bank", annual)
         self.assertEqual(ds["car"][0]["value"], 0.1824)
+
+    def test_industry_deep_counts_hk_annual_report_type(self):
+        cli = FakeClient({
+            "hk/company/fs/non_financial": [[
+                {"date": "2025-06-30", "reportType": "annual_report", "q": {}},
+                {"date": "2025-09-30", "reportType": "third_quarter_report", "q": {}},
+            ]],
+        })
+        d = lxd.LxrData(client=cli, verbose=False)
+
+        r = d.get_industry_deep("00700", years=2, report_type="non_financial")
+
+        self.assertEqual(r["annual_count"], 1)
 
     def test_revenue_constitution(self):
         cli = FakeClient({
@@ -524,6 +548,38 @@ class TestMacroAndIndexValuation(unittest.TestCase):
         self.assertIn("共同游资贡献Top: 600519 章盟主", text)
         self.assertIn("独有游资贡献Top: 000568 拉萨天团", text)
         self.assertIn("1. 600519", text)
+
+
+def test_verify_inputs_uses_hk_annual_report_type_for_eps_and_bvps():
+    cli = FakeClient({
+        "hk/company/fundamental/non_financial": [[
+            {"date": "2026-06-30", "sp": 400.0, "mc": 3.8e12},
+        ]],
+        "hk/company/fs/non_financial": [[
+            {
+                "date": "2025-06-30",
+                "reportType": "annual_report",
+                "q": {
+                    "ps": {"beps": {"t": 10.5}},
+                    "bs": {"tetoshopc_ps": {"t": 85.0}, "tsc": {"t": 9.5e9}},
+                },
+            },
+            {
+                "date": "2026-03-31",
+                "reportType": "first_quarter_report",
+                "q": {
+                    "ps": {"beps": {"t": 2.0}},
+                    "bs": {"tetoshopc_ps": {"t": 87.0}, "tsc": {"t": 9.4e9}},
+                },
+            },
+        ]],
+    })
+    d = lxd.LxrData(client=cli, verbose=False)
+
+    r = d.get_verification_inputs("00700", report_type="non_financial")
+
+    assert r["eps"] == 10.5
+    assert r["bvps"] == 85.0
 
 
 class TestQualityMetrics(unittest.TestCase):
