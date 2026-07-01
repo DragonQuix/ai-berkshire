@@ -252,6 +252,11 @@ TASK_AGENT_DEGRADATION_SKILLS = [
 
 TASK_AGENT_DEGRADATION_SNIPPETS = [
     "Agent 降级记录",
+    "路由失败可能间歇性发生",
+    "每次 TeamCreate/TaskCreate/后台 Agent 派发",
+    "必须独立捕获",
+    "不得因前一次成功假设后续也成功",
+    "同一路由失败后不反复重试",
     "model route not configured",
     "timeout",
     "permission denied",

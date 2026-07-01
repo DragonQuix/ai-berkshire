@@ -24,7 +24,7 @@ description: 公司新闻脉搏：股价异动时快速归因。Team Lead 统一
 
 ### Agent 失败诊断与降级记录（必须执行）
 
-若 TeamCreate、TaskCreate、后台 Agent 启动、等待或读取结果失败，Team Lead 不得把失败当作未发生。遇到 `model route not configured`、`timeout`、`permission denied` 或同类权限/路由/超时错误时，立即降级为「顺序角色模拟」，并在报告附录「Agent 降级记录」中记录：失败 Agent、错误原文摘要、降级方式、影响范围。错误原文摘要只保留必要信息，不写入密钥或本机隐私路径；错误摘要脱敏标准：可保留：模型名、错误码、HTTP 状态、非敏感错误类别，例如 `deepseek-v4-flash 路由未配置`；必须删除：本机绝对路径、token、cookie、账户名、API Key、完整请求头；影响范围需说明哪些侦察维度由 Team Lead 模拟、哪些结论因此置信度下降。
+Agent 路由失败可能间歇性发生；每次 TeamCreate/TaskCreate/后台 Agent 派发、等待或读取结果时都必须独立捕获，不得因前一次成功假设后续也成功；同一路由失败后不反复重试。若 TeamCreate、TaskCreate、后台 Agent 启动、等待或读取结果失败，Team Lead 不得把失败当作未发生。遇到 `model route not configured`、`timeout`、`permission denied` 或同类权限/路由/超时错误时，立即降级为「顺序角色模拟」，并在报告附录「Agent 降级记录」中记录：失败 Agent、错误原文摘要、降级方式、影响范围。错误原文摘要只保留必要信息，不写入密钥或本机隐私路径；错误摘要脱敏标准：可保留：模型名、错误码、HTTP 状态、非敏感错误类别，例如 `deepseek-v4-flash 路由未配置`；必须删除：本机绝对路径、token、cookie、账户名、API Key、完整请求头；影响范围需说明哪些侦察维度由 Team Lead 模拟、哪些结论因此置信度下降。
 
 ## 执行流程
 
