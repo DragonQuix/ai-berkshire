@@ -27,7 +27,7 @@ $ErrorActionPreference = "Stop"
 # ---------------------------------------------------------------------------
 # 配置
 # ---------------------------------------------------------------------------
-$RepoURL = "https://github.com/xbtlin/ai-berkshire.git"
+$RepoURL = "https://github.com/DragonQuix/ai-berkshire.git"
 $ExpectedSkillCount = 19
 if (-not $InstallDir) {
     $InstallDir = Join-Path $HOME "ai-berkshire"

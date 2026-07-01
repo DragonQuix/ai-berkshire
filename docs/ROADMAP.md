@@ -8,7 +8,7 @@
 
 - 当前日期：2026-07-01
 - 当前分支：`main`
-- 当前本地状态：本地曾验证为 `main...origin/main [ahead 11]`，说明 GitHub 用户通过默认安装脚本还拿不到最近 11 个提交。
+- 当前本地状态：`origin` 应指向 fork `https://github.com/DragonQuix/ai-berkshire.git`；本地 `main` 已包含 P0 交付修复但尚未推送到 fork。
 - 当前能力状态：核心投研 skill、组合分析工具、报告审计、Codex reference 同步和测试体系已经较完整。
 - 当前交付状态：不建议直接对普通 Claude Code 用户发布；可以内部 beta 使用。
 - 当前差距：主要是发布工程和安装链路，估计最小可交付还需 0.5-1 天，稳妥公开交付需 2-3 天。
@@ -80,22 +80,23 @@ P0 未全部完成前，不得发布，不得 push/tag 作为 release。
 
 ### P0.1 远端状态收敛
 
-状态：已完成（本地远端收敛完成，最终 push 由 P0.7 执行）
+状态：已完成（发布远端已恢复到 fork，最终 push 由 P0.7 执行）
 
 问题：
 
-- 本地 `main` 曾领先 `origin/main` 11 个提交。用户通过 README 默认 `git clone https://github.com/xbtlin/ai-berkshire.git` 只能拿到远端版本。
-- 2026-07-01 复核发现，当前本地 `origin` 实际指向 `https://github.com/DragonQuix/ai-berkshire.git`，但 README 默认安装命令指向 `https://github.com/xbtlin/ai-berkshire.git`。
-- 2026-07-01 复核时，`xbtlin/ai-berkshire` 与当时的 `origin` 不是同一 HEAD；本地 `main` 与 `xbtlin/main` 也已分叉。
-- 2026-07-01 已按项目文档和 README 确认最终发布远端为 `xbtlin/ai-berkshire`；已将本地 `origin` 对齐到 `https://github.com/xbtlin/ai-berkshire.git`，并合并 `xbtlin/main` 远端基线。
+- 本地 `main` 曾领先 `origin/main` 11 个提交；P0 修复继续推进后，本地仍需要最终 push 才能让普通用户按 README 安装到最新版本。
+- 本项目发布远端是 fork `https://github.com/DragonQuix/ai-berkshire.git`；`https://github.com/xbtlin/ai-berkshire.git` 仅作为上游参考仓库。
+- 2026-07-01 曾误将 `origin` 对齐到上游 `xbtlin/ai-berkshire` 并尝试 push，结果因当前 GitHub 凭证无上游写权限返回 403；该失败不代表 fork 发布受阻。
+- 2026-07-01 已合并上游 `xbtlin/main` 基线到本地 `main`，但普通用户安装入口、install 脚本和发布 smoke 必须统一指向 fork。
 
 必须完成：
 
 - 确认最终发布提交全部在本地 `main`。
-- 确认最终面向普通用户的发布远端：README 默认 clone 的 `xbtlin/ai-berkshire`，还是当前本地 `origin` 的 `DragonQuix/ai-berkshire`。=> 已确认使用 `xbtlin/ai-berkshire`。
-- 若最终发布远端为 `xbtlin/ai-berkshire`，必须先处理 `xbtlin/main` 与本地 `main` 的分叉，保留 P0 原子提交边界，并重新运行最终准出门禁。=> 已通过 merge commit `<48bdf67>` 合并 `xbtlin/main`，冲突文件保留本地 P0 发布说明，远端新增报告/脚本/Codex 兼容产物已纳入本地。
-- 若最终发布远端为 `DragonQuix/ai-berkshire`，必须同步修改 README/README_EN/install 文档中的默认 clone URL，避免普通用户按文档安装到错误仓库。=> 不采用。
-- 在最终准出门禁通过后，按项目规则 `git pull --rebase origin main`，解决冲突后再 push。=> 当前 `origin/main` 已是本地 `main` 祖先，最终 push 由 P0.7 执行。
+- 确认最终发布提交全部在本地 `main`。=> 已确认。
+- 确认最终面向普通用户的发布远端：README 默认 clone URL 必须与 fork `DragonQuix/ai-berkshire` 一致。=> 已确认使用 fork。
+- 保留已合并的上游基线：已通过 merge commit `<48bdf67>` 合并 `xbtlin/main`，冲突文件保留本地 P0 发布说明，远端新增报告/脚本/Codex 兼容产物已纳入本地。
+- 同步修改 README/README_EN/install/release smoke 中的默认 clone URL，避免普通用户按文档安装到上游仓库。=> 已修正为 `DragonQuix/ai-berkshire`。
+- 在最终准出门禁通过后，按项目规则 `git fetch origin main` 并确认 `origin/main` 是本地 `main` 祖先，再 push。=> 当前 fork `origin/main` 已是本地 `main` 祖先，最终 push 由 P0.7 执行。
 - push 前不得丢失原子提交边界。
 
 验证命令：
@@ -104,9 +105,9 @@ P0 未全部完成前，不得发布，不得 push/tag 作为 release。
 git status --short --branch
 git log -5 --oneline
 git remote -v
-git ls-remote https://github.com/xbtlin/ai-berkshire.git HEAD
-git ls-remote https://github.com/DragonQuix/ai-berkshire.git HEAD
 git fetch origin main
+git ls-remote origin HEAD refs/heads/main
+git ls-remote https://github.com/xbtlin/ai-berkshire.git HEAD
 git rev-list --left-right --count origin/main...main
 git merge-base --is-ancestor origin/main main
 ```
@@ -286,7 +287,7 @@ rg -n "安装后自检|19 个|portfolio-holdings.sample.json|~/.claude/commands|
 
 ### P0.7 最终发布动作
 
-状态：未完成（阻塞：当前 GitHub 凭证无 `xbtlin/ai-berkshire` push 权限）
+状态：未完成（待推送到 fork `origin/main`）
 
 前置条件：
 
@@ -301,12 +302,12 @@ rg -n "安装后自检|19 个|portfolio-holdings.sample.json|~/.claude/commands|
 - push 到 `origin main`。
 - 如需要 tag，使用明确 tag，例如 `v0.9.0-claude-code-installable`。
 
-当前阻塞：
+当前状态：
 
 - 2026-07-01 已重新运行最终准出门禁，全部通过。
 - 已执行 `git pull --rebase origin main`；该命令尝试重放 200 个本地提交并在早期安装脚本提交上冲突。为保留 P0 原子提交和 merge commit `<48bdf67>`，已中止 rebase；随后用 `origin/main` 是本地 `main` 祖先证明远端无新增提交需要整合。
-- 已执行 `git push --progress --porcelain origin main`；GitHub 返回 `remote: Permission to xbtlin/ai-berkshire.git denied to DragonQuix.` 和 HTTP 403。
-- 继续发布需要用具备 `xbtlin/ai-berkshire` 写权限的 GitHub 凭证重新执行 `git push origin main`，或由仓库 owner 授权当前凭证。
+- 上一次 `git push --progress --porcelain origin main` 失败，是因为 `origin` 被误设为上游 `xbtlin/ai-berkshire`；该 403 已确认为远端地址错误，不是 fork 发布权限阻塞。
+- 已恢复 `origin` 为 fork `https://github.com/DragonQuix/ai-berkshire.git`；继续发布需要重新运行最终准出门禁并 push 到 fork。
 
 验证命令：
 
@@ -375,4 +376,5 @@ P1 不得回填到 P0 之前作为“顺手优化”。
 - 2026-07-01：完成 P0.4，提交 `<641bf4a>`；验证：`rg -n --glob '!docs/ROADMAP.md' "18 个|16 clear|19 个|claude" README.md README_EN.md install.ps1 install.sh tests tools` -> 仅命中 19 个与 claude 预期说明，无旧错误数量；PowerShell 解析 `install.ps1` -> 通过；`bash -n install.sh` -> 通过；`python -m pytest tests/test_skill_output_regressions.py -q` -> 33 passed；`python tools\verify_channel_capability.py --quick` -> 全部通过；`git diff --check` -> 通过；剩余阻塞：P0.1、P0.5、P0.6、P0.7。
 - 2026-07-01：完成 P0.5，提交 `<5a72772>`；验证：`python tools\release_smoke.py` -> PASS release smoke；`python -m pytest tests/test_release_smoke.py -q` -> 2 passed；剩余阻塞：P0.1、P0.6、P0.7。
 - 2026-07-01：完成 P0.6，提交 `<06e86a9>`；验证：`rg -n "安装后自检|19 个|portfolio-holdings.sample.json|~/.claude/commands|/dyp-ask|/portfolio-review" README.md README_EN.md` -> 命中安装后自检、19 个命令、portfolio 样例、Claude Code 轻量命令和排障提示；`python -m pytest tests/test_skill_output_regressions.py -q` -> 35 passed；剩余阻塞：P0.1、P0.7。
-- 2026-07-01：完成 P0.1 本地远端收敛，提交 `<48bdf67>`；验证：`git remote -v` -> `origin` 指向 `https://github.com/xbtlin/ai-berkshire.git`；`git rev-list --left-right --count origin/main...main` -> `0 201`；`git merge-base --is-ancestor origin/main main` -> 通过；`python -m pytest -q` -> 363 passed；`python tools\verify_channel_capability.py --quick` -> 全部通过；`python tools\release_smoke.py` -> PASS release smoke；剩余阻塞：P0.7。
+- 2026-07-01：完成 P0.1 上游基线合并，提交 `<48bdf67>`；验证：`git rev-list --left-right --count origin/main...main` -> `0 201`（当时 origin 指向上游）；`git merge-base --is-ancestor origin/main main` -> 通过；`python -m pytest -q` -> 363 passed；`python tools\verify_channel_capability.py --quick` -> 全部通过；`python tools\release_smoke.py` -> PASS release smoke；剩余阻塞：P0.7。
+- 2026-07-01：修正 P0.1/P0.7 发布远端判断；将 `origin`、README、README_EN、install 脚本和 release smoke 的默认安装仓库统一为 fork `DragonQuix/ai-berkshire`；验证：待本次最终准出门禁记录；剩余阻塞：P0.7。

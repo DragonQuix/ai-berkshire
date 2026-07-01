@@ -177,7 +177,7 @@ def check_readme_install_contract(repo: Path) -> CheckResult:
         "README.md": [
             "19 个 Skill",
             "19 个 Claude Code slash command",
-            "git clone https://github.com/xbtlin/ai-berkshire.git",
+            "git clone https://github.com/DragonQuix/ai-berkshire.git",
             "bash install.sh",
             "pwsh install.ps1",
             "~/.claude/commands",
@@ -185,7 +185,7 @@ def check_readme_install_contract(repo: Path) -> CheckResult:
         "README_EN.md": [
             "19 Skills",
             "19 Claude Code slash commands",
-            "git clone https://github.com/xbtlin/ai-berkshire.git",
+            "git clone https://github.com/DragonQuix/ai-berkshire.git",
             "bash install.sh",
             "pwsh install.ps1",
             "~/.claude/commands",

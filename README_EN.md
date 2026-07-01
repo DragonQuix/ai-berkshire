@@ -236,11 +236,11 @@ Use the installer for the complete Claude Code + Codex setup:
 
 ```bash
 # macOS / Linux
-git clone https://github.com/xbtlin/ai-berkshire.git ~/ai-berkshire
+git clone https://github.com/DragonQuix/ai-berkshire.git ~/ai-berkshire
 cd ~/ai-berkshire && bash install.sh
 
 # Windows PowerShell
-git clone https://github.com/xbtlin/ai-berkshire.git $HOME\ai-berkshire
+git clone https://github.com/DragonQuix/ai-berkshire.git $HOME\ai-berkshire
 cd $HOME\ai-berkshire; pwsh install.ps1
 ```
 
@@ -681,4 +681,4 @@ MIT License
 
 If this project has been helpful to you, please give it a Star!
 
-[![Star History Chart](https://api.star-history.com/svg?repos=xbtlin/ai-berkshire&type=Date)](https://star-history.com/#xbtlin/ai-berkshire&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=DragonQuix/ai-berkshire&type=Date)](https://star-history.com/#DragonQuix/ai-berkshire&Date)

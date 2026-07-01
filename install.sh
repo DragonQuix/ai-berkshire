@@ -7,7 +7,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # 配置
 # ---------------------------------------------------------------------------
-REPO_URL="https://github.com/xbtlin/ai-berkshire.git"
+REPO_URL="https://github.com/DragonQuix/ai-berkshire.git"
 EXPECTED_SKILL_COUNT=19
 INSTALL_DIR="${AI_BERKSHIRE_HOME:-$HOME/ai-berkshire}"
 COMMANDS_DIR="$HOME/.claude/commands"
