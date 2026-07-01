@@ -28,6 +28,7 @@ $ErrorActionPreference = "Stop"
 # 配置
 # ---------------------------------------------------------------------------
 $RepoURL = "https://github.com/xbtlin/ai-berkshire.git"
+$ExpectedSkillCount = 19
 if (-not $InstallDir) {
     $InstallDir = Join-Path $HOME "ai-berkshire"
 }
@@ -186,7 +187,12 @@ Get-ChildItem "$skillsDir\*.md" | ForEach-Object {
     $installed++
 }
 
-Write-Host "  共安装 $installed 个技能"
+if ($installed -ne $ExpectedSkillCount) {
+    Write-Host "  ✗ Skill 数量异常：实际 $installed，期望 19 个 Claude Code 命令" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "  共安装 $installed / $ExpectedSkillCount 个技能（期望 19 个 Claude Code 命令）"
 
 Write-Host ""
 
@@ -270,7 +276,7 @@ Write-Host "  Claude Code Commands: $CommandsDir"
 if (-not $SkipCodex) {
     Write-Host "  Codex Skill:          $CodexSkillDest"
 }
-Write-Host "  已安装:               $installed 个 Claude Code 命令"
+Write-Host "  已安装:               $installed / $ExpectedSkillCount 个 Claude Code 命令"
 Write-Host ""
 Write-Host "  快速开始:" -ForegroundColor Cyan
 Write-Host "    /investment-research 腾讯        # 深度研究一家公司"

@@ -1346,7 +1346,7 @@ def test_verify_channel_capability_output_uses_expected_skill_count_not_hardcode
     m = re.search(r"EXPECTED_SKILL_COUNT\s*=\s*(\d+)", vcc_text)
     assert m
     expected = m.group(1)
-    # 任何形如 "18 个 Skill" 的硬编码都应改为引用 EXPECTED_SKILL_COUNT
+    # 任何旧版 Skill 数量硬编码都应改为引用 EXPECTED_SKILL_COUNT
     hardcoded = re.findall(r'"(\d+) 个 Skill', vcc_text) + re.findall(r"'(\d+) 个 Skill", vcc_text)
     assert hardcoded == [], f"verify_channel_capability 仍硬编码 skill 数量: {hardcoded}"
     # 标题与 pass 文案应使用 EXPECTED_SKILL_COUNT（如 f-string 或占位）

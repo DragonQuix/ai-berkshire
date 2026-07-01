@@ -163,13 +163,13 @@ Ask AI directly, and you have one context window. The team model improves depth 
 > Source: [`assets/architecture.mmd`](assets/architecture.mmd) (editable Mermaid diagram)
 
 **Three-Layer Design Philosophy**:
-- **Skill Layer**: Abstracts "what you want to do" into 16 clear entry points — deep research, earnings analysis, industry screening, portfolio management, and thinking tools. Pick by scenario.
+- **Skill Layer**: Abstracts "what you want to do" into 19 clear entry points — deep research, earnings analysis, industry screening, portfolio management, publishing, and thinking tools. Pick by scenario.
 - **Agent Layer**: The Team Lead owns evidence gathering and writes; role Agents perform read-only analysis over the shared source pack, challenge each other through independent judgments, and the Team Lead synthesizes.
 - **Tool Layer**: Exact-precision calculations, real-time web search, report auditing — ensures every report's data is rigorous and verifiable.
 
 ---
 
-## Skills Overview (16 Skills)
+## Skills Overview (19 Skills)
 
 ### 🔬 Deep Research
 
@@ -196,6 +196,8 @@ Ask AI directly, and you have one context window. The team model improves depth 
 | [`/industry-funnel`](skills/industry-funnel.md) | Industry funnel screening | Full market → rough cut ≤10 → final pick 3, with deep analysis |
 | [`/quality-screen`](skills/quality-screen.md) | Quality screen (7 hard metrics) | Quickly eliminate non-first-class companies; supports single stock / industry / index / thematic batch screening |
 | [`/investment-checklist`](skills/investment-checklist.md) | Buffett pre-buy checklist | Six gates, 10-minute decision on whether to dig deeper |
+| [`/compare`](skills/compare.md) | Multi-stock comparison | 2–4 comparable companies, aligned financials, valuation, and qualitative verdicts |
+| [`/bottleneck-hunter`](skills/bottleneck-hunter.md) | Supply-chain bottleneck hunter | Decompose mega-trends into physical bottlenecks and second-/third-order beneficiaries |
 
 ### 📈 Portfolio Management
 
@@ -205,10 +207,11 @@ Ask AI directly, and you have one context window. The team model improves depth 
 | [`/thesis-tracker`](skills/thesis-tracker.md) | Investment thesis tracker | Post-buy discipline system: continuously track whether your thesis has been falsified |
 | [`/news-pulse`](skills/news-pulse.md) | Price-move rapid attribution | When a stock surges or drops — figure out "what happened" in 10 minutes |
 
-### 🧠 Thinking Tools
+### 🧠 Publishing & Thinking Tools
 
 | Skill | Purpose | When to Use |
 |-------|---------|-------------|
+| [`/wechat-article`](skills/wechat-article.md) | WeChat article workflow | Author, editor, and reader-review roles for publishable long-form articles |
 | [`/dyp-ask`](skills/dyp-ask.md) | Duan Yongping Q&A | Think through any question the Duan Yongping way — business, investing, life |
 | [`/financial-data`](skills/financial-data.md) | Financial data retrieval & cross-validation | Ensure key data comes from 2+ independent sources; alerts on >1% deviation |
 
@@ -222,17 +225,29 @@ Ask AI directly, and you have one context window. The team model improves depth 
 npm install -g @anthropic-ai/claude-code
 ```
 
-### 2. Install Skills
+### 2. Install AI Berkshire
 
-Copy the `.md` files from the `skills/` directory to your Claude Code commands directory:
+Recommended prerequisites:
+
+- Required by the install scripts: `git` and `python`.
+- Recommended but not hard-checked by the scripts: the `claude` CLI.
+
+Use the installer for the complete Claude Code + Codex setup:
 
 ```bash
-# Clone the repository
-git clone https://github.com/xbtlin/ai-berkshire.git
+# macOS / Linux
+git clone https://github.com/xbtlin/ai-berkshire.git ~/ai-berkshire
+cd ~/ai-berkshire && bash install.sh
 
-# Copy skills to Claude Code global commands directory
-cp ai-berkshire/skills/*.md ~/.claude/commands/
+# Windows PowerShell
+git clone https://github.com/xbtlin/ai-berkshire.git $HOME\ai-berkshire
+cd $HOME\ai-berkshire; pwsh install.ps1
 ```
+
+The installer hard-checks git and python, installs 19 Claude Code slash commands into `~/.claude/commands/`, and installs the native Codex skill unless skipped.
+The `claude` CLI is a recommended prerequisite for actually using the installed slash commands, but it is not a hard install-script check.
+
+Manual install is also possible, but copying `skills/*.md` only installs command definitions. To use the Python tools, examples, and docs-backed workflows, keep the repository directory and run from the repository root when invoking tool commands.
 
 ### 3. Use
 

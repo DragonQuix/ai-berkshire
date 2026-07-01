@@ -162,13 +162,13 @@ AI Berkshire 确保：**同样的输入 → 结构一致、深度一致的输出
 > 图源：[`assets/architecture.mmd`](assets/architecture.mmd)（Mermaid 可编辑源码）
 
 **三层设计哲学**：
-- **Skill 层**：把"你要做什么"抽象成 16 个明确入口——深度研究、财报分析、行业筛选、持仓管理、思维工具，按场景选用
+- **Skill 层**：把"你要做什么"抽象成 19 个明确入口——深度研究、财报分析、行业筛选、持仓管理、写作发布、思维工具，按场景选用
 - **Agent 层**：Team Lead 统一取证与写入，角色 Agent 基于共享资料包只读分析——它们独立判断、互相挑战，最后由 Team Lead 综合
 - **工具层**：精确计算、实时检索、报告抽检——保证每份报告的数据严谨性可验证
 
 ---
 
-## Skills 一览（16个）
+## Skills 一览（19个）
 
 ### 🔬 深度研究类
 
@@ -195,6 +195,8 @@ AI Berkshire 确保：**同样的输入 → 结构一致、深度一致的输出
 | [`/industry-funnel`](skills/industry-funnel.md) | 行业漏斗筛选 | 全市场 → 粗筛 ≤10 家 → 终选 3 家深度分析 |
 | [`/quality-screen`](skills/quality-screen.md) | 去劣筛选（7条硬指标） | 快速排除非一流公司，支持个股/行业/指数/主题批量筛 |
 | [`/investment-checklist`](skills/investment-checklist.md) | 巴菲特买入前 Checklist | 六关快速筛选，10分钟决定是否值得深入 |
+| [`/compare`](skills/compare.md) | 多股横向对决 | 2-4 只可比公司同维度财务、估值与定性裁决 |
+| [`/bottleneck-hunter`](skills/bottleneck-hunter.md) | 供应链瓶颈猎手 | 从超级趋势拆解物理瓶颈，寻找二三阶受益公司 |
 
 ### 📈 持仓管理类
 
@@ -204,10 +206,11 @@ AI Berkshire 确保：**同样的输入 → 结构一致、深度一致的输出
 | [`/thesis-tracker`](skills/thesis-tracker.md) | 投资论文追踪 | 买入后的纪律系统：持续跟踪论文是否被证伪 |
 | [`/news-pulse`](skills/news-pulse.md) | 股价异动快速归因 | 股价大涨/大跌时10分钟搞清"发生了什么" |
 
-### 🧠 思维工具类
+### 🧠 写作与思维工具类
 
 | Skill | 用途 | 适合场景 |
 |-------|------|---------|
+| [`/wechat-article`](skills/wechat-article.md) | 微信公众号文章 | 作者、编辑、读者三角色协作，产出可发布长文 |
 | [`/dyp-ask`](skills/dyp-ask.md) | 段永平问答 | 以段永平的方式思考任何问题——商业、投资、人生 |
 | [`/financial-data`](skills/financial-data.md) | 财务数据获取与交叉验证规范 | 确保关键数据来自2个独立来源，误差>1%告警 |
 
@@ -238,14 +241,14 @@ cd $HOME\ai-berkshire; pwsh install.ps1
 ```
 
 > **安装脚本做了什么？**
-> 1. 检查前置条件（git, python, claude）
+> 1. 检查硬性前置条件（git, python）；`claude` CLI 是推荐前置条件，不作为脚本硬性检查
 > 2. Clone/更新仓库到 `~/ai-berkshire/`
-> 3. 将 18 个 Skill 安装到 ~/.claude/commands/（Claude Code 命令）
+> 3. 将 19 个 Skill 安装到 ~/.claude/commands/（Claude Code 命令）
 > 4. 安装 Codex 原生 Skill 到 `$CODEX_HOME/skills/ai-berkshire`
-> 4. 检查 Python 工具依赖
+> 5. 检查 Python 工具依赖
 >
 > macOS/Linux 默认使用**符号链接**（`git pull` 后自动更新），Windows 使用文件拷贝。
-> 也支持手动安装：直接将 skills/*.md 复制到 ~/.claude/commands/ 即可。
+> 也支持手动安装：手动复制 `skills/*.md` 只安装命令定义；若要完整工具链可用，必须保留仓库目录，并在需要运行 Python 工具时从仓库根目录运行。推荐前置条件是已安装 `claude` CLI；脚本硬性检查 git 和 python。
 >
 > **Codex 用户**：运行 `bash install.sh`（或 `pwsh install.ps1`）即可同时安装 Claude Code 命令和 Codex 原生 Skill。手动安装 Codex Skill：将 `codex/ai-berkshire/` 复制到 `$CODEX_HOME/skills/`（Windows 默认 C:\Users\<用户>\.codex\skills）。
 

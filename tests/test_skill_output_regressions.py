@@ -177,6 +177,44 @@ DATA_DEPENDENCY_RELEASE_CONTRACTS = {
     ],
 }
 
+INSTALL_RELEASE_CONTRACTS = {
+    "README.md": [
+        "19 个 Skill",
+        "19 个 Claude Code slash command",
+        "推荐前置条件",
+        "脚本硬性检查 git 和 python",
+        "手动复制 `skills/*.md` 只安装命令定义",
+        "保留仓库目录",
+        "从仓库根目录运行",
+    ],
+    "README_EN.md": [
+        "19 Skills",
+        "19 Claude Code slash commands",
+        "recommended prerequisite",
+        "hard-checks git and python",
+        "copying `skills/*.md` only installs command definitions",
+        "keep the repository directory",
+        "run from the repository root",
+    ],
+    "install.ps1": [
+        "$ExpectedSkillCount = 19",
+        "期望 19 个 Claude Code 命令",
+        "已安装:               $installed / $ExpectedSkillCount 个 Claude Code 命令",
+    ],
+    "install.sh": [
+        "EXPECTED_SKILL_COUNT=19",
+        "期望 19 个 Claude Code 命令",
+        '已安装:   $installed / $EXPECTED_SKILL_COUNT 个 Claude Code 命令',
+    ],
+}
+
+LEGACY_SKILL_COUNT_PATTERNS = [
+    "18" + " 个",
+    "16" + " clear",
+    "16" + " 个",
+    "16" + " Skills",
+]
+
 
 def public_release_files() -> list[Path]:
     files: list[Path] = []
@@ -225,3 +263,25 @@ def test_data_dependency_release_contracts_are_documented(
     text = read_text(rel_path)
     for snippet in required_snippets:
         assert snippet in text, f"{rel_path} missing data dependency contract {snippet!r}"
+
+
+@pytest.mark.parametrize("rel_path, required_snippets", INSTALL_RELEASE_CONTRACTS.items())
+def test_install_release_contracts_are_documented(
+    rel_path: str,
+    required_snippets: list[str],
+) -> None:
+    text = read_text(rel_path)
+    for snippet in required_snippets:
+        assert snippet in text, f"{rel_path} missing install release contract {snippet!r}"
+
+
+def test_public_release_files_do_not_contain_legacy_skill_counts() -> None:
+    offenders: list[str] = []
+    for path in public_release_files():
+        text = path.read_text(encoding="utf-8")
+        rel_path = path.relative_to(REPO).as_posix()
+        for pattern in LEGACY_SKILL_COUNT_PATTERNS:
+            if pattern in text:
+                offenders.append(f"{rel_path}: contains {pattern!r}")
+
+    assert not offenders, "发布面文件不能继续使用旧 Skill 数量:\n" + "\n".join(offenders)

@@ -8,6 +8,7 @@ set -euo pipefail
 # 配置
 # ---------------------------------------------------------------------------
 REPO_URL="https://github.com/xbtlin/ai-berkshire.git"
+EXPECTED_SKILL_COUNT=19
 INSTALL_DIR="${AI_BERKSHIRE_HOME:-$HOME/ai-berkshire}"
 COMMANDS_DIR="$HOME/.claude/commands"
 CODEX_SKILL_NAME="ai-berkshire"
@@ -32,6 +33,7 @@ SKIP_CODEX=false
 usage() {
     cat <<EOF
 AI Berkshire — Claude Code + Codex 价值投资研究 Skill 合集安装器
+安装 19 个 Claude Code 命令，并可同步 Codex 原生 Skill
 
 用法: bash install.sh [选项]
 
@@ -83,13 +85,13 @@ if $UNINSTALL; then
                 if echo "$target" | grep -q "ai-berkshire"; then
                     rm -f "$md"
                     echo "  移除: $(basename "$md")"
-                    ((removed++))
+                    removed=$((removed + 1))
                 fi
             elif [ -f "$md" ]; then
                 if head -5 "$md" 2>/dev/null | grep -qi "ai.berkshire\|巴菲特.*芒格.*段永平\|投资研究.*四大师"; then
                     rm -f "$md"
                     echo "  移除: $(basename "$md")"
-                    ((removed++))
+                    removed=$((removed + 1))
                 fi
             fi
         done
@@ -193,10 +195,15 @@ for src in "$SKILLS_DIR"/*.md; do
         ln -sf "$src" "$dest"
         echo "  已链接: $name"
     fi
-    ((installed++))
+    installed=$((installed + 1))
 done
 
-echo "  共安装 $installed 个技能"
+if [ "$installed" -ne "$EXPECTED_SKILL_COUNT" ]; then
+    echo -e "  ${RED}✗${NC} Skill 数量异常：实际 $installed，期望 19 个 Claude Code 命令"
+    exit 1
+fi
+
+echo "  共安装 $installed / $EXPECTED_SKILL_COUNT 个技能（期望 19 个 Claude Code 命令）"
 
 echo ""
 
@@ -268,7 +275,7 @@ echo "  技能目录: $COMMANDS_DIR"
 if ! $SKIP_CODEX; then
     echo "  Codex Skill: $CODEX_SKILL_DEST"
 fi
-echo "  已安装:   $installed 个 Claude Code 命令"
+echo "  已安装:   $installed / $EXPECTED_SKILL_COUNT 个 Claude Code 命令"
 echo ""
 echo -e "  ${CYAN}快速开始:${NC}"
 echo "    /investment-research 腾讯        # 深度研究一家公司"

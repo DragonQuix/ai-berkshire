@@ -90,7 +90,7 @@ python "$env:USERPROFILE\.claude\skills\skill-creator\scripts\quick_validate.py"
 | 项目 | 判定 | 证据 |
 |---|---|---|
 | 重点 `_source` 文件 | PASS | `dyp-ask.md`、`earnings-team.md`、`management-deep-dive.md`、`private-company-research.md`、`wechat-article.md`、`financial-data.md` 均已明确 `_source` |
-| 根/Codex Skill 同步 | PASS | 抽查 18 个增强 Skill，根目录与 `codex/ai-berkshire/references/skills/` 哈希一致 |
+| 根/Codex Skill 同步 | PASS | 抽查多项增强 Skill，根目录与 `codex/ai-berkshire/references/skills/` 哈希一致 |
 | `tools/` 与 Codex tools 同步 | PASS | `lxr_data.py`、`verify_channel_capability.py`、`lxr_client.py`、`financial_rigor.py`、`ashare_data.py`、`stock_screener.py` 哈希一致 |
 | `quality-metrics 600132` | PASS | `_source=lixinger`，`share_dilution_5y.value=0.0`，`status=pass`，`result=pass` |
 | 五个候选复核 | PASS | 5/5 均无 missing；`300492`、`300972` 因股本膨胀超阈值有效判 fail，不是数据缺失 |
