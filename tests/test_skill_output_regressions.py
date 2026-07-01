@@ -263,6 +263,15 @@ TASK_AGENT_DEGRADATION_SNIPPETS = [
     "顺序角色模拟",
 ]
 
+HK_INDUSTRY_COMPARE_FALLBACK_SNIPPETS = [
+    "港股行业对比降级",
+    "申万行业分类仅覆盖A股",
+    "mx-xuangu",
+    "手工指定同业",
+    "港股行业龙头",
+    "不要求申万同行分位",
+]
+
 LEGACY_SKILL_COUNT_PATTERNS = [
     "18" + " 个",
     "16" + " clear",
@@ -358,3 +367,10 @@ def test_task_agent_degradation_contracts_are_documented(skill_name: str) -> Non
         text = read_text(rel_path)
         for snippet in TASK_AGENT_DEGRADATION_SNIPPETS:
             assert snippet in text, f"{rel_path} missing task-agent degradation contract {snippet!r}"
+
+
+def test_investment_research_documents_hk_industry_compare_fallback() -> None:
+    for rel_path in skill_channels("investment-research.md"):
+        text = read_text(rel_path)
+        for snippet in HK_INDUSTRY_COMPARE_FALLBACK_SNIPPETS:
+            assert snippet in text, f"{rel_path} missing HK industry compare fallback {snippet!r}"

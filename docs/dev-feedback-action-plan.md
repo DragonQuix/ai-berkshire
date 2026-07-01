@@ -154,6 +154,8 @@ python tools\verify_channel_capability.py --quick
 
 ### P1-B2：港股行业对比降级说明
 
+状态：已完成（2026-07-01）
+
 目标文件：
 
 - `tools/lxr_data.py`
@@ -166,6 +168,12 @@ python tools\verify_channel_capability.py --quick
 
 - 港股 `industry-compare` 返回 `note` 同时包含 `alternatives`，例如 mx-xuangu 同业、手工指定同业、行业龙头列表。
 - skill 文档在港股路径中不再要求申万同行分位，而是转为同业手工列表或 mx 辅助。
+
+完成记录：
+
+- `compare_industry_valuation()` 在港股/非 A 股申万不适用时，将 `note` 与 `alternatives` 透出到顶层结果，并在 `industry` 子块保留同一组替代路径。
+- alternatives 覆盖 `mx-xuangu` 辅助筛选、手工指定同业列表、港股行业龙头/主要可比公司三条路径。
+- `investment-research` 明确“港股行业对比降级”，D2 行业水位不要求申万同行分位。
 
 验证命令：
 

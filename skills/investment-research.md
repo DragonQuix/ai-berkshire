@@ -76,6 +76,8 @@ python tools/lxr_data.py datapack {code} --years 5 -o _tmp_{code}_datapack.json
 
 Windows 终端：`$env:PYTHONIOENCODING='utf-8'`；MX 脚本**必须**传 `--output-dir` 或输出目录参数（默认 `/root/.openclaw/...` 在 Windows 不可用）。
 
+**港股行业对比降级**：`industry-compare` 对港股会返回 `note: 申万行业分类仅覆盖A股` 和 `alternatives`。港股不要求申万同行分位；改用 `mx-xuangu` 辅助找同业、手工指定同业列表，或选取港股行业龙头 / 主要可比公司后逐一拉取 `valuation` 并说明选择依据。
+
 **0.3 保险 / 银行 / 证券专属字段**（`industry-deep` 自动路由 `report_type`）：
 
 | 类型 | 理杏仁直接获取（E0.4 已验证 601336） | 仍需年报原文的场景 |
@@ -248,7 +250,7 @@ python tools/financial_rigor.py verify-valuation \
 | 维度 | 问题 | 取数 | `_source` |
 |------|------|------|-----------|
 | D1 自身水位 | PE 处于自身历史什么分位？ | `percentiles` + `valuation` 的 PE-TTM 分位点 | lixinger |
-| D2 行业水位 | PE 处于申万同业什么位置？ | `industry-compare` 对比表中位数/分位 | lixinger |
+| D2 行业水位 | A股：PE 处于申万同业什么位置；港股：不要求申万同行分位，改用港股行业对比降级路径 | `industry-compare` 对比表；港股用 mx-xuangu / 手工指定同业 / 港股行业龙头可比公司 | lixinger / mx-xuangu |
 | D3 全市场位置 | 全市场多少家更便宜且质量不输？ | mx-xuangu「PE低于{本公司PE}且ROE大于{本公司ROE}%的A股」 | mx-xuangu |
 | D4 利率环境 | 10Y 国债收益率下当前 PE 合理吗？ | `macro-debt` 最新 10Y + 与历史 ERP 直觉对照 | lixinger |
 

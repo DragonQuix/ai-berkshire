@@ -333,6 +333,22 @@ class TestMacroAndIndexValuation(unittest.TestCase):
         self.assertIsNone(r["industry_code"])
         self.assertEqual(r["_source"], "none")
 
+    def test_industry_compare_hk_returns_actionable_alternatives(self):
+        d = lxd.LxrData(client=FakeClient(), verbose=False)
+        r = d.compare_industry_valuation("09992")
+
+        self.assertEqual(r["_source"], "none")
+        self.assertEqual(r["market"], "hk")
+        self.assertEqual(r["note"], "申万行业分类仅覆盖A股")
+        self.assertIsNone(r["comparison"])
+        self.assertIn("alternatives", r)
+        self.assertEqual(r["industry"]["alternatives"], r["alternatives"])
+
+        joined = "\n".join(r["alternatives"])
+        self.assertIn("mx-xuangu", joined)
+        self.assertIn("手工指定同业", joined)
+        self.assertIn("港股行业龙头", joined)
+
     def test_industry_valuation_uses_no_cp(self):
         cli = FakeClient({"cn/industry/fundamental/sw_2021": [[
             {"date": "2026-06-26", "pe_ttm.y10.mcw.cv": 17.78, "pe_ttm.y10.mcw.cvpos": 0.016},

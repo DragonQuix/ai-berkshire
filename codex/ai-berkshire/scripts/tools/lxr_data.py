@@ -1278,6 +1278,14 @@ class LxrData:
     # 行业对比模块（P5.3：申万二级行业估值对比表）
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _hk_industry_compare_alternatives(code: str) -> list[str]:
+        return [
+            f'使用 mx-xuangu 辅助筛选港股同业：python tools/lxr_data.py mx-xuangu "港股 {code} 同行业 可比公司"',
+            "手工指定同业列表后分别拉取 valuation/percentiles，再在报告中说明选择依据",
+            "选取港股行业龙头或主要可比公司，按业务结构、市值、收入地区和估值口径逐项对比",
+        ]
+
     def _sw_industry_map(self, source: str = "sw_2021") -> dict:
         """构建股票→所属行业码列表 + 行业码→{name,level,fsTableType}。
         constituents 省略 stockCodes 返回所有行业成分（同一股票出现在一/二/三级各一条）；
@@ -1319,7 +1327,9 @@ class LxrData:
         if market != "cn":
             return {"source_detail": "lixinger:not_available", "code": norm, "market": market,
                     "industry_code": None, "industry_name": None, "level": None,
-                    "note": "申万行业分类仅覆盖A股", "_source": "none"}
+                    "note": "申万行业分类仅覆盖A股",
+                    "alternatives": self._hk_industry_compare_alternatives(norm),
+                    "_source": "none"}
         m = self._sw_industry_map(source=source)
         codes = m["stock2codes"].get(norm, [])
         if not codes:
@@ -1380,6 +1390,7 @@ class LxrData:
         }
         if market != "cn":
             result["note"] = "申万行业分类仅覆盖A股"
+            result["alternatives"] = self._hk_industry_compare_alternatives(anchor)
             return result
 
         m = self._sw_industry_map(source=source)
@@ -1452,6 +1463,10 @@ class LxrData:
             "_source": ind.get("_source"),
         }
         if not ind.get("industry_code"):
+            if ind.get("note"):
+                result["note"] = ind["note"]
+            if ind.get("alternatives"):
+                result["alternatives"] = ind["alternatives"]
             return result
         ind_val = self.get_industry_valuation(ind["industry_code"], source=source)
         comp_val = self.get_valuation(code)
