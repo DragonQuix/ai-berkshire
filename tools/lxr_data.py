@@ -79,6 +79,34 @@ FS_TYPES = ("non_financial", "bank", "insurance", "security", "other_financial",
 HK_FS_TYPES = ("non_financial", "bank", "insurance", "security", "other_financial", "reit")
 CN_FS_TYPES = ("non_financial", "bank", "insurance", "security", "other_financial")
 
+FINANCIAL_FIELD_CALIBERS = {
+    "q.ps.toi.t": {
+        "name": "toi",
+        "caliber": "营业总收入",
+        "report_label": "收入/收益",
+    },
+    "q.ps.oi.t": {
+        "name": "oi",
+        "caliber": "营业收入",
+        "report_label": "营业收入",
+    },
+    "q.ps.npatoshopc.t": {
+        "name": "npatoshopc",
+        "caliber": "归母净利润",
+        "report_label": "归母净利润",
+    },
+    "q.ps.np.t": {
+        "name": "np",
+        "caliber": "净利润",
+        "report_label": "净利润",
+    },
+    "q.cfs.ncffoa.t": {
+        "name": "ncffoa",
+        "caliber": "经营活动现金流量净额",
+        "report_label": "经营现金流",
+    },
+}
+
 # 非金融：核心绝对值指标（expressionCalculateType = t 当期值），已验证有效。
 DEFAULT_FINANCIALS_METRICS = [
     "q.ps.toi.t",            # 营业总收入
@@ -132,6 +160,30 @@ METRICS_BY_TYPE = {
     "non_financial": DEFAULT_FINANCIALS_METRICS,
     "insurance": INSURANCE_FINANCIALS_METRICS,
 }
+
+
+def _financial_caliber_metadata(market: str, report_type: str) -> dict:
+    currency = "HKD" if market == "hk" else "CNY"
+    fields = {}
+    for key, item in FINANCIAL_FIELD_CALIBERS.items():
+        fields[key] = {
+            **item,
+            "currency": currency,
+            "unit": "raw_yuan",
+            "unit_note": "理杏仁返回原始货币单位；报告写亿元/亿港元时必须显式换算",
+        }
+    return {
+        "source": "lixinger",
+        "market": market,
+        "report_type": report_type,
+        "currency": currency,
+        "unit": "raw_yuan",
+        "fields": fields,
+        "notes": [
+            "toi=营业总收入；年报“收益”可能按披露口径包含或剔除特定业务，需要逐项核对。",
+            "跨来源比较必须同时保留字段口径、币种和单位；无法确认同口径时使用 cross-validate --caliber 标注。",
+        ],
+    }
 
 _SKIP_INTEREST_COVERAGE = frozenset({"bank", "insurance", "security", "other_financial"})
 
@@ -654,6 +706,7 @@ class LxrData:
             "records": records,
             "metric_count": len(used),
             "available_metrics": used,
+            "caliber_metadata": _financial_caliber_metadata(market, fs_type),
         }
 
     def _get_financials_mx(self, code: str, years: int, name: Optional[str]) -> dict:
@@ -1879,6 +1932,10 @@ class LxrData:
             label = name or norm
             _section("mx_quote", lambda: self.mx_data(f"{label} 最新价 涨跌幅 PE PB"))
             _section("mx_news", lambda: self.mx_search(f"{label} 最新公告 业绩"))
+
+        financials = pack["sections"].get("financials")
+        if isinstance(financials, dict) and financials.get("caliber_metadata"):
+            pack["caliber_metadata"] = {"financials": financials["caliber_metadata"]}
 
         pack["_source"] = _datapack_source(pack, include_mx)
         has_failed_section = any(

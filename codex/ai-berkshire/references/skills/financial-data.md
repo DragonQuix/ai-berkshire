@@ -51,6 +51,17 @@
 
 复合数据包（`datapack`）顶层 `_source` 反映实际组合；各 `sections.*` 子块保留各自 `_source`。
 
+### `caliber_metadata` 口径元数据（所有报告必看）
+
+`tools/lxr_data.py financials` 与 `datapack.sections.financials` 会返回 `caliber_metadata`，用于把字段口径、币种和单位传到报告与审计环节。报告引用财务数据时必须同时保留口径说明：
+
+- `toi=营业总收入`，不是自动等同于所有公司年报“收益”口径；港股年报“收益”可能按披露口径包含或剔除特定业务，必须核对。
+- `caliber_metadata.currency` 给出币种（A股通常 CNY，港股通常 HKD）。
+- `caliber_metadata.unit` 为 `raw_yuan`，表示理杏仁原始货币单位；报告写“亿元/亿港元”时必须显式换算。
+- `cross-validate --caliber` 用于记录口径说明；若同一指标跨源偏差超阈，工具会输出「口径待核对」，不得把已解释的口径差异当作普通数据错误。
+
+报告表格建议至少包含「指标 / 数值 / 口径/来源 / 币种 / 单位」列；无法确认同口径时，不强行合并数值。
+
 ### CLI 调用方式（推荐）
 
 ```bash

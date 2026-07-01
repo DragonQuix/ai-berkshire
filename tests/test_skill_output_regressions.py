@@ -272,6 +272,27 @@ HK_INDUSTRY_COMPARE_FALLBACK_SNIPPETS = [
     "不要求申万同行分位",
 ]
 
+FINANCIAL_CALIBER_METADATA_CONTRACTS = {
+    "financial-data.md": [
+        "caliber_metadata",
+        "toi=营业总收入",
+        "年报“收益”",
+        "币种",
+        "单位",
+        "口径待核对",
+    ],
+    "investment-research.md": [
+        "口径/来源",
+        "caliber_metadata",
+        "toi=营业总收入",
+        "年报“收益”",
+        "币种",
+        "单位",
+        "cross-validate",
+        "--caliber",
+    ],
+}
+
 LEGACY_SKILL_COUNT_PATTERNS = [
     "18" + " 个",
     "16" + " clear",
@@ -374,3 +395,14 @@ def test_investment_research_documents_hk_industry_compare_fallback() -> None:
         text = read_text(rel_path)
         for snippet in HK_INDUSTRY_COMPARE_FALLBACK_SNIPPETS:
             assert snippet in text, f"{rel_path} missing HK industry compare fallback {snippet!r}"
+
+
+@pytest.mark.parametrize("skill_name, required_snippets", FINANCIAL_CALIBER_METADATA_CONTRACTS.items())
+def test_financial_caliber_metadata_contracts_are_documented(
+    skill_name: str,
+    required_snippets: list[str],
+) -> None:
+    for rel_path in skill_channels(skill_name):
+        text = read_text(rel_path)
+        for snippet in required_snippets:
+            assert snippet in text, f"{rel_path} missing financial caliber metadata contract {snippet!r}"

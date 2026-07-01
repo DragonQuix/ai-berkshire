@@ -184,6 +184,8 @@ python tools\verify_channel_capability.py --quick
 
 ### P1-B3：财务口径元数据
 
+状态：已完成（2026-07-01）
+
 目标文件：
 
 - `tools/lxr_data.py`
@@ -197,6 +199,13 @@ python tools\verify_channel_capability.py --quick
 - financials/datapack 能表达字段口径，例如 `toi=营业总收入`、年报“收益”口径、币种和单位。
 - `cross-validate --caliber` 输出口径冲突提示，避免把已解释的口径差异当作普通数据错误。
 - 报告数据表要求增加“口径/来源”列。
+
+完成记录：
+
+- `lxr_data.py financials` 新增 `caliber_metadata`，记录理杏仁字段口径（如 `toi=营业总收入`）、年报“收益”口径提醒、币种和原始单位。
+- `datapack` 汇总 `sections.financials.caliber_metadata` 到顶层 `caliber_metadata.financials`，方便报告和审计链路复用。
+- `cross-validate --caliber` 在来源偏差未通过时输出「口径待核对」，返回结果保留 `caliber_warning`。
+- `financial-data` 与 `investment-research` 文档要求核心数据表保留「口径/来源 / 币种 / 单位」，root skill 与 Codex reference 已同步。
 
 验证命令：
 

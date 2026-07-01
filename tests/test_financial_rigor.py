@@ -150,6 +150,21 @@ class TestCrossValidation(unittest.TestCase):
         self.assertIn("参考中位数", out)
         self.assertNotIn("加权中位数", out)
 
+    def test_cross_validate_flags_caliber_review_when_sources_diverge(self):
+        result, out = _capture_stdout(
+            fr.cross_validate,
+            "revenue",
+            {"annual_report": 100, "lixinger": 130},
+            "亿",
+            2.0,
+            caliber="年报“收益” vs 理杏仁 toi=营业总收入",
+        )
+
+        self.assertFalse(result["all_consistent"])
+        self.assertTrue(result["caliber_warning"])
+        self.assertIn("口径待核对", out)
+        self.assertIn("年报“收益” vs 理杏仁 toi=营业总收入", out)
+
 
 class TestThreeScenarioValuation(unittest.TestCase):
     def test_cli_normalizes_percent_growth_inputs_and_warns_on_stderr(self):

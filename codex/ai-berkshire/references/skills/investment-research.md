@@ -57,7 +57,7 @@ python tools/lxr_data.py datapack {code} --years 5 -o _tmp_{code}_datapack.json
 # 跳过妙想（省日限额）：python tools/lxr_data.py datapack {code} --no-mx -o _tmp_{code}_datapack.json
 ```
 
-主 Agent 随后读取 `_tmp_{code}_datapack.json`，从 `sections.financials/valuation/verify_inputs/...` 中取数；不要用 `glob datapack_*.json` 猜缓存文件名。若只想看 stdout，可省略 `-o`。
+主 Agent 随后读取 `_tmp_{code}_datapack.json`，从 `sections.financials/valuation/verify_inputs/...` 中取数；不要用 `glob datapack_*.json` 猜缓存文件名。若只想看 stdout，可省略 `-o`。财报字段必须同时读取 `sections.financials.caliber_metadata` 或顶层 `caliber_metadata.financials`，保留 `toi=营业总收入`、年报“收益”差异、币种和单位信息。
 
 或按维度分拆（理杏仁为主，妙想补 tick/资讯；单次研究约 5–8 次理杏仁 + 2 次 MX）：
 
@@ -92,16 +92,18 @@ Windows 终端：`$env:PYTHONIOENCODING='utf-8'`；MX 脚本**必须**传 `--out
 
 ```markdown
 ## 数据摘要（预处理）
-| 指标 | 最新值 | 来源 |
-|------|--------|------|
-| 市值 / PE-TTM / PB | ... | lixinger |
-| PE 历史分位（10年） | ...% | lixinger |
-| 营收 / 归母净利润（近5年） | 表 | lixinger |
-| [保险] EV / NBV / 偿付能力 | ... | lixinger |
-| 前十大股东（最新） | 表 | lixinger |
-| 高管/大股东增减持（2年） | 表 | lixinger |
-| 实时价 / 涨跌幅 | ... | mx-data |
+| 指标 | 最新值 | 口径/来源 | 币种 | 单位 |
+|------|--------|-----------|------|------|
+| 市值 / PE-TTM / PB | ... | lixinger | ... | ... |
+| PE 历史分位（10年） | ...% | lixinger | ... | ... |
+| 营收 / 归母净利润（近5年） | 表 | caliber_metadata：toi=营业总收入；年报“收益”需核对 | CNY/HKD | raw_yuan → 亿元/亿港元 |
+| [保险] EV / NBV / 偿付能力 | ... | lixinger / industry-deep | ... | ... |
+| 前十大股东（最新） | 表 | lixinger | ... | ... |
+| 高管/大股东增减持（2年） | 表 | lixinger | ... | ... |
+| 实时价 / 涨跌幅 | ... | mx-data | ... | ... |
 ```
+
+报告所有核心数据表都必须保留「口径/来源」列。`cross-validate --caliber` 的口径说明应与 `caliber_metadata` 保持一致；如工具提示「口径待核对」，先解释口径差异再决定是否纳入抽检通过。
 
 **0.5 Agent 分工调整**：结构化数字由数据包提供；Task Agent **仅**负责竞争格局、商业模式定性、管理层履历、行业 TAM、风险事件等**无法编码**的维度。禁止 3 个 Agent 并行重复拉取财报、调用 WebSearch/WebFetch/Bash 或写文件。缺资料时输出补数请求，由主 Agent 统一补齐。
 

@@ -219,15 +219,19 @@ def cross_validate(field_name, source_values: dict, unit="", tolerance_pct=2.0, 
     else:
         print(f"  ⚠️  存在来源偏差 > {tolerance_pct}%, 请核实差异原因")
         print(f"     建议: 优先采用公司年报/交易所数据")
+        if caliber:
+            print(f"     口径待核对: {caliber}")
 
     # Consensus value
     consensus = median
+    caliber_warning = bool(caliber and not all_ok)
     print(f"\n  参考中位数: {fmt_number(exact(consensus))} {unit}")
     return {
         "consensus": consensus,
         "all_consistent": all_ok,
         "magnitude_warning": magnitude_warning,
         "caliber": caliber,
+        "caliber_warning": caliber_warning,
     }
 
 

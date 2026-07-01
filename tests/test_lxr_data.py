@@ -118,6 +118,22 @@ class TestEndpointRouting(unittest.TestCase):
         fs_call = next(p for e, p in cli.calls if e == "hk/company/fs/non_financial")
         self.assertEqual(fs_call["stockCodes"], ["00700"])
 
+    def test_financials_lixinger_includes_caliber_metadata(self):
+        cli = FakeClient({
+            "cn/company": [{"list": [{"fsTableType": "non_financial"}]}],
+            "cn/company/fs/non_financial": [[{"date": "2025-12-31", "q": {}}]],
+        })
+        d = lxd.LxrData(client=cli, verbose=False)
+        r = d.get_financials("600519", years=1, source="lixinger")
+
+        meta = r["caliber_metadata"]
+        self.assertEqual(meta["currency"], "CNY")
+        self.assertEqual(meta["unit"], "raw_yuan")
+        self.assertEqual(meta["report_type"], "non_financial")
+        self.assertEqual(meta["fields"]["q.ps.toi.t"]["name"], "toi")
+        self.assertEqual(meta["fields"]["q.ps.toi.t"]["caliber"], "营业总收入")
+        self.assertIn("年报“收益”", "\n".join(meta["notes"]))
+
     def test_valuation_routes_cn(self):
         cli = FakeClient({
             "cn/company": [{"list": [{"fsTableType": "non_financial"}]}],
@@ -629,6 +645,50 @@ def test_datapack_does_not_cache_failed_sections(monkeypatch):
     assert second["sections"]["mx_news"]["_source"] == "mx-search"
     assert d.client.cache.saved is second
     assert calls["mx_news"] == 2
+
+
+def test_datapack_promotes_financial_caliber_metadata(monkeypatch):
+    from lxr_data import LxrData
+
+    class FakeCache:
+        def get(self, endpoint, payload, ttl_seconds):
+            return False, None
+
+        def set(self, endpoint, payload, value):
+            pass
+
+    class FakeClient:
+        config = {"data_type_ttl_seconds": {}}
+        cache = FakeCache()
+
+    d = LxrData(client=FakeClient(), verbose=False)
+    financial_meta = {
+        "currency": "CNY",
+        "unit": "raw_yuan",
+        "fields": {"q.ps.toi.t": {"name": "toi", "caliber": "营业总收入"}},
+    }
+
+    monkeypatch.setattr("lxr_data._detect_market", lambda code: "cn")
+    monkeypatch.setattr("lxr_data._norm_code", lambda code, market=None: "600519")
+    monkeypatch.setattr(d, "detect_fs_type", lambda code: "non_financial")
+    monkeypatch.setattr(
+        d,
+        "get_financials",
+        lambda *a, **k: {"_source": "lixinger", "caliber_metadata": financial_meta},
+    )
+    monkeypatch.setattr(d, "get_valuation", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_verification_inputs", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_valuation_percentiles", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_governance", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_majority_shareholders", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_revenue_constitution", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "compare_industry_valuation", lambda *a, **k: {"_source": "lixinger"})
+
+    pack = d.get_research_datapack("600519", include_mx=False)
+
+    self_meta = pack["sections"]["financials"]["caliber_metadata"]
+    assert self_meta == financial_meta
+    assert pack["caliber_metadata"]["financials"] == financial_meta
 
 
 def test_mx_script_constructor_override_is_used_for_mx_data(tmp_path, monkeypatch):
