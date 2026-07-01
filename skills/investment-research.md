@@ -76,7 +76,7 @@ python tools/lxr_data.py datapack {code} --years 5 -o _tmp_{code}_datapack.json
 
 Windows 终端：`$env:PYTHONIOENCODING='utf-8'`；MX 脚本**必须**传 `--output-dir` 或输出目录参数（默认 `/root/.openclaw/...` 在 Windows 不可用）。
 
-**港股行业对比降级**：`industry-compare` 对港股会返回 `note: 申万行业分类仅覆盖A股` 和 `alternatives`。港股不要求申万同行分位；改用 `mx-xuangu` 辅助找同业、手工指定同业列表，或选取港股行业龙头 / 主要可比公司后逐一拉取 `valuation` 并说明选择依据。
+**港股行业对比降级**：`industry-compare` 对港股会返回 `note: 申万行业分类仅覆盖A股` 和 `alternatives`；即使使用 `python tools/lxr_data.py industry-compare {code} --no-mx` 省额度路径，也必须保留这组静态替代步骤。港股不要求申万同行分位；改用 `mx-xuangu` 辅助找同业、手工指定同业列表，或选取港股行业龙头 / 主要可比公司后逐一拉取 `valuation` 并说明选择依据。
 
 **0.3 保险 / 银行 / 证券专属字段**（`industry-deep` 自动路由 `report_type`）：
 

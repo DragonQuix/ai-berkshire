@@ -1340,6 +1340,36 @@ def test__compare_cli_prints_json_with_json_flag(monkeypatch, capsys):
     assert "matrix" in data and "leader" in data
 
 
+def test__industry_compare_cli_accepts_no_mx_for_hk_alternatives(monkeypatch, capsys):
+    original_lxr = lxd.LxrData
+
+    class FakeLxr:
+        def __init__(self, verbose=True):
+            self.verbose = verbose
+
+        def compare_industry_valuation(self, code, source="sw_2021", level="two"):
+            assert code == "00700"
+            assert source == "sw_2021"
+            assert level == "two"
+            return original_lxr(client=FakeClient(), verbose=False).compare_industry_valuation(code)
+
+    monkeypatch.setattr(lxd, "LxrData", FakeLxr)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["lxr_data.py", "industry-compare", "00700", "--no-mx", "--quiet"],
+    )
+
+    lxd._cli()
+
+    data = __import__("json").loads(capsys.readouterr().out)
+    assert data["_source"] == "none"
+    assert data["market"] == "hk"
+    assert data["note"] == "申万行业分类仅覆盖A股"
+    assert "alternatives" in data
+    assert "mx-xuangu" in "\n".join(data["alternatives"])
+
+
 def test__datapack_cli_writes_explicit_output_file(monkeypatch, tmp_path, capsys):
     class FakeLxr:
         def __init__(self, verbose=True):

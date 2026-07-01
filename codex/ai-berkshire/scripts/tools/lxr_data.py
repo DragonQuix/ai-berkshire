@@ -2585,6 +2585,7 @@ def _cli():
     p_ic.add_argument("code", help="A股代码，如 600519")
     p_ic.add_argument("--source", default="sw_2021", choices=["sw", "sw_2021", "cni"])
     p_ic.add_argument("--level", default="two", choices=["one", "two", "three"])
+    p_ic.add_argument("--no-mx", action="store_true", help="兼容省额度路径；industry-compare 本身不调用妙想")
     p_ic.add_argument("--quiet", action="store_true")
 
     p_dp = sub.add_parser("datapack", help="投研数据包（理杏仁批量+妙想，TTL 1h 缓存）")
