@@ -10,6 +10,15 @@
 
 一个人 + Claude/Codex = 一个投研团队。
 
+## 这个项目能做什么
+
+- 安装 19 个 Claude Code slash command，并可同步安装一个 Codex 原生 Skill。
+- 把公司深度研究、财报解读、组合复盘、行业筛选、管理层分析、新闻脉冲判断等投研流程结构化。
+- 强制区分事实、估计、观点和反面证据，减少“AI 写得很像但无法决策”的问题。
+- 无需私有 token 即可先跑离线样例；理杏仁、妙想、Playwright 都只是可选增强。
+
+第一次试用建议从轻量命令开始：`/dyp-ask 用段永平视角解释什么是好生意`；确认命令可见后，再试 `/portfolio-review 腾讯30%, 美团20%, 茅台20%, 现金30%`。
+
 ---
 
 ## Real Track Record
@@ -241,14 +250,14 @@ cd $HOME\ai-berkshire; pwsh install.ps1
 ```
 
 > **安装脚本做了什么？**
-> 1. 检查硬性前置条件（git, python）；`claude` CLI 是推荐前置条件，不作为脚本硬性检查
+> 1. 检查硬性前置条件（git, python）；Windows 用户需用 PowerShell 7 的 `pwsh` 运行 `install.ps1`；`claude` CLI 是推荐前置条件，不作为脚本硬性检查
 > 2. Clone/更新仓库到 `~/ai-berkshire/`
 > 3. 将 19 个 Skill 安装到 ~/.claude/commands/（Claude Code 命令）
 > 4. 安装 Codex 原生 Skill 到 `$CODEX_HOME/skills/ai-berkshire`
 > 5. 检查 Python 工具依赖
 >
 > macOS/Linux 默认使用**符号链接**（`git pull` 后自动更新），Windows 使用文件拷贝。
-> 也支持手动安装：手动复制 `skills/*.md` 只安装命令定义；若要完整工具链可用，必须保留仓库目录，并在需要运行 Python 工具时从仓库根目录运行。推荐前置条件是已安装 `claude` CLI；脚本硬性检查 git 和 python。
+> 也支持手动安装：手动复制 `skills/*.md` 只安装命令定义；若要完整工具链可用，必须保留仓库目录，并在需要运行 Python 工具时从仓库根目录运行。推荐前置条件是已安装 `claude` CLI；脚本硬性检查 git 和 python；Windows 安装脚本请使用 `pwsh`，不要用 Windows PowerShell 5.1 的 `powershell.exe`。
 >
 > **Codex 用户**：运行 `bash install.sh`（或 `pwsh install.ps1`）即可同时安装 Claude Code 命令和 Codex 原生 Skill。手动安装 Codex Skill：将 `codex/ai-berkshire/` 复制到 `$CODEX_HOME/skills/`（Windows 默认 C:\Users\<用户>\.codex\skills）。
 
@@ -256,16 +265,19 @@ cd $HOME\ai-berkshire; pwsh install.ps1
 
 安装完成后，先做 3 个不依赖私有 token 的检查：
 
-1. 确认 Claude Code 命令已安装到 `~/.claude/commands`，数量应为 19 个命令：
+1. 确认 19 个 AI Berkshire 命令已安装到 `~/.claude/commands`。如果你已有其他 Claude Code 命令，目录里的 `.md` 总数可能超过 19；关键是下面这些命令名都存在。
 
    ```bash
-   ls ~/.claude/commands/*.md | wc -l
+   expected="bottleneck-hunter compare deep-company-series dyp-ask earnings-review earnings-team financial-data industry-funnel industry-research investment-checklist investment-research investment-team management-deep-dive news-pulse portfolio-review private-company-research quality-screen thesis-tracker wechat-article"
+   for name in $expected; do test -f "$HOME/.claude/commands/$name.md" || echo "missing: $name"; done
    ```
 
    Windows PowerShell：
 
    ```powershell
-   (Get-ChildItem $HOME\.claude\commands -Filter *.md).Count
+   $expected = 'bottleneck-hunter','compare','deep-company-series','dyp-ask','earnings-review','earnings-team','financial-data','industry-funnel','industry-research','investment-checklist','investment-research','investment-team','management-deep-dive','news-pulse','portfolio-review','private-company-research','quality-screen','thesis-tracker','wechat-article'
+   $missing = $expected | Where-Object { -not (Test-Path "$HOME\.claude\commands\$_.md") }
+   if ($missing) { $missing } else { "AI Berkshire commands OK: $($expected.Count)" }
    ```
 
 2. 在仓库根目录运行组合样例，确认离线工具链可用：
@@ -286,7 +298,7 @@ cd $HOME\ai-berkshire; pwsh install.ps1
    /portfolio-review 腾讯30%, 美团20%, 茅台20%, 现金30%
    ```
 
-如果 Claude Code 看不到 `/dyp-ask` 或 `/portfolio-review`，先新开 Claude Code 会话；仍不可见时，检查 `~/.claude/commands` 是否存在 19 个 `.md` 命令文件，并重新运行安装脚本。
+如果 Claude Code 看不到 `/dyp-ask` 或 `/portfolio-review`，先新开 Claude Code 会话；仍不可见时，用上面的命令名检查确认 19 个 AI Berkshire `.md` 命令文件都存在，并重新运行安装脚本。
 
 ### 安装反馈
 

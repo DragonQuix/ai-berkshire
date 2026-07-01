@@ -6,9 +6,18 @@ English | [中文](README.md)
 >
 > Redefining the depth and efficiency of investment research with AI.
 
-**AI Berkshire** is a collection of investment research skills built on [Claude Code](https://claude.ai/code). It systematizes the methodologies of four value investing masters — Buffett, Munger, Duan Yongping, and Li Lu — and delivers professional-grade research through AI Agents.
+**AI Berkshire** is a collection of investment research skills built on [Claude Code](https://claude.ai/code) and [Codex](https://codex.openai.com). It systematizes the methodologies of four value investing masters — Buffett, Munger, Duan Yongping, and Li Lu — and delivers professional-grade research through AI Agents.
 
-One person + Claude = an entire investment research team.
+One person + Claude/Codex = an entire investment research team.
+
+## What This Project Does
+
+- Installs 19 Claude Code slash commands and can also install one native Codex skill.
+- Structures company research, earnings review, portfolio review, industry screening, management analysis, and news-pulse diagnosis.
+- Forces separation between facts, estimates, opinions, and counter-evidence, reducing polished but decision-useless AI output.
+- Works first with offline examples and no private token; Lixinger, Miaoxiang, and Playwright are optional enhancements.
+
+For a first trial, start with a lightweight command: `/dyp-ask Explain what makes a good business in Duan Yongping's style`. After commands are visible, try `/portfolio-review Tencent 30%, Meituan 20%, Moutai 20%, Cash 30%`.
 
 ---
 
@@ -230,6 +239,7 @@ npm install -g @anthropic-ai/claude-code
 Recommended prerequisites:
 
 - Required by the install scripts: `git` and `python`.
+- Required on Windows for `install.ps1`: PowerShell 7 (`pwsh`). Do not use Windows PowerShell 5.1 (`powershell.exe`) for this UTF-8 script.
 - Recommended but not hard-checked by the scripts: the `claude` CLI.
 
 Use the installer for the complete Claude Code + Codex setup:
@@ -245,7 +255,7 @@ cd $HOME\ai-berkshire; pwsh install.ps1
 ```
 
 The installer hard-checks git and python, installs 19 Claude Code slash commands into `~/.claude/commands/`, and installs the native Codex skill unless skipped.
-The `claude` CLI is a recommended prerequisite for actually using the installed slash commands, but it is not a hard install-script check.
+On Windows, run `install.ps1` with PowerShell 7 (`pwsh`). The `claude` CLI is a recommended prerequisite for actually using the installed slash commands, but it is not a hard install-script check.
 
 Manual install is also possible, but copying `skills/*.md` only installs command definitions. To use the Python tools, examples, and docs-backed workflows, keep the repository directory and run from the repository root when invoking tool commands.
 
@@ -253,16 +263,19 @@ Manual install is also possible, but copying `skills/*.md` only installs command
 
 After installation, run these checks that do not require any private token:
 
-1. Confirm Claude Code commands were installed into `~/.claude/commands`. The expected count is 19 commands:
+1. Confirm the 19 AI Berkshire commands were installed into `~/.claude/commands`. If you already have other Claude Code commands, the total `.md` count may exceed 19; what matters is that all command names below exist.
 
    ```bash
-   ls ~/.claude/commands/*.md | wc -l
+   expected="bottleneck-hunter compare deep-company-series dyp-ask earnings-review earnings-team financial-data industry-funnel industry-research investment-checklist investment-research investment-team management-deep-dive news-pulse portfolio-review private-company-research quality-screen thesis-tracker wechat-article"
+   for name in $expected; do test -f "$HOME/.claude/commands/$name.md" || echo "missing: $name"; done
    ```
 
    Windows PowerShell:
 
    ```powershell
-   (Get-ChildItem $HOME\.claude\commands -Filter *.md).Count
+   $expected = 'bottleneck-hunter','compare','deep-company-series','dyp-ask','earnings-review','earnings-team','financial-data','industry-funnel','industry-research','investment-checklist','investment-research','investment-team','management-deep-dive','news-pulse','portfolio-review','private-company-research','quality-screen','thesis-tracker','wechat-article'
+   $missing = $expected | Where-Object { -not (Test-Path "$HOME\.claude\commands\$_.md") }
+   if ($missing) { $missing } else { "AI Berkshire commands OK: $($expected.Count)" }
    ```
 
 2. From the repository root, run the offline portfolio sample:
@@ -283,7 +296,7 @@ After installation, run these checks that do not require any private token:
    /portfolio-review Tencent 30%, Meituan 20%, Moutai 20%, Cash 30%
    ```
 
-If Claude Code cannot see `/dyp-ask` or `/portfolio-review`, start a new Claude Code session first. If they are still missing, check `~/.claude/commands` for 19 `.md` command files and rerun the installer.
+If Claude Code cannot see `/dyp-ask` or `/portfolio-review`, start a new Claude Code session first. If they are still missing, use the command-name check above to confirm all 19 AI Berkshire `.md` files exist and rerun the installer.
 
 ### Install feedback
 

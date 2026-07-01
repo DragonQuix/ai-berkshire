@@ -14,7 +14,7 @@ body:
     attributes:
       label: Platform
       options:
-        - Windows PowerShell
+        - Windows PowerShell 7 / pwsh
         - macOS / Linux shell
         - WSL or other compatibility layer
     validations:
@@ -43,7 +43,7 @@ body:
     attributes:
       label: Post-install self-check
       options:
-        - label: 19 Claude Code command files exist under ~/.claude/commands
+        - label: 19 AI Berkshire command files exist under ~/.claude/commands
         - label: portfolio sample runs without private tokens
         - label: /dyp-ask or /portfolio-review is visible in a new Claude Code session
         - label: Codex skill appears after a new session or Codex App restart

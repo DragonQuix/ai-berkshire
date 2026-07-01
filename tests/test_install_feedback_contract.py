@@ -19,7 +19,7 @@ def test_install_feedback_issue_template_exists() -> None:
         "Platform",
         "Tool versions",
         "Install command",
-        "19 Claude Code command files",
+        "19 AI Berkshire command files",
         "portfolio sample",
         "Codex skill",
         "Redact tokens",
@@ -32,10 +32,10 @@ def test_install_feedback_docs_define_safe_minimum_fields() -> None:
 
     for snippet in [
         "token、cookie、账户标识",
-        "Windows PowerShell",
+        "Windows PowerShell 7",
         "macOS/Linux shell",
         "~/.claude/commands",
-        "19 个",
+        "19 个 AI Berkshire",
         "portfolio-holdings.sample.json",
         "ai-berkshire",
         "真实反馈记录",
@@ -49,5 +49,7 @@ def test_readmes_link_install_feedback_entry() -> None:
 
     assert "docs/install-feedback.md" in zh
     assert ".github/ISSUE_TEMPLATE/install-feedback.yml" in zh
+    assert "AI Berkshire commands OK" in zh
     assert "docs/install-feedback.md" in en
     assert ".github/ISSUE_TEMPLATE/install-feedback.yml" in en
+    assert "AI Berkshire commands OK" in en
