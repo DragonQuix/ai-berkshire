@@ -9,7 +9,7 @@ Requires Python >= 3.7.
 Usage (called automatically by Skills, no manual execution needed):
     python3 tools/financial_rigor.py verify-market-cap --price 510 --shares 9.11e9 --reported 4.65e12 --currency HKD
     python3 tools/financial_rigor.py verify-valuation --price 510 --eps 23.5 --bvps 120 --fcf-per-share 18 --dividend 2.4
-    python3 tools/financial_rigor.py cross-validate --field revenue --values '{"年报": 7518, "Yahoo": 7500, "StockAnalysis": 7520}' --unit 亿
+    python3 tools/financial_rigor.py cross-validate --field revenue --values '{"年报": 7518, "Yahoo": 7500, "StockAnalysis": 7520}' --unit 亿 --caliber 年报收益口径
     python3 tools/financial_rigor.py benford --values '[1234, 2345, 3456, ...]'
     python3 tools/financial_rigor.py calc --expr '510 * 9.11e9'
 """
@@ -176,7 +176,7 @@ def verify_valuation(price, eps=None, bvps=None, fcf_per_share=None,
 # 3. Cross-Source Data Validation (多源交叉验证)
 # ---------------------------------------------------------------------------
 
-def cross_validate(field_name, source_values: dict, unit="", tolerance_pct=2.0):
+def cross_validate(field_name, source_values: dict, unit="", tolerance_pct=2.0, caliber=None):
     """Compare a data point across multiple sources, flag discrepancies."""
     print("=" * 60)
     print(f"交叉验证: {field_name} (Cross-Validation)")
@@ -191,13 +191,23 @@ def cross_validate(field_name, source_values: dict, unit="", tolerance_pct=2.0):
     n = len(sorted_vals)
     median = sorted_vals[n // 2] if n % 2 == 1 else (sorted_vals[n//2-1] + sorted_vals[n//2]) / 2
 
+    nonzero_abs = [abs(v) for v in sorted_vals if v != 0]
+    magnitude_warning = (
+        len(nonzero_abs) >= 2
+        and max(nonzero_abs) / min(nonzero_abs) > 50
+    )
+
     print(f"  数据来源数: {len(sources)}")
+    if caliber:
+        print(f"  口径说明: {caliber}")
     print(f"  参考中位数: {fmt_number(exact(median))} {unit}")
+    if magnitude_warning:
+        print("  ⚠️  疑似单位不一致: 最大值/最小值超过 50 倍，请核对单位、币种或小数点")
     print()
 
     all_ok = True
     for src, val in values.items():
-        dev = abs(float(val) - median) / median * 100 if median != 0 else 0
+        dev = abs(float(val) - median) / abs(median) * 100 if median != 0 else 0
         status = "✅" if dev <= tolerance_pct else "❌"
         if dev > tolerance_pct:
             all_ok = False
@@ -212,8 +222,13 @@ def cross_validate(field_name, source_values: dict, unit="", tolerance_pct=2.0):
 
     # Consensus value
     consensus = median
-    print(f"\n  共识值 (加权中位数): {fmt_number(exact(consensus))} {unit}")
-    return {"consensus": consensus, "all_consistent": all_ok}
+    print(f"\n  参考中位数: {fmt_number(exact(consensus))} {unit}")
+    return {
+        "consensus": consensus,
+        "all_consistent": all_ok,
+        "magnitude_warning": magnitude_warning,
+        "caliber": caliber,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -342,10 +357,22 @@ def three_scenario_valuation(current_price, current_eps, shares_billion,
     eps = exact(current_eps)
     shares = exact(shares_billion)
 
+    normalized_growths, normalized = _normalize_growth_inputs([
+        growth_optimistic,
+        growth_neutral,
+        growth_pessimistic,
+    ])
+    if normalized:
+        print(
+            "警告: growth 参数疑似百分数，已自动除以 100 转为小数；"
+            "推荐格式如 0.30 0.15 -0.05。",
+            file=sys.stderr,
+        )
+
     scenarios = [
-        ("乐观 (Bull)", growth_optimistic, pe_optimistic),
-        ("中性 (Base)", growth_neutral, pe_neutral),
-        ("悲观 (Bear)", growth_pessimistic, pe_pessimistic),
+        ("乐观 (Bull)", normalized_growths[0], pe_optimistic),
+        ("中性 (Base)", normalized_growths[1], pe_neutral),
+        ("悲观 (Bear)", normalized_growths[2], pe_pessimistic),
     ]
 
     print(f"  当前股价: {p} {currency}")
@@ -370,6 +397,20 @@ def three_scenario_valuation(current_price, current_eps, shares_billion,
 
     print()
     print("  ✅ 所有计算使用精确十进制, 结果可审计复现")
+
+
+def _normalize_growth_inputs(growth_values):
+    """Accept decimal growth rates and auto-convert percentage-style inputs."""
+    normalized = []
+    changed = False
+    for value in growth_values:
+        raw = float(value)
+        if abs(raw) > 1:
+            normalized.append(raw / 100)
+            changed = True
+        else:
+            normalized.append(raw)
+    return normalized, changed
 
 
 # ---------------------------------------------------------------------------
@@ -418,7 +459,7 @@ def main():
 Examples:
   %(prog)s verify-market-cap --price 510 --shares 9.11e9 --reported 4.65e12 --currency HKD
   %(prog)s verify-valuation --price 510 --eps 23.5 --bvps 120
-  %(prog)s cross-validate --field revenue --values '{"年报": 7518, "Yahoo": 7500}' --unit 亿
+  %(prog)s cross-validate --field revenue --values '{"年报": 7518, "Yahoo": 7500}' --unit 亿 --caliber 年报收益口径
   %(prog)s benford --values '[1234, 2345, 3456, ...]'
   %(prog)s calc --expr '510 * 9.11e9'
         """)
@@ -453,6 +494,7 @@ Examples:
     cv.add_argument("--values", required=True, help="JSON: {来源: 数值}")
     cv.add_argument("--unit", default="")
     cv.add_argument("--tolerance", type=float, default=2.0, help="容差百分比")
+    cv.add_argument("--caliber", default=None, help="口径说明，如年报收益口径/理杏仁营业总收入口径")
 
     # benford
     bf = sub.add_parser("benford", help="Benford定律检测")
@@ -499,7 +541,7 @@ Examples:
                             args.dividend, args.revenue_per_share)
     elif args.command == "cross-validate":
         values = json.loads(args.values)
-        cross_validate(args.field, values, args.unit, args.tolerance)
+        cross_validate(args.field, values, args.unit, args.tolerance, args.caliber)
     elif args.command == "benford":
         values = json.loads(args.values)
         benford_check(values)

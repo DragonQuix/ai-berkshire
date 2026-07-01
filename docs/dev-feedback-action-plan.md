@@ -91,6 +91,8 @@ python tools\verify_channel_capability.py --quick
 
 ### P1-A3：`financial_rigor.py` 参数防呆与口径提示
 
+状态：已完成（2026-07-01）
+
 目标文件：
 
 - `tools/financial_rigor.py`
@@ -105,6 +107,12 @@ python tools\verify_channel_capability.py --quick
 - `cross-validate` 在 `max(abs(v))/min(abs(v)) > 50` 时提示疑似单位不一致。
 - `cross-validate` 增加可选 `--caliber`，输出中保留口径说明。
 - “共识值 (加权中位数)”改为“参考中位数”或真实实现加权逻辑，二选一。
+
+完成记录：
+
+- `three-scenario` 对绝对值大于 1 的 growth 输入按百分数误填处理，自动除以 100，并向 stderr 写出格式警告。
+- `cross-validate` 返回并输出量级告警，支持 `--caliber` 传入口径说明，最终参考值统一用“参考中位数”表述。
+- root 工具、Codex bundled 副本、root skill 与 Codex reference 已同步。
 
 验证命令：
 

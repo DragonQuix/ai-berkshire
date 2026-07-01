@@ -154,9 +154,10 @@ python tools/financial_rigor.py verify-market-cap \
 Step 2 — 关键数据多源交叉验证：
 ```bash
 python tools/financial_rigor.py cross-validate \
-  --field {字段名} --values '{"来源1": 数值, "来源2": 数值}' --unit {单位}
+  --field {字段名} --values '{"来源1": 数值, "来源2": 数值}' --unit {单位} \
+  --caliber "{口径说明，如年报收益口径/理杏仁营业总收入口径}"
 ```
-对收入、净利润、现金储备分别执行。
+对收入、净利润、现金储备分别执行。若工具提示“疑似单位不一致”，必须回到来源核对单位、币种或小数点后再写入报告。
 
 Step 3 — 估值指标精确验算（PE/PB/ROE/FCF Yield 等）：
 ```bash
@@ -258,6 +259,7 @@ python tools/financial_rigor.py three-scenario \
   --growth {乐观增速} {中性增速} {悲观增速} \
   --pe {乐观PE} {中性PE} {悲观PE} --years 3 --currency {币种}
 ```
+`--growth` 推荐使用小数格式（例如 `0.30 0.15 -0.05`）。若误填 `30 15 -5`，工具会自动转为 `0.30/0.15/-0.05` 并在 stderr 警告；报告中必须保留最终使用口径。
 - 与自身历史估值对比
 - 与同行估值对比
 

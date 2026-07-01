@@ -25,6 +25,17 @@ def _capture_stdout(func, *args, **kwargs):
     return result, buf.getvalue()
 
 
+def _run_financial_rigor_cli(*args):
+    return subprocess.run(
+        [sys.executable, str(REPO_ROOT / "tools" / "financial_rigor.py"), *args],
+        cwd=REPO_ROOT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+    )
+
+
 class TestDividendYield(unittest.TestCase):
     def test_decimal_yield_ratio(self):
         # 理杏仁 dyr=0.0409 表示 4.09%
@@ -111,6 +122,67 @@ class TestCrossValidation(unittest.TestCase):
         self.assertFalse(result["all_consistent"])
         self.assertEqual(100.0, result["consensus"])
         self.assertIn("存在来源偏差", out)
+
+    def test_cross_validate_warns_when_values_have_suspicious_magnitude_gap(self):
+        result, out = _capture_stdout(
+            fr.cross_validate,
+            "market_cap",
+            {"annual_report": 41302, "vendor": 413.02},
+            "亿",
+            2.0,
+        )
+
+        self.assertTrue(result["magnitude_warning"])
+        self.assertIn("疑似单位不一致", out)
+
+    def test_cross_validate_prints_caliber_and_uses_reference_median_wording(self):
+        result, out = _capture_stdout(
+            fr.cross_validate,
+            "revenue",
+            {"annual_report": 100, "vendor": 101},
+            "亿",
+            2.0,
+            caliber="年报披露收益口径",
+        )
+
+        self.assertEqual("年报披露收益口径", result["caliber"])
+        self.assertIn("口径说明: 年报披露收益口径", out)
+        self.assertIn("参考中位数", out)
+        self.assertNotIn("加权中位数", out)
+
+
+class TestThreeScenarioValuation(unittest.TestCase):
+    def test_cli_normalizes_percent_growth_inputs_and_warns_on_stderr(self):
+        proc = _run_financial_rigor_cli(
+            "three-scenario",
+            "--price",
+            "100",
+            "--eps",
+            "5",
+            "--shares",
+            "10",
+            "--growth",
+            "30",
+            "15",
+            "-5",
+            "--pe",
+            "25",
+            "20",
+            "10",
+            "--years",
+            "1",
+            "--currency",
+            "CNY",
+        )
+
+        self.assertEqual(0, proc.returncode, msg=f"stderr:\n{proc.stderr}")
+        self.assertIn("growth 参数疑似百分数", proc.stderr)
+        self.assertIn("30%", proc.stdout)
+        self.assertIn("15%", proc.stdout)
+        self.assertIn("-5%", proc.stdout)
+        self.assertNotIn("3000%", proc.stdout)
+        self.assertNotIn("1500%", proc.stdout)
+        self.assertNotIn("-500%", proc.stdout)
 
 
 class TestBenfordCheck(unittest.TestCase):
