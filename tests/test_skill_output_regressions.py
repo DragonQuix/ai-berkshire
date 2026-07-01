@@ -208,6 +208,33 @@ INSTALL_RELEASE_CONTRACTS = {
     ],
 }
 
+POST_INSTALL_SELF_CHECK_CONTRACTS = {
+    "README.md": [
+        "## 安装后自检",
+        "~/.claude/commands",
+        "19 个命令",
+        "portfolio-holdings.sample.json",
+        "python tools/portfolio_analyzer.py analyze",
+        "--format json",
+        "/dyp-ask",
+        "/portfolio-review",
+        "新开 Claude Code 会话",
+        "检查 `~/.claude/commands`",
+    ],
+    "README_EN.md": [
+        "## Post-install self-check",
+        "~/.claude/commands",
+        "19 commands",
+        "portfolio-holdings.sample.json",
+        "python tools/portfolio_analyzer.py analyze",
+        "--format json",
+        "/dyp-ask",
+        "/portfolio-review",
+        "start a new Claude Code session",
+        "check `~/.claude/commands`",
+    ],
+}
+
 LEGACY_SKILL_COUNT_PATTERNS = [
     "18" + " 个",
     "16" + " clear",
@@ -285,3 +312,13 @@ def test_public_release_files_do_not_contain_legacy_skill_counts() -> None:
                 offenders.append(f"{rel_path}: contains {pattern!r}")
 
     assert not offenders, "发布面文件不能继续使用旧 Skill 数量:\n" + "\n".join(offenders)
+
+
+@pytest.mark.parametrize("rel_path, required_snippets", POST_INSTALL_SELF_CHECK_CONTRACTS.items())
+def test_post_install_self_check_contracts_are_documented(
+    rel_path: str,
+    required_snippets: list[str],
+) -> None:
+    text = read_text(rel_path)
+    for snippet in required_snippets:
+        assert snippet in text, f"{rel_path} missing post-install self-check {snippet!r}"

@@ -249,6 +249,42 @@ The `claude` CLI is a recommended prerequisite for actually using the installed 
 
 Manual install is also possible, but copying `skills/*.md` only installs command definitions. To use the Python tools, examples, and docs-backed workflows, keep the repository directory and run from the repository root when invoking tool commands.
 
+## Post-install self-check
+
+After installation, run these checks that do not require any private token:
+
+1. Confirm Claude Code commands were installed into `~/.claude/commands`. The expected count is 19 commands:
+
+   ```bash
+   ls ~/.claude/commands/*.md | wc -l
+   ```
+
+   Windows PowerShell:
+
+   ```powershell
+   (Get-ChildItem $HOME\.claude\commands -Filter *.md).Count
+   ```
+
+2. From the repository root, run the offline portfolio sample:
+
+   ```bash
+   python tools/portfolio_analyzer.py analyze examples/portfolio-holdings.sample.json --format json
+   ```
+
+3. Start a new Claude Code session and invoke one lightweight command:
+
+   ```text
+   /dyp-ask Explain what makes a good business in Duan Yongping's style
+   ```
+
+   Or trigger the portfolio workflow with a minimal example:
+
+   ```text
+   /portfolio-review Tencent 30%, Meituan 20%, Moutai 20%, Cash 30%
+   ```
+
+If Claude Code cannot see `/dyp-ask` or `/portfolio-review`, start a new Claude Code session first. If they are still missing, check `~/.claude/commands` for 19 `.md` command files and rerun the installer.
+
 ### 3. Use
 
 Invoke directly in Claude Code:

@@ -252,6 +252,42 @@ cd $HOME\ai-berkshire; pwsh install.ps1
 >
 > **Codex 用户**：运行 `bash install.sh`（或 `pwsh install.ps1`）即可同时安装 Claude Code 命令和 Codex 原生 Skill。手动安装 Codex Skill：将 `codex/ai-berkshire/` 复制到 `$CODEX_HOME/skills/`（Windows 默认 C:\Users\<用户>\.codex\skills）。
 
+## 安装后自检
+
+安装完成后，先做 3 个不依赖私有 token 的检查：
+
+1. 确认 Claude Code 命令已安装到 `~/.claude/commands`，数量应为 19 个命令：
+
+   ```bash
+   ls ~/.claude/commands/*.md | wc -l
+   ```
+
+   Windows PowerShell：
+
+   ```powershell
+   (Get-ChildItem $HOME\.claude\commands -Filter *.md).Count
+   ```
+
+2. 在仓库根目录运行组合样例，确认离线工具链可用：
+
+   ```bash
+   python tools/portfolio_analyzer.py analyze examples/portfolio-holdings.sample.json --format json
+   ```
+
+3. 在 Claude Code 中新开会话，调用一个轻量命令：
+
+   ```text
+   /dyp-ask 用段永平视角解释什么是好生意
+   ```
+
+   或用组合样例描述触发：
+
+   ```text
+   /portfolio-review 腾讯30%, 美团20%, 茅台20%, 现金30%
+   ```
+
+如果 Claude Code 看不到 `/dyp-ask` 或 `/portfolio-review`，先新开 Claude Code 会话；仍不可见时，检查 `~/.claude/commands` 是否存在 19 个 `.md` 命令文件，并重新运行安装脚本。
+
 ## 数据源与可选依赖
 
 安装 AI Berkshire 不需要任何私有 token。普通用户不配置 `LIXINGER_TOKEN`、妙想 mx 系列或 Playwright 时，不应被判定为安装失败；相关增强能力会降级、跳过，或提示补充配置。
