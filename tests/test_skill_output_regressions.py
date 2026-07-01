@@ -237,6 +237,32 @@ POST_INSTALL_SELF_CHECK_CONTRACTS = {
     ],
 }
 
+TASK_AGENT_DEGRADATION_SKILLS = [
+    "deep-company-series.md",
+    "earnings-team.md",
+    "industry-research.md",
+    "investment-checklist.md",
+    "investment-research.md",
+    "investment-team.md",
+    "management-deep-dive.md",
+    "news-pulse.md",
+    "private-company-research.md",
+    "wechat-article.md",
+]
+
+TASK_AGENT_DEGRADATION_SNIPPETS = [
+    "Agent 降级记录",
+    "model route not configured",
+    "timeout",
+    "permission denied",
+    "失败 Agent",
+    "错误原文摘要",
+    "降级方式",
+    "影响范围",
+    "不得把失败当作未发生",
+    "顺序角色模拟",
+]
+
 LEGACY_SKILL_COUNT_PATTERNS = [
     "18" + " 个",
     "16" + " clear",
@@ -324,3 +350,11 @@ def test_post_install_self_check_contracts_are_documented(
     text = read_text(rel_path)
     for snippet in required_snippets:
         assert snippet in text, f"{rel_path} missing post-install self-check {snippet!r}"
+
+
+@pytest.mark.parametrize("skill_name", TASK_AGENT_DEGRADATION_SKILLS)
+def test_task_agent_degradation_contracts_are_documented(skill_name: str) -> None:
+    for rel_path in skill_channels(skill_name):
+        text = read_text(rel_path)
+        for snippet in TASK_AGENT_DEGRADATION_SNIPPETS:
+            assert snippet in text, f"{rel_path} missing task-agent degradation contract {snippet!r}"

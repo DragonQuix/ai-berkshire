@@ -124,6 +124,8 @@ python tools\verify_channel_capability.py --quick
 
 ### P1-B1：Task Agent 失败诊断与降级记录
 
+状态：已完成（2026-07-01）
+
 目标文件：
 
 - `skills/investment-research.md`
@@ -136,6 +138,12 @@ python tools\verify_channel_capability.py --quick
 - 明确 `model route not configured`、`timeout`、`permission denied` 的处理策略。
 - 要求报告附录记录：失败 agent、错误原文摘要、降级方式、影响范围。
 - 主 Agent 顺序模拟不再“装作没有失败”，而是可审计地继续。
+
+完成记录：
+
+- `investment-research` 增加 Task Agent 失败诊断与报告附录记录要求。
+- 同步覆盖含后台 Agent/顺序模拟句式的团队型入口：`investment-team`、`earnings-team`、`industry-research`、`investment-checklist`、`management-deep-dive`、`news-pulse`、`private-company-research`、`wechat-article`、`deep-company-series`。
+- 测试固定检查三类错误、失败 Agent、错误原文摘要、降级方式、影响范围和「顺序角色模拟」标注，避免后续文档回退为 silent fallback。
 
 验证命令：
 

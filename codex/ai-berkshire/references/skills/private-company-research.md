@@ -75,6 +75,10 @@
 
 如果 TeamCreate / TaskCreate 不可用，跳过团队对象，由 Team Lead 顺序模拟 6 个角色。
 
+### Agent 失败诊断与降级记录（必须执行）
+
+若 TeamCreate、TaskCreate、后台 Agent 启动、等待或读取结果失败，Team Lead 不得把失败当作未发生。遇到 `model route not configured`、`timeout`、`permission denied` 或同类权限/路由/超时错误时，立即降级为「顺序角色模拟」，并在最终报告或素材仓附录「Agent 降级记录」中记录：失败 Agent、错误原文摘要、降级方式、影响范围。错误原文摘要只保留必要信息，不写入密钥或本机隐私路径；影响范围需说明哪些角色由 Team Lead 模拟、哪些结论因此置信度下降。
+
 ### 第三步：创建6个只读分析任务
 
 使用 TaskCreate 创建以下6个任务（每个都要有 subject、description、activeForm）：

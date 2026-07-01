@@ -14,6 +14,10 @@
 
 本 Skill 可使用 Task Agent 辅助定性分析，但所有联网搜索、理杏仁/妙想取数、financial_rigor.py 验算、文件写入和数据抽检必须由主 Agent 执行。Task Agent 只基于主 Agent 注入的数据包、来源索引和资料摘录分析商业模式、竞争格局、管理层、行业 TAM、风险事件等无法编码的维度。若后台 Agent 权限受限，主 Agent 顺序模拟这些分析角色，不中断流程。
 
+### Agent 失败诊断与降级记录（必须执行）
+
+若 TeamCreate、TaskCreate、后台 Agent 启动、等待或读取结果失败，主 Agent 不得把失败当作未发生。遇到 `model route not configured`、`timeout`、`permission denied` 或同类权限/路由/超时错误时，立即降级为「顺序角色模拟」，并在报告附录「Agent 降级记录」中记录：失败 Agent、错误原文摘要、降级方式、影响范围。错误原文摘要只保留必要信息，不写入密钥或本机隐私路径；影响范围需说明哪些角色由主 Agent 模拟、哪些结论因此置信度下降。
+
 ### 前置步骤：AI研究偏见自觉（必须执行）
 
 在开始研究前，先评估该公司的"AI可研究性"，识别潜在的数据偏见：

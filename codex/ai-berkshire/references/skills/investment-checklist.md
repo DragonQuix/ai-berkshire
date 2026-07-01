@@ -10,6 +10,10 @@
 
 多公司 Checklist 可以并行分析，但不得让后台 Agent 自行取数。Team Lead 统一拉取理杏仁、妙想、Web 数据和 financial_rigor.py 验算结果；公司级 Agent 只基于共享数据包补充护城河、竞争格局、管理层等定性判断。若后台 Agent 权限受限，Team Lead 按公司顺序模拟，不阻塞流程。
 
+### Agent 失败诊断与降级记录（必须执行）
+
+若 TeamCreate、TaskCreate、后台 Agent 启动、等待或读取结果失败，Team Lead 不得把失败当作未发生。遇到 `model route not configured`、`timeout`、`permission denied` 或同类权限/路由/超时错误时，立即降级为「顺序角色模拟」，并在报告附录「Agent 降级记录」中记录：失败 Agent、错误原文摘要、降级方式、影响范围。错误原文摘要只保留必要信息，不写入密钥或本机隐私路径；影响范围需说明哪些公司由 Team Lead 模拟、哪些结论因此置信度下降。
+
 ### 第一步：解析输入，识别所有待分析公司
 
 从 $ARGUMENTS 中解析出所有公司名称/代码。对每家公司确定：

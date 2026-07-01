@@ -26,6 +26,10 @@ AI无法和管理层吃饭，但可以通过公开信息做到：
 
 管理层研究涉及大量搜索、访谈、公告、监管和员工/客户侧面信息。Team Lead 统一执行 WebSearch/WebFetch、mx-search、理杏仁、文件写入和数据验算；后台 Agent 只基于 Team Lead 提供的材料做公开发言、资本配置、治理、侧面验证四类分析。若后台 Agent 权限受限，Team Lead 顺序模拟四类分析。
 
+### Agent 失败诊断与降级记录（必须执行）
+
+若 TeamCreate、TaskCreate、后台 Agent 启动、等待或读取结果失败，Team Lead 不得把失败当作未发生。遇到 `model route not configured`、`timeout`、`permission denied` 或同类权限/路由/超时错误时，立即降级为「顺序角色模拟」，并在报告附录「Agent 降级记录」中记录：失败 Agent、错误原文摘要、降级方式、影响范围。错误原文摘要只保留必要信息，不写入密钥或本机隐私路径；影响范围需说明哪些分析维度由 Team Lead 模拟、哪些结论因此置信度下降。
+
 ### 第〇步：定量数据层（理杏仁 + 妙想，必须执行）
 
 在定性研究之前，先拉取可量化的「言行一致」证据。统一走 `tools/lxr_data.py`，禁止直调理杏仁 API。
