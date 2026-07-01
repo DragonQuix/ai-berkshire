@@ -74,6 +74,7 @@
 ## 真实开发反馈记录
 
 ```md
-- 2026-07-01：`/investment-research 泡泡玛特`；结果 mixed；识别工具容错、口径与可观测性问题；原始反馈见 `docs/dev-feedback-investment-research.md`；核查后方案见 `docs/dev-feedback-action-plan.md`。
+- 2026-07-01：`/investment-research 泡泡玛特`（standard）；结果 mixed；识别工具容错、口径与可观测性问题；原始反馈见 `docs/dev-feedback-investment-research.md`；核查后方案见 `docs/dev-feedback-action-plan.md`。
+- 2026-07-01：`/investment-research 腾讯控股`（deep，commit `1ae451ce`）；结果 usable-with-warnings；作为 `20ea36d9` 后 9 个修复提交的二次运行验证，确认 E1/E6/E7/E8/E9 修复生效，新发现 report_audit 单位陷阱（§3.1）、verdict 缺口径认可通道（§3.4）、港股 `--no-mx` 路径 alternatives 缺失（§3.5）；原始反馈见 `docs/dev-feedback-investment-research-deep-20260701.md`。
 ```
 

@@ -305,3 +305,30 @@ python tools\release_smoke.py
 3. 再做 P1-A3，降低三情景估值和交叉验证的误用概率。
 4. 然后做 P1-B1/B2/B3，把 skill 文档和口径/降级元数据补齐。
 5. 最后做离线 fixture 和 CI，把这些问题变成长期回归测试。=> 已完成 P1-C1。
+
+## 7. 二次运行验证证据（2026-07-01 腾讯 deep 档）
+
+`20ea36d9` 后的修复经 `1ae451ce` 运行二次验证，结果记录于 `docs/dev-feedback-investment-research-deep-20260701.md`：
+
+| 修复项 | 二次验证结论 | 证据 |
+|--------|------------|------|
+| P1-A1 report_audit 数值韧性 | ✅ 生效 | E8/E9 不再崩溃，`_to_numeric` 与 `_SIGNED_NUM` 生效 |
+| P1-A2 datapack 落盘 | ✅ 生效 | `-o _tmp_00700_datapack.json` 落盘成功 |
+| P1-A3 rigor 参数防呆 | ✅ 生效 | `--growth 30 15 -5` 自动转 0.30/0.15/-0.05 + stderr 警告；`--caliber` 与量级告警可用 |
+| P1-B1 Agent 降级记录 | ✅ 生效 | 报告附录 A 完整记录 Explore Agent 与 exa-1 两项降级 |
+| P1-B2 港股行业对比降级 | ⚠️ 默认路径生效，`--no-mx` 路径未覆盖 | `industry-compare 00700` 含 alternatives；`--no-mx` 输出为空 |
+| P1-B3 财务口径元数据 | ⚠️ 代码层生效，报告层执行力不足 | caliber_metadata 进入 datapack；但 29 个数据表仅 1 个含口径列 |
+| P1-C1 离线 CI 门禁 | ✅ 生效 | fixture 与 workflow 就位 |
+| P1-D1 release notes | ✅ 生效 | 与本次运行无直接关系，工具可用 |
+
+## 8. 下一轮 P1 反馈驱动修复候选（来自腾讯 deep 档）
+
+按准出摩擦优先级排序，详见 `docs/dev-feedback-investment-research-deep-20260701.md` §3 与 §5：
+
+- **P1-E1**：`report_audit` 单位归一化（§3.1）——extract 保留 unit 但 verdict 不归一化，fetched_value 单位错配触发 9900% 假偏差。目标 `tools/report_audit.py`，加 `report_unit`/`fetched_unit` 字段与已知换算归一化。
+- **P1-E2**：`report_audit` CLI `-o/--output`（§3.2）——verdict stdout 混日志头需清洗。参考 `lxr_data.py datapack -o`。
+- **P1-E3**：`report_audit` verdict `caliber_ack` 通道（§3.4）——已知口径差异占警告额度，缺认可通道。
+- **P2-E4**：港股 `--no-mx` 路径透 alternatives（§3.5）——文档示例路径的覆盖盲点。
+- **P2-E5**：口径列覆盖率检查（§3.3）——让"所有核心数据表"从软约束变机器检查。
+- **P2-E6**：港股年报 `reportType` 兜底（§3.6）——本次主 Agent 内联修复，应固化。
+- **P3-E7/E8**：Agent 降级"必要信息"标准示例（§3.7）、action-plan 二次验证字段（§3.8，本节已示范）。
