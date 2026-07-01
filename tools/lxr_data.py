@@ -1907,7 +1907,14 @@ class LxrData:
         include_mx: bool = True,
         ttl_seconds: int = 3600,
     ) -> dict:
-        """一次性拉取投研常用数据包，缓存 1 小时供多 Skill/多模块共享。"""
+        """一次性拉取投研常用数据包，缓存 1 小时供多 Skill/多模块共享。
+
+        顶层可观测字段：
+        - ``fetched_at`` / ``_generated_at``：数据包生成时间（ISO），二者同源，``_generated_at`` 为规范键名。
+        - ``_ttl_seconds``：传入的缓存 TTL（秒），0 或负值表示不缓存。
+        - ``_expires_at``：``_generated_at + _ttl_seconds``，消费者可直接判断是否需要重新取数。
+        - ``_cache``：命中缓存时为 ``"hit"``，此时 ``_generated_at`` 保留原始生成时间而非命中时间。
+        """
         market = _detect_market(code)
         norm = _norm_code(code, market)
         cache_key = {"code": norm, "market": market, "years": years, "include_mx": include_mx}
@@ -1915,11 +1922,16 @@ class LxrData:
         if hit and isinstance(cached, dict):
             return {**cached, "_cache": "hit"}
 
+        generated_at = _dt.datetime.now()
+        ttl_for_field = int(ttl_seconds) if ttl_seconds else 0
         pack: dict[str, Any] = {
             "code": norm,
             "market": market,
             "years": years,
-            "fetched_at": _dt.datetime.now().isoformat(),
+            "fetched_at": generated_at.isoformat(),
+            "_generated_at": generated_at.isoformat(),
+            "_ttl_seconds": ttl_for_field,
+            "_expires_at": (generated_at + _dt.timedelta(seconds=ttl_for_field)).isoformat(),
             "sections": {},
         }
 

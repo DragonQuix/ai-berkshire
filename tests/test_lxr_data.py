@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import datetime as _dt
 import os
 import sys
 import tempfile
@@ -760,6 +761,88 @@ def test_datapack_promotes_financial_caliber_metadata(monkeypatch):
     self_meta = pack["sections"]["financials"]["caliber_metadata"]
     assert self_meta == financial_meta
     assert pack["caliber_metadata"]["financials"] == financial_meta
+
+
+def test_datapack_exposes_generated_at_and_ttl_observability(monkeypatch):
+    """P3-F7：datapack 顶层必须暴露 _generated_at 与 TTL 可观测字段，供消费者判断新鲜度。"""
+    from lxr_data import LxrData
+
+    class FakeCache:
+        def __init__(self):
+            self.saved = None
+
+        def get(self, endpoint, payload, ttl_seconds):
+            return False, None
+
+        def set(self, endpoint, payload, value):
+            self.saved = value
+
+    class FakeClient:
+        def __init__(self):
+            self.config = {"data_type_ttl_seconds": {}}
+            self.cache = FakeCache()
+
+    d = LxrData(client=FakeClient(), verbose=False)
+    monkeypatch.setattr("lxr_data._detect_market", lambda code: "cn")
+    monkeypatch.setattr("lxr_data._norm_code", lambda code, market=None: "600519")
+    monkeypatch.setattr(d, "detect_fs_type", lambda code: "non_financial")
+    monkeypatch.setattr(d, "get_financials", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_valuation", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_verification_inputs", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_valuation_percentiles", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_governance", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_majority_shareholders", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "get_revenue_constitution", lambda *a, **k: {"_source": "lixinger"})
+    monkeypatch.setattr(d, "compare_industry_valuation", lambda *a, **k: {"_source": "lixinger"})
+
+    pack = d.get_research_datapack("600519", include_mx=False, ttl_seconds=3600)
+
+    assert "_generated_at" in pack, "datapack 顶层缺少 _generated_at"
+    generated_at = _dt.datetime.fromisoformat(pack["_generated_at"])
+    assert pack["_ttl_seconds"] == 3600, "datapack 顶层 _ttl_seconds 未透出传入 TTL"
+    expected_expires = (generated_at + _dt.timedelta(seconds=3600)).isoformat()
+    assert pack["_expires_at"] == expected_expires, "datapack _expires_at 不等于 _generated_at + _ttl_seconds"
+    # 兼容字段 fetched_at 保留且与 _generated_at 同源
+    assert pack["fetched_at"] == pack["_generated_at"]
+    # 缓存写入的副本同样带可观测字段
+    assert d.client.cache.saved is pack
+    assert d.client.cache.saved["_ttl_seconds"] == 3600
+
+
+def test_datapack_preserves_generated_at_and_ttl_on_cache_hit(monkeypatch):
+    """P3-F7：缓存命中时 _generated_at/_ttl_seconds/_expires_at 保留原始生成时间，不被刷新。"""
+    from lxr_data import LxrData
+
+    cached_pack = {
+        "code": "600519",
+        "market": "cn",
+        "years": 5,
+        "fetched_at": "2026-07-01T10:00:00",
+        "_generated_at": "2026-07-01T10:00:00",
+        "_ttl_seconds": 3600,
+        "_expires_at": "2026-07-01T11:00:00",
+        "sections": {"financials": {"_source": "lixinger"}},
+        "_source": "lixinger",
+    }
+
+    class FakeCache:
+        def get(self, endpoint, payload, ttl_seconds):
+            return True, cached_pack
+
+        def set(self, endpoint, payload, value):
+            raise AssertionError("缓存命中路径不应再写缓存")
+
+    class FakeClient:
+        config = {"data_type_ttl_seconds": {}}
+        cache = FakeCache()
+
+    d = LxrData(client=FakeClient(), verbose=False)
+    pack = d.get_research_datapack("600519", include_mx=False, ttl_seconds=3600)
+
+    assert pack["_cache"] == "hit"
+    assert pack["_generated_at"] == "2026-07-01T10:00:00"
+    assert pack["_ttl_seconds"] == 3600
+    assert pack["_expires_at"] == "2026-07-01T11:00:00"
 
 
 def test_mx_script_constructor_override_is_used_for_mx_data(tmp_path, monkeypatch):

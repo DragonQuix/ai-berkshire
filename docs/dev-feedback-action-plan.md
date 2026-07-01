@@ -581,6 +581,46 @@ python tools\verify_channel_capability.py --quick
 python -m pytest tests/test_skill_output_regressions.py -q
 ```
 
+### P3-F7：datapack 顶层 `_generated_at` 与 TTL 可观测
+
+状态：已完成（2026-07-01）
+
+来源反馈：
+
+- `docs/dev-feedback-investment-research-deep-20260701-xinhua.md` §8.1 候选项。
+- `lxr_data.py datapack` 顶层只有 `fetched_at`，缺少规范化的生成时间键和 TTL 字段；主 Agent 读取落盘 datapack 时无法直接判断数据新鲜度或何时过期，只能凭经验决定是否重新取数。
+
+目标文件：
+
+- `tools/lxr_data.py`
+- `codex/ai-berkshire/scripts/tools/lxr_data.py`
+- `tests/test_lxr_data.py`
+- `docs/ROADMAP.md`
+- `docs/dev-feedback-action-plan.md`
+
+验收点：
+
+- `get_research_datapack` 顶层新增 `_generated_at`（ISO 时间戳，与 `fetched_at` 同源，`_generated_at` 为规范键名）。
+- 顶层新增 `_ttl_seconds`，透出传入的缓存 TTL；0 或负值表示不缓存。
+- 顶层新增 `_expires_at`，等于 `_generated_at + _ttl_seconds`，消费者无需自行计算即可判断是否需要重新取数。
+- 缓存命中时 `_generated_at`/`_ttl_seconds`/`_expires_at` 保留原始生成时间，不被命中时间刷新；`_cache: "hit"` 仍由命中路径附加。
+- 现有 stdout JSON 与 `-o/--output` 行为保持兼容，仅新增字段，不改变既有键。
+
+完成记录：
+
+- `get_research_datapack` 用单一 `generated_at` 同时生成 `fetched_at` 与 `_generated_at`，避免双事实源。
+- `_ttl_seconds` 对 `None`/0/负值归一为 0，`_expires_at` 按归一后 TTL 计算。
+- docstring 补充「顶层可观测字段」说明，覆盖 `_cache` 命中语义。
+- 新增两条回归测试：新鲜生成路径断言三个字段与 `_expires_at` 等式；缓存命中路径断言字段保留且不写缓存。
+- root 工具与 Codex bundled 副本已同步。
+
+验证命令：
+
+```powershell
+python -m pytest tests/test_lxr_data.py -q
+python tools\verify_channel_capability.py --quick
+```
+
 ## 5. 反馈入口动作
 
 本次已将“执行 agent 的代码级复盘”从普通 `usage-feedback` 中分离，新增：
@@ -643,7 +683,7 @@ python -m pytest tests/test_skill_output_regressions.py -q
 | P2-F4 extract 误抽情景标题与列对齐错位 | 已完成 | 非可审计压力/偏误表整表跳过；表格数据行列数不匹配时直接跳过，不再生成 `列N` 猜测标签 |
 | P2-F5 Agent 路由间歇性说明 | 已完成 | 10 个团队型 skill 均要求每次 TeamCreate/TaskCreate/后台 Agent 派发、等待或读取结果独立捕获，不因前一次成功假设后续成功 |
 | P3-F6 deep 档抽检点数量下限自适应 | 已完成 | `report_audit extract --depth deep` 默认 25% 抽样、至少 30 点且不再 30 点封顶；`/investment-research` deep 档文档已改用该参数 |
-| P3-F7 datapack `_generated_at` TTL 可观测 | 候选 | 属可观测性增强，不阻断本轮准出 |
+| P3-F7 datapack `_generated_at` TTL 可观测 | 已完成 | datapack 顶层新增 `_generated_at`/`_ttl_seconds`/`_expires_at`，缓存命中保留原始生成时间 |
 
 ## 9. 二次验证跟踪字段
 
@@ -671,3 +711,4 @@ python -m pytest tests/test_skill_output_regressions.py -q
 | P2-F4 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py::test_extract_data_points_skips_stress_or_bias_tables_as_non_auditable_data tests/test_report_audit.py::test_extract_data_points_skips_misaligned_table_rows_instead_of_guessing_columns -q`；等待下一次完整报告运行回填 |
 | P2-F5 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_skill_output_regressions.py::test_task_agent_degradation_contracts_are_documented -q`；等待下一次完整报告运行回填 |
 | P3-F6 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py::test_cli_extract_deep_depth_uses_adaptive_sample_count tests/test_skill_output_regressions.py::test_investment_research_documents_deep_audit_depth -q`；等待下一次完整报告运行回填 |
+| P3-F7 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_lxr_data.py::test_datapack_exposes_generated_at_and_ttl_observability tests/test_lxr_data.py::test_datapack_preserves_generated_at_and_ttl_on_cache_hit -q`；等待下一次完整报告运行回填 |
