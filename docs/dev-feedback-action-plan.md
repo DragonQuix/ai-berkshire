@@ -40,6 +40,8 @@
 
 ### P1-A1：`report_audit.py` 数值韧性
 
+状态：已完成（2026-07-01）
+
 目标文件：
 
 - `tools/report_audit.py`
@@ -199,4 +201,3 @@ python tools\verify_channel_capability.py --quick
 3. 再做 P1-A3，降低三情景估值和交叉验证的误用概率。
 4. 然后做 P1-B1/B2/B3，把 skill 文档和口径/降级元数据补齐。
 5. 最后做离线 fixture 和 CI，把这些问题变成长期回归测试。
-

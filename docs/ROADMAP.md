@@ -363,7 +363,7 @@ P1 不得回填到 P0 之前作为“顺手优化”。
 
 P1 反馈驱动修复队列（按 `docs/dev-feedback-action-plan.md` 执行）：
 
-- P1-A1：`report_audit.py` 数值韧性，修复非数值核验崩溃、负号抽取丢失和方向/幅度比较口径。
+- P1-A1：`report_audit.py` 数值韧性，修复非数值核验崩溃、负号抽取丢失和方向/幅度比较口径。=> 已完成。
 - P1-A2：`lxr_data.py datapack` 可复现输出，支持落盘、复用和降级/mx raw 记录。
 - P1-A3：`financial_rigor.py` 参数防呆，处理三情景增长率误填、交叉验证量级错位和口径说明。
 - P1-B1：Task Agent 失败诊断与降级记录，避免子 agent 路由失败被无声吞掉。
@@ -379,6 +379,7 @@ P1 进展记录：
 - 2026-07-01：使用体验反馈入口第一步，新增 `.github/ISSUE_TEMPLATE/usage-feedback.yml`、`docs/usage-feedback.md` 和 README/README_EN 入口，用于收集命令使用场景、脱敏输入、结果体验、卡点、改进建议和匿名引用授权。
 - 2026-07-01：完成 `/investment-research 泡泡玛特` 运行复盘的独立核查，确认 `report_audit`、`financial_rigor`、`lxr_data datapack`、Task Agent 降级记录和口径元数据的 P1 修复队列，见 `docs/dev-feedback-action-plan.md`。
 - 2026-07-01：开发反馈入口第一步，新增 `.github/ISSUE_TEMPLATE/dev-feedback.yml`、`docs/dev-feedback.md` 和 README/README_EN 入口，用于收集执行 agent 的错误链、复现证据、源码位置、技术评价和 machine-readable JSON。
+- 2026-07-01：完成 P1-A1 `report_audit.py` 数值韧性修复，保留表格正负号、非数值核验值安全跳过、默认保留符号比较，并支持显式 `compare_mode=absolute_magnitude`；root 工具与 Codex bundled 副本已同步。
 
 ## 7. 发布日志
 

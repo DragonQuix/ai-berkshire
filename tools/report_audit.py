@@ -50,27 +50,28 @@ def _configure_utf8_stdio():
 
 # 匹配模式：数字 + 单位，前面有上下文标签
 # 例：收入：1,239亿元、PE 18.8x、毛利率 56%、市值 ~$5,670亿
+_SIGNED_NUM = r'[+\-]?[\d,，\.]+'
 _PATTERNS = [
     # 百分比
-    (r'([\d,，\.]+)\s*%',                        '%',    'percent'),
+    (rf'({_SIGNED_NUM})\s*%',                        '%',    'percent'),
     # 亿元/亿美元/亿港元
-    (r'([\d,，\.]+)\s*亿(元|美元|港元|RMB|USD|HKD)?', '亿',    'hundred_million'),
+    (rf'({_SIGNED_NUM})\s*亿(元|美元|港元|RMB|USD|HKD)?', '亿',    'hundred_million'),
     # 倍数 PE/PB/PS
-    (r'([\d,，\.]+)\s*[xX倍]',                   'x',    'multiple'),
+    (rf'({_SIGNED_NUM})\s*[xX倍]',                   'x',    'multiple'),
     # 万亿
-    (r'([\d,，\.]+)\s*万亿',                      '万亿', 'trillion'),
+    (rf'({_SIGNED_NUM})\s*万亿',                      '万亿', 'trillion'),
     # 美元绝对值（B/T）
-    (r'\$\s*([\d,，\.]+)\s*([BMT亿])',             '$',    'usd_abs'),
+    (rf'\$\s*({_SIGNED_NUM})\s*([BMT亿])',             '$',    'usd_abs'),
     # 纯整数（如市值、收入、用户数等，出现在表格 | 里）
-    (r'\|\s*[~约]?\$?([\d,，\.]+)\s*\|',          '',     'table_num'),
+    (rf'\|\s*[~约]?\$?({_SIGNED_NUM})\s*\|',          '',     'table_num'),
 ]
 
 _LABEL_RE = re.compile(
-    r'(?P<label>[^\|\n：:]{2,25})[：:\s]+[~约]?\$?(?P<num>[\d,，\.]+)\s*(?P<unit>亿[元美港]?元?|万亿|[xX倍]|%|[BMT])?'
+    rf'(?P<label>[^\|\n：:]{{2,25}})[：:\s]+[~约]?\$?(?P<num>{_SIGNED_NUM})\s*(?P<unit>亿[元美港]?元?|万亿|[xX倍]|%|[BMT])?'
 )
 
 _TABLE_ROW_RE = re.compile(
-    r'\|\s*(?P<label>[^|]{1,40})\s*\|\s*[~约]?\$?(?P<num>[\d,，\.]+)\s*(?P<unit>亿[元美港]?元?|万亿|[xX倍]|%|[BMT])?\s*\|'
+    rf'\|\s*(?P<label>[^|]{{1,40}})\s*\|\s*[~约]?\$?(?P<num>{_SIGNED_NUM})\s*(?P<unit>亿[元美港]?元?|万亿|[xX倍]|%|[BMT])?\s*\|'
 )
 
 
@@ -111,14 +112,14 @@ def _is_valid_label(label: str) -> bool:
 
 # 两列表格行：| 标签 | 数值 unit |（专为财务报告的 KV 表设计）
 _KV_TABLE_RE = re.compile(
-    r'^\|\s*(?P<label>[^|*\n]{2,40}?)\s*\|\s*[~约]?\$?(?P<num>[\d,，\.]+)\s*'
+    rf'^\|\s*(?P<label>[^|*\n]{{2,40}}?)\s*\|\s*[~约]?\$?(?P<num>{_SIGNED_NUM})\s*'
     r'(?P<unit>亿[元美港]?元?|万亿|[xX倍]|%|[BMT亿])?\s*[\|（\(]'
 )
 
 # 带标签的 KV 行：标签：数值 单位
 _KV_LABEL_RE = re.compile(
     r'(?P<label>[\u4e00-\u9fa5A-Za-z][^\|\n：:*]{1,30})[：:]\s*[~约]?\$?'
-    r'(?P<num>[\d,，\.]+)\s*(?P<unit>亿[元美港]?元?|万亿|[xX倍]|%|[BMT])?'
+    rf'(?P<num>{_SIGNED_NUM})\s*(?P<unit>亿[元美港]?元?|万亿|[xX倍]|%|[BMT])?'
 )
 
 
@@ -150,13 +151,13 @@ def _parse_md_tables(lines: list) -> list:
                         col_header = headers_raw[col_idx] if col_idx < len(headers_raw) else f'列{col_idx}'
                         # 提取 cell 中的数字+单位
                         m = re.search(
-                            r'[~约]?\$?([\d,，\.]+)\s*(亿[元美港]?元?|万亿|[xX倍]|%|[BMT])?',
+                            rf'[~约]?\$?({_SIGNED_NUM})\s*(亿[元美港]?元?|万亿|[xX倍]|%|[BMT])?',
                             cell
                         )
                         if m:
                             val = _clean_num(m.group(1))
                             unit = (m.group(2) or '').strip()
-                            if val and val != 0 and val < 1e15:
+                            if val and val != 0 and abs(val) < 1e15:
                                 results.append((row_label, col_header, val, unit, i + 1, dline))
                     i += 1
                 continue
@@ -182,7 +183,7 @@ def extract_data_points(md_text: str) -> list:
         label = re.sub(r'[\*_`]+', '', label).strip()
         if not _is_valid_label(label):
             return
-        if val is None or val == 0 or val > 1e15:
+        if val is None or val == 0 or abs(val) > 1e15:
             return
         # 过滤纯年份/季度
         if re.fullmatch(r'(20\d{2}|Q[1-4]|\d{4}\s*Q[1-4])', label.strip()):
@@ -255,8 +256,28 @@ def sample_points(points: list, ratio: float = 0.15, seed: int = None) -> list:
 _TOLERANCE = 0.02   # 2% 容差（与 financial-data.md / plan-skill-enhancement §4.3 一致）
 
 
-def _pct_diff(reported: float, fetched: float) -> float:
+def _to_numeric(value):
+    """安全转为 float；日期、文本、评级等非数值返回 None。"""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).replace(',', '').replace('，', '').strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def _pct_diff(reported: float, fetched: float, compare_mode: str = "") -> float:
     """相对偏差 (absolute)。"""
+    if compare_mode == "absolute_magnitude":
+        reported = abs(reported)
+        fetched = abs(fetched)
     if reported == 0:
         return 0.0 if fetched == 0 else float('inf')
     return abs(reported - fetched) / abs(reported)
@@ -295,15 +316,20 @@ def render_verdict(results: list, report_name: str = "") -> dict:
 
     fail_items = []
     warn_items = []
+    compared_count = 0
 
     for item in results:
         label = item.get('label', '?')
-        reported = float(item.get('reported_value', 0))
+        reported = _to_numeric(item.get('reported_value', 0))
+        if reported is None:
+            print(f'  ⬜ [{item["id"]:>2}] {label[:35]:35s}  →  [报告值非数值，跳过]')
+            continue
         unit = item.get('unit', '')
         fetched = item.get('fetched_value')
         source = item.get('fetched_source', '?')
         fetched2 = item.get('fetched_value2')
         source2 = item.get('fetched_source2', '')
+        compare_mode = item.get('compare_mode', '')
 
         # --- 主来源比对 ---
         if fetched is None:
@@ -311,14 +337,19 @@ def render_verdict(results: list, report_name: str = "") -> dict:
             print(f'  ⬜ [{item["id"]:>2}] {label[:35]:35s} {reported:>12.2f} {unit}  →  [未提供核验值，跳过]')
             continue
 
-        fetched = float(fetched)
-        diff1 = _pct_diff(reported, fetched)
+        fetched = _to_numeric(fetched)
+        if fetched is None:
+            print(f'  ⬜ [{item["id"]:>2}] {label[:35]:35s} {reported:>12.2f} {unit}  →  [{source} 非数值核验值，跳过]')
+            continue
+        compared_count += 1
+        diff1 = _pct_diff(reported, fetched, compare_mode)
 
         # --- 第二来源比对（如有）---
         diff2 = None
         if fetched2 is not None:
-            fetched2 = float(fetched2)
-            diff2 = _pct_diff(reported, fetched2)
+            fetched2 = _to_numeric(fetched2)
+            if fetched2 is not None:
+                diff2 = _pct_diff(reported, fetched2, compare_mode)
 
         # 判断
         pass1 = diff1 <= _TOLERANCE
@@ -367,7 +398,7 @@ def render_verdict(results: list, report_name: str = "") -> dict:
     print()
     print('-' * 70)
 
-    total = len([r for r in results if r.get('fetched_value') is not None])
+    total = compared_count
     fail_count = len(fail_items)
     warn_count = len(warn_items)
     pass_count = total - fail_count - warn_count

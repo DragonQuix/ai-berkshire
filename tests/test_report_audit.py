@@ -55,6 +55,22 @@ PE：18.8x
     assert all("代码块收入" not in p["label"] for p in points)
 
 
+def test_extract_data_points_preserves_signed_table_percentages() -> None:
+    text = """# 估值情景
+
+| 指标 | 数值 |
+|---|---:|
+| 乐观涨跌幅 | +174.3% |
+| 悲观涨跌幅 | -46.5% |
+"""
+
+    points = audit.extract_data_points(text)
+    labels = {p["label"]: p for p in points}
+
+    assert labels["乐观涨跌幅 · 数值"]["reported_value"] == 174.3
+    assert labels["悲观涨跌幅 · 数值"]["reported_value"] == -46.5
+
+
 def test_sample_points_respects_minimum_cap_seed_and_line_order() -> None:
     points = [
         {"id": i, "label": f"指标{i}", "line_number": 100 - i}
@@ -142,6 +158,57 @@ def test_render_verdict_warns_but_does_not_fail_when_one_source_matches() -> Non
     assert result["warn_count"] == 1
     assert result["fail_count"] == 0
     assert "警告" in out
+
+
+def test_render_verdict_skips_non_numeric_fetched_values() -> None:
+    result, out = _capture_stdout(
+        audit.render_verdict,
+        [
+            {
+                "id": 1,
+                "label": "发布日期",
+                "reported_value": 2026,
+                "fetched_value": "2026-07-01",
+                "fetched_source": "announcement",
+            }
+        ],
+    )
+
+    assert result["verdict"] == "PASS"
+    assert result["pass_count"] == 0
+    assert result["fail_count"] == 0
+    assert "非数值" in out
+
+
+def test_render_verdict_preserves_sign_unless_absolute_magnitude_requested() -> None:
+    signed_result, _ = _capture_stdout(
+        audit.render_verdict,
+        [
+            {
+                "id": 1,
+                "label": "悲观涨跌幅",
+                "reported_value": 46.5,
+                "fetched_value": -46.5,
+                "fetched_source": "manual",
+            }
+        ],
+    )
+    magnitude_result, _ = _capture_stdout(
+        audit.render_verdict,
+        [
+            {
+                "id": 1,
+                "label": "悲观跌幅",
+                "reported_value": 46.5,
+                "fetched_value": -46.5,
+                "fetched_source": "manual",
+                "compare_mode": "absolute_magnitude",
+            }
+        ],
+    )
+
+    assert signed_result["verdict"] == "FAIL"
+    assert magnitude_result["verdict"] == "PASS"
 
 
 def test_cli_extract_outputs_json_template(tmp_path: Path) -> None:
