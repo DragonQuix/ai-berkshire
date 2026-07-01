@@ -511,6 +511,76 @@ python -m pytest tests/test_lxr_data.py -q
 python tools\verify_channel_capability.py --quick
 ```
 
+### P3-E7：Agent 降级错误摘要脱敏标准
+
+状态：已完成（2026-07-01）
+
+来源反馈：
+
+- `docs/dev-feedback-investment-research-deep-20260701.md` §3.7。
+- P1-B1 已要求记录「错误原文摘要」，但缺少什么可保留、什么必须删除的判定标准，容易导致不同执行 agent 标准不一致。
+
+目标文件：
+
+- `skills/investment-research.md`
+- 相关团队型 skill：`investment-team`、`earnings-team`、`industry-research`、`investment-checklist`、`management-deep-dive`、`news-pulse`、`private-company-research`、`wechat-article`、`deep-company-series`
+- `codex/ai-berkshire/references/skills/*.md`
+- `tests/test_skill_output_regressions.py`
+- `docs/ROADMAP.md`
+- `docs/dev-feedback-action-plan.md`
+
+验收点：
+
+- Agent 降级记录段落明确「错误摘要脱敏标准」。
+- 可保留：模型名、错误码、HTTP 状态、非敏感错误类别。
+- 必须删除：本机绝对路径、token、cookie、账户名、API Key、完整请求头。
+- 给出正样本：`deepseek-v4-flash 路由未配置` 可保留。
+
+完成记录：
+
+- 10 个团队型 root skill 与对应 Codex reference 均补充脱敏标准。
+- `tests/test_skill_output_regressions.py` 增加回归合同，防止后续退回到「只说必要信息」的模糊表述。
+
+验证命令：
+
+```powershell
+python -m pytest tests/test_skill_output_regressions.py -q
+python tools\verify_channel_capability.py --quick
+```
+
+### P3-E8：action-plan 二次验证跟踪字段
+
+状态：已完成（2026-07-01）
+
+来源反馈：
+
+- `docs/dev-feedback-investment-research-deep-20260701.md` §3.8。
+- 现有 action-plan 记录「状态：已完成」，但没有统一字段区分「已自动回归验证」和「已在真实技能运行中二次验证」。
+
+目标文件：
+
+- `docs/dev-feedback-action-plan.md`
+- `tests/test_skill_output_regressions.py`
+- `docs/ROADMAP.md`
+
+验收点：
+
+- action-plan 增加「二次验证跟踪字段」。
+- 每个已完成反馈项至少有一行跟踪记录。
+- 已经在腾讯 deep 档二次运行中验证过的项，链接到 `docs/dev-feedback-investment-research-deep-20260701.md`。
+- 尚未真实二次运行的项明确标记为「待补」，不得伪造真实运行证据。
+
+完成记录：
+
+- 新增第 9 节二次验证跟踪表。
+- `tests/test_skill_output_regressions.py` 固定表头、证据文件链接和已完成项行，避免后续 action-plan 只记录状态不记录验证证据。
+
+验证命令：
+
+```powershell
+python -m pytest tests/test_skill_output_regressions.py -q
+```
+
 ## 5. 反馈入口动作
 
 本次已将“执行 agent 的代码级复盘”从普通 `usage-feedback` 中分离，新增：
@@ -559,4 +629,25 @@ python tools\verify_channel_capability.py --quick
 - **P2-E4**：港股 `--no-mx` 路径透 alternatives（§3.5）——文档示例路径的覆盖盲点。=> 已完成。
 - **P2-E5**：口径列覆盖率检查（§3.3）——让"所有核心数据表"从软约束变机器检查。=> 已完成。
 - **P2-E6**：港股年报 `reportType` 兜底（§3.6）——本次主 Agent 内联修复，应固化。=> 已完成。
-- **P3-E7/E8**：Agent 降级"必要信息"标准示例（§3.7）、action-plan 二次验证字段（§3.8，本节已示范）。
+- **P3-E7/E8**：Agent 降级"必要信息"标准示例（§3.7）、action-plan 二次验证字段（§3.8，本节已示范）。=> 已完成。
+
+## 9. 二次验证跟踪字段
+
+本节用于区分「代码/文档已修复并通过自动回归」与「已在真实技能完整运行中二次验证」。后续每次完整运行产生新的 dev-feedback 文件时，应回填对应行；未真实运行验证的项必须标记「待补」，不得用单元测试结果冒充真实运行闭环。
+
+| 反馈项 | 状态 | 二次验证证据 |
+|---|---|---|
+| P1-A1 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260701.md` §1 E8/E9：verdict 不再崩溃，负号抽取生效 |
+| P1-A2 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260701.md` §1：`datapack -o _tmp_00700_datapack.json` 落盘成功 |
+| P1-A3 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260701.md` §1 E7：growth 自动归一并写 stderr 警告 |
+| P1-B1 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260701.md` §1 E5：报告附录 A 记录 Agent 降级 |
+| P1-B2 | 已二次验证但发现补丁缺口 | `docs/dev-feedback-investment-research-deep-20260701.md` §3.5：默认路径生效，`--no-mx` 缺口后续由 P2-E4 修复 |
+| P1-B3 | 已二次验证但报告执行力不足 | `docs/dev-feedback-investment-research-deep-20260701.md` §1 E12 / §3.3：口径元数据进入 datapack，报告口径列覆盖不足后续由 P2-E5 修复 |
+| P1-C1 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260701.md` §2.8：fixture 与 workflow 就位 |
+| P1-D1 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260701.md` §2.9：release notes 工具可用 |
+| P1-E1 | 待真实运行二次验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py -q`；等待下一次完整报告运行回填 |
+| P1-E2 | 待真实运行二次验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py -q`；等待下一次完整报告运行回填 |
+| P1-E3 | 待真实运行二次验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py -q`；等待下一次完整报告运行回填 |
+| P2-E4 | 待真实运行二次验证 | 当前已有自动回归：`python -m pytest tests/test_lxr_data.py -q`；等待下一次完整报告运行回填 |
+| P2-E5 | 待真实运行二次验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py -q`；等待下一次完整报告运行回填 |
+| P2-E6 | 待真实运行二次验证 | 当前已有自动回归：`python -m pytest tests/test_lxr_data.py -q`；等待下一次完整报告运行回填 |

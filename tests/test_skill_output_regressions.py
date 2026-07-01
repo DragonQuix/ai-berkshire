@@ -263,6 +263,18 @@ TASK_AGENT_DEGRADATION_SNIPPETS = [
     "顺序角色模拟",
 ]
 
+TASK_AGENT_DEGRADATION_REDACTION_SNIPPETS = [
+    "错误摘要脱敏标准",
+    "可保留：模型名",
+    "错误码",
+    "HTTP 状态",
+    "必须删除：本机绝对路径",
+    "token",
+    "cookie",
+    "账户名",
+    "deepseek-v4-flash 路由未配置",
+]
+
 HK_INDUSTRY_COMPARE_FALLBACK_SNIPPETS = [
     "港股行业对比降级",
     "申万行业分类仅覆盖A股",
@@ -298,6 +310,23 @@ LEGACY_SKILL_COUNT_PATTERNS = [
     "16" + " clear",
     "16" + " 个",
     "16" + " Skills",
+]
+
+DEV_FEEDBACK_SECOND_VALIDATION_ITEMS = [
+    "P1-A1",
+    "P1-A2",
+    "P1-A3",
+    "P1-B1",
+    "P1-B2",
+    "P1-B3",
+    "P1-C1",
+    "P1-D1",
+    "P1-E1",
+    "P1-E2",
+    "P1-E3",
+    "P2-E4",
+    "P2-E5",
+    "P2-E6",
 ]
 
 
@@ -390,6 +419,14 @@ def test_task_agent_degradation_contracts_are_documented(skill_name: str) -> Non
             assert snippet in text, f"{rel_path} missing task-agent degradation contract {snippet!r}"
 
 
+@pytest.mark.parametrize("skill_name", TASK_AGENT_DEGRADATION_SKILLS)
+def test_task_agent_degradation_redaction_examples_are_documented(skill_name: str) -> None:
+    for rel_path in skill_channels(skill_name):
+        text = read_text(rel_path)
+        for snippet in TASK_AGENT_DEGRADATION_REDACTION_SNIPPETS:
+            assert snippet in text, f"{rel_path} missing task-agent redaction example {snippet!r}"
+
+
 def test_investment_research_documents_hk_industry_compare_fallback() -> None:
     for rel_path in skill_channels("investment-research.md"):
         text = read_text(rel_path)
@@ -406,3 +443,12 @@ def test_financial_caliber_metadata_contracts_are_documented(
         text = read_text(rel_path)
         for snippet in required_snippets:
             assert snippet in text, f"{rel_path} missing financial caliber metadata contract {snippet!r}"
+
+
+def test_dev_feedback_action_plan_tracks_second_validation_evidence() -> None:
+    text = read_text("docs/dev-feedback-action-plan.md")
+    assert "## 9. 二次验证跟踪字段" in text
+    assert "反馈项 | 状态 | 二次验证证据" in text
+    assert "docs/dev-feedback-investment-research-deep-20260701.md" in text
+    for item in DEV_FEEDBACK_SECOND_VALIDATION_ITEMS:
+        assert f"| {item} |" in text, f"dev-feedback action plan missing second validation row for {item}"
