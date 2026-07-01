@@ -49,9 +49,11 @@
 **0.2 一次性拉取数据包**（推荐单命令，TTL 1h 跨模块共享）：
 
 ```bash
-python tools/lxr_data.py datapack {code} --years 5
-# 跳过妙想（省日限额）：python tools/lxr_data.py datapack {code} --no-mx
+python tools/lxr_data.py datapack {code} --years 5 -o _tmp_{code}_datapack.json
+# 跳过妙想（省日限额）：python tools/lxr_data.py datapack {code} --no-mx -o _tmp_{code}_datapack.json
 ```
+
+主 Agent 随后读取 `_tmp_{code}_datapack.json`，从 `sections.financials/valuation/verify_inputs/...` 中取数；不要用 `glob datapack_*.json` 猜缓存文件名。若只想看 stdout，可省略 `-o`。
 
 或按维度分拆（理杏仁为主，妙想补 tick/资讯；单次研究约 5–8 次理杏仁 + 2 次 MX）：
 

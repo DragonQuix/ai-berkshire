@@ -64,6 +64,8 @@ python tools\verify_channel_capability.py --quick
 
 ### P1-A2：`lxr_data.py datapack` 可复现输出
 
+状态：已完成（2026-07-01）：CLI 已支持 `--output/-o` 与 `--output-dir`；mx section 继续保留 `raw_path`。
+
 目标文件：
 
 - `tools/lxr_data.py`

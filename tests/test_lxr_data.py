@@ -1264,6 +1264,76 @@ def test__compare_cli_prints_json_with_json_flag(monkeypatch, capsys):
     assert "matrix" in data and "leader" in data
 
 
+def test__datapack_cli_writes_explicit_output_file(monkeypatch, tmp_path, capsys):
+    class FakeLxr:
+        def __init__(self, verbose=True):
+            self.verbose = verbose
+
+        def get_research_datapack(self, code, years=5, name=None, include_mx=True):
+            assert code == "600519"
+            assert years == 5
+            assert name == "茅台"
+            assert include_mx is False
+            return {
+                "code": "600519",
+                "market": "cn",
+                "sections": {"financials": {"_source": "lixinger"}},
+                "_source": "lixinger",
+            }
+
+    out_path = tmp_path / "datapack.json"
+    monkeypatch.setattr(lxd, "LxrData", FakeLxr)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "lxr_data.py",
+            "datapack",
+            "600519",
+            "--years",
+            "5",
+            "--name",
+            "茅台",
+            "--no-mx",
+            "--output",
+            str(out_path),
+        ],
+    )
+
+    lxd._cli()
+
+    written = __import__("json").loads(out_path.read_text(encoding="utf-8"))
+    captured = capsys.readouterr()
+    stdout_json = __import__("json").loads(captured.out)
+    assert written["code"] == "600519"
+    assert written["sections"]["financials"]["_source"] == "lixinger"
+    assert stdout_json == written
+    assert str(out_path) in captured.err
+
+
+def test__datapack_cli_writes_default_file_in_output_dir(monkeypatch, tmp_path):
+    class FakeLxr:
+        def __init__(self, verbose=True):
+            self.verbose = verbose
+
+        def get_research_datapack(self, code, years=5, name=None, include_mx=True):
+            return {"code": "09992", "market": "hk", "sections": {}, "_source": "lixinger"}
+
+    monkeypatch.setattr(lxd, "LxrData", FakeLxr)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["lxr_data.py", "datapack", "09992", "--output-dir", str(tmp_path)],
+    )
+
+    lxd._cli()
+
+    out_path = tmp_path / "ai_berkshire_datapack_09992.json"
+    written = __import__("json").loads(out_path.read_text(encoding="utf-8"))
+    assert written["code"] == "09992"
+    assert written["market"] == "hk"
+
+
 def test__compare_cli_rejects_code_count_out_of_range(monkeypatch, capsys):
     import pytest
     # 只给1个代码：argparse nargs="+" 不限制数量，需在分发前显式校验 2-4

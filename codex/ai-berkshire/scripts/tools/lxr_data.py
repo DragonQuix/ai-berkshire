@@ -2356,6 +2356,29 @@ def _merge_sources(*srcs: str) -> str:
     return "multi"
 
 
+def _write_json_output(data: dict, output_path: str) -> str:
+    """Write CLI JSON payload to a UTF-8 file and return its absolute path."""
+    abs_path = os.path.abspath(output_path)
+    out_dir = os.path.dirname(abs_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    with open(abs_path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+        f.write("\n")
+    return abs_path
+
+
+def _datapack_output_path(data: dict, code: str, output: Optional[str], output_dir: Optional[str]) -> Optional[str]:
+    if output and output_dir:
+        raise ValueError("datapack 不能同时指定 --output 和 --output-dir")
+    if output:
+        return output
+    if not output_dir:
+        return None
+    safe_code = re.sub(r"[^0-9A-Za-z_.-]+", "_", str(data.get("code") or code))
+    return os.path.join(output_dir, f"ai_berkshire_datapack_{safe_code}.json")
+
+
 def get_compare_payload(data, codes: list, years: int = 5) -> dict:
     """编排：对每个 code 取 financials + valuation，组装后交纯计算层。
 
@@ -2497,6 +2520,8 @@ def _cli():
     p_dp.add_argument("--years", type=int, default=5)
     p_dp.add_argument("--name", default=None, help="公司中文名（妙想查询用）")
     p_dp.add_argument("--no-mx", action="store_true", help="跳过妙想 tick/资讯（节省日限额）")
+    p_dp.add_argument("-o", "--output", default=None, help="将 datapack JSON 写入指定文件")
+    p_dp.add_argument("--output-dir", default=None, help="将 datapack JSON 写入目录内默认文件名")
     p_dp.add_argument("--quiet", action="store_true")
 
     p_qm = sub.add_parser("quality-metrics", help="/quality-screen 精确 7 指标（理杏仁本地计算）")
@@ -2755,6 +2780,13 @@ def _cli():
         data = LxrData(verbose=not args.quiet).get_research_datapack(
             args.code, years=args.years, name=args.name, include_mx=not args.no_mx,
         )
+        try:
+            out_path = _datapack_output_path(data, args.code, args.output, args.output_dir)
+        except ValueError as exc:
+            parser.error(str(exc))
+        if out_path:
+            written = _write_json_output(data, out_path)
+            print(f"[datapack] 写入 {written}", file=sys.stderr)
     elif args.command == "compare":
         if len(args.codes) < 2 or len(args.codes) > 4:
             parser.error("compare 需 2-4 个代码")
