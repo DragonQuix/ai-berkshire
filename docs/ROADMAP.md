@@ -286,7 +286,7 @@ rg -n "安装后自检|19 个|portfolio-holdings.sample.json|~/.claude/commands|
 
 ### P0.7 最终发布动作
 
-状态：未完成
+状态：未完成（阻塞：当前 GitHub 凭证无 `xbtlin/ai-berkshire` push 权限）
 
 前置条件：
 
@@ -301,16 +301,25 @@ rg -n "安装后自检|19 个|portfolio-holdings.sample.json|~/.claude/commands|
 - push 到 `origin main`。
 - 如需要 tag，使用明确 tag，例如 `v0.9.0-claude-code-installable`。
 
+当前阻塞：
+
+- 2026-07-01 已重新运行最终准出门禁，全部通过。
+- 已执行 `git pull --rebase origin main`；该命令尝试重放 200 个本地提交并在早期安装脚本提交上冲突。为保留 P0 原子提交和 merge commit `<48bdf67>`，已中止 rebase；随后用 `origin/main` 是本地 `main` 祖先证明远端无新增提交需要整合。
+- 已执行 `git push --progress --porcelain origin main`；GitHub 返回 `remote: Permission to xbtlin/ai-berkshire.git denied to DragonQuix.` 和 HTTP 403。
+- 继续发布需要用具备 `xbtlin/ai-berkshire` 写权限的 GitHub 凭证重新执行 `git push origin main`，或由仓库 owner 授权当前凭证。
+
 验证命令：
 
 ```powershell
 git status --short --branch
 git log -5 --oneline
+git push --progress --porcelain origin main
 ```
 
 准出标准：
 
 - 远端可通过 README 命令安装到同一版本。
+- `git status --short --branch` 不再显示本地 ahead。
 
 ## 5. 最终准出门禁
 
