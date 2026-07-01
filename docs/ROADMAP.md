@@ -357,8 +357,18 @@ P1 只能在 P0 发布完成后启动。
 - 继续扩展组合级分析、估值模型或数据源。
 - 增加 GitHub Actions CI。
 - 做 release notes 自动生成。
+- 按真实技能运行反馈收敛工具容错性、可观测性和口径元数据，优先处理会阻断报告准出的缺陷。
 
 P1 不得回填到 P0 之前作为“顺手优化”。
+
+P1 反馈驱动修复队列（按 `docs/dev-feedback-action-plan.md` 执行）：
+
+- P1-A1：`report_audit.py` 数值韧性，修复非数值核验崩溃、负号抽取丢失和方向/幅度比较口径。
+- P1-A2：`lxr_data.py datapack` 可复现输出，支持落盘、复用和降级/mx raw 记录。
+- P1-A3：`financial_rigor.py` 参数防呆，处理三情景增长率误填、交叉验证量级错位和口径说明。
+- P1-B1：Task Agent 失败诊断与降级记录，避免子 agent 路由失败被无声吞掉。
+- P1-B2：港股行业对比降级说明，给出申万不适用时的替代路径。
+- P1-B3：财务口径元数据，把理杏仁字段口径、年报口径、币种和单位传到报告与审计环节。
 
 P1 进展记录：
 
@@ -367,6 +377,8 @@ P1 进展记录：
 - 2026-07-01：最终用户试用前 README 收敛，README/README_EN 顶部补充“项目能做什么/首次试用建议”，安装后自检改为核对 19 个 AI Berkshire 命令名，避免已有其他 Claude Code 命令时误判目录总数。
 - 2026-07-01：Windows 安装说明收敛，README/README_EN 明确 `install.ps1` 应使用 PowerShell 7 `pwsh` 执行，避免 Windows PowerShell 5.1 按 ANSI 误读 UTF-8 脚本。
 - 2026-07-01：使用体验反馈入口第一步，新增 `.github/ISSUE_TEMPLATE/usage-feedback.yml`、`docs/usage-feedback.md` 和 README/README_EN 入口，用于收集命令使用场景、脱敏输入、结果体验、卡点、改进建议和匿名引用授权。
+- 2026-07-01：完成 `/investment-research 泡泡玛特` 运行复盘的独立核查，确认 `report_audit`、`financial_rigor`、`lxr_data datapack`、Task Agent 降级记录和口径元数据的 P1 修复队列，见 `docs/dev-feedback-action-plan.md`。
+- 2026-07-01：开发反馈入口第一步，新增 `.github/ISSUE_TEMPLATE/dev-feedback.yml`、`docs/dev-feedback.md` 和 README/README_EN 入口，用于收集执行 agent 的错误链、复现证据、源码位置、技术评价和 machine-readable JSON。
 
 ## 7. 发布日志
 

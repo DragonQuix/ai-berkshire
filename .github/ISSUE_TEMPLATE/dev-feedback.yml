@@ -1,0 +1,102 @@
+name: 开发反馈 / Dev feedback
+description: Share code-level findings from a full AI Berkshire skill run.
+title: "[Dev feedback] "
+labels: ["dev-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for code-level feedback from a full skill run. Remove
+        tokens, cookies, account identifiers, real holdings, private local
+        paths, and unredacted logs before submitting.
+
+  - type: input
+    id: skill
+    attributes:
+      label: Skill and depth
+      description: Which AI Berkshire skill did you run?
+      placeholder: "/investment-research --depth standard"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Paste the commit hash, installed version, or date if available.
+      placeholder: "20ea36d9"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Runtime
+      options:
+        - Claude Code
+        - Codex
+        - Claude Code + Codex
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Outcome tier
+      options:
+        - blocked
+        - mixed
+        - usable-with-warnings
+    validations:
+      required: true
+
+  - type: textarea
+    id: error_chain
+    attributes:
+      label: Error chain
+      description: List stages, symptoms, error summaries, and user-visible impact in order.
+      placeholder: "1. datapack: ...\n2. report audit: ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and reproduction
+      description: Include commands, exit codes, sanitized logs, raw snippets, and code locations.
+      placeholder: "python tools/report_audit.py verdict ... -> ValueError at tools/report_audit.py:314"
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical_evaluation
+    attributes:
+      label: Technical evaluation
+      description: What is confirmed, partial, unverified, or possibly wrong in the initial feedback?
+      placeholder: "Confirmed: ... Partial: ... Unverified: ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested_fixes
+    attributes:
+      label: Suggested fixes
+      description: Target files, tests, and acceptance commands for a programming agent.
+      placeholder: "Target: tools/report_audit.py; Tests: tests/test_report_audit.py; Verify: pytest ..."
+
+  - type: textarea
+    id: machine_readable_json
+    attributes:
+      label: Optional machine-readable JSON
+      description: Paste the JSON payload from docs/dev-feedback.md if available.
+      render: json
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed tokens, cookies, account identifiers, real holdings, private paths, and unredacted logs.
+          required: true
+

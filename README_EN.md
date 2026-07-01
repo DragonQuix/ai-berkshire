@@ -313,6 +313,13 @@ issue form at `.github/ISSUE_TEMPLATE/usage-feedback.yml`. For real holdings,
 accounts, or trades, use percentages or anonymized examples instead of private
 details.
 
+### Dev feedback for agents and maintainers
+
+If you ran a full skill workflow and collected an error chain, code locations,
+reproduction commands, or suggested fixes, use `docs/dev-feedback.md` or the
+GitHub issue form at `.github/ISSUE_TEMPLATE/dev-feedback.yml`. This is for
+programming-agent handoff and does not replace regular usage feedback.
+
 ### 3. Use
 
 Invoke directly in Claude Code:

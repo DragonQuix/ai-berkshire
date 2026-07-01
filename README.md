@@ -312,6 +312,12 @@ token、cookie、账户标识和真实本机私有路径。
 请按 `docs/usage-feedback.md` 提供脱敏反馈；也可以使用 GitHub issue form：
 `.github/ISSUE_TEMPLATE/usage-feedback.yml`。涉及真实持仓、账户、交易记录时，请改用比例或匿名样例。
 
+### 开发反馈（执行 agent / 维护者）
+
+如果你让 agent 完整跑了一次 skill，并整理出错误链、源码位置、复现命令或修复建议，
+请按 `docs/dev-feedback.md` 提供开发反馈；也可以使用 GitHub issue form：
+`.github/ISSUE_TEMPLATE/dev-feedback.yml`。这类反馈用于编程 agent 接手修复，不替代普通使用体验反馈。
+
 ## 数据源与可选依赖
 
 安装 AI Berkshire 不需要任何私有 token。普通用户不配置 `LIXINGER_TOKEN`、妙想 mx 系列或 Playwright 时，不应被判定为安装失败；相关增强能力会降级、跳过，或提示补充配置。

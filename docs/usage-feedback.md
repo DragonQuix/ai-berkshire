@@ -7,6 +7,7 @@
 
 - GitHub issue form：`.github/ISSUE_TEMPLATE/usage-feedback.yml`
 - 安装失败、命令不可见或自检不通过：请优先使用 `.github/ISSUE_TEMPLATE/install-feedback.yml`
+- 如果反馈来自执行 agent 的代码级复盘，且包含错误链、源码位置、复现命令或修复建议，请使用 `docs/dev-feedback.md`。
 
 ## 最小反馈字段
 
@@ -17,6 +18,8 @@
 - 卡点：命令可见性、数据源、报告结构、术语、速度、幻觉、缺少反面证据等。
 - 期望改进：希望新增的说明、样例、命令行为或报告结构。
 - 匿名引用授权：是否允许把反馈整理进 README 或 docs 作为用户案例。
+
+如果你已经整理出 machine-readable JSON、错误链、行号或最小复现，请不要塞进普通使用体验反馈；这些内容更适合 `docs/dev-feedback.md`。
 
 ## 反馈分级
 
