@@ -1,0 +1,58 @@
+name: 安装反馈 / Install feedback
+description: Report whether AI Berkshire installs and self-checks correctly.
+title: "[Install feedback] "
+labels: ["install-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing AI Berkshire. Please remove private tokens, cookies,
+        account identifiers, and local personal paths before submitting logs.
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows PowerShell
+        - macOS / Linux shell
+        - WSL or other compatibility layer
+    validations:
+      required: true
+
+  - type: input
+    id: versions
+    attributes:
+      label: Tool versions
+      description: Include OS, git, python, Claude Code, and Codex App versions when available.
+      placeholder: "Windows 11; git 2.x; Python 3.x; Claude Code x.x; Codex App x.x"
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Install command
+      description: Paste the exact install command you ran.
+      placeholder: "git clone ... && bash install.sh"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: self_check
+    attributes:
+      label: Post-install self-check
+      options:
+        - label: 19 Claude Code command files exist under ~/.claude/commands
+        - label: portfolio sample runs without private tokens
+        - label: /dyp-ask or /portfolio-review is visible in a new Claude Code session
+        - label: Codex skill appears after a new session or Codex App restart
+
+  - type: textarea
+    id: result
+    attributes:
+      label: Result and sanitized logs
+      description: Describe what worked or failed. Redact tokens, cookies, account ids, and private local paths.
+      placeholder: "Expected / actual behavior, error output, and what you tried next."
+    validations:
+      required: true

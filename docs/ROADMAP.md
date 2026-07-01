@@ -363,6 +363,7 @@ P1 不得回填到 P0 之前作为“顺手优化”。
 P1 进展记录：
 
 - 2026-07-01：Codex 包安装体验第一步，`tools/release_smoke.py` 增加 Codex package contract，检查 `codex/ai-berkshire/SKILL.md`、19 个 reference、关键 bundled tools、禁止私有 `lxr_config.json` 进入 Codex 包，并校验 `scripts/tools/*.py` 与 root `tools/*.py` 同步。
+- 2026-07-01：安装反馈入口第一步，新增 `.github/ISSUE_TEMPLATE/install-feedback.yml`、`docs/install-feedback.md` 和 README/README_EN 入口，用于收集普通用户安装、自检、Codex 发现和脱敏失败日志。
 
 ## 7. 发布日志
 

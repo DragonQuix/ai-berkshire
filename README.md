@@ -288,6 +288,12 @@ cd $HOME\ai-berkshire; pwsh install.ps1
 
 如果 Claude Code 看不到 `/dyp-ask` 或 `/portfolio-review`，先新开 Claude Code 会话；仍不可见时，检查 `~/.claude/commands` 是否存在 19 个 `.md` 命令文件，并重新运行安装脚本。
 
+### 安装反馈
+
+如果安装或自检结果与上面不一致，请按 `docs/install-feedback.md` 提供脱敏反馈；
+也可以使用 GitHub issue form：`.github/ISSUE_TEMPLATE/install-feedback.yml`。提交前请移除
+token、cookie、账户标识和真实本机私有路径。
+
 ## 数据源与可选依赖
 
 安装 AI Berkshire 不需要任何私有 token。普通用户不配置 `LIXINGER_TOKEN`、妙想 mx 系列或 Playwright 时，不应被判定为安装失败；相关增强能力会降级、跳过，或提示补充配置。

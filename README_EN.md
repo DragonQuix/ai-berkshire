@@ -285,6 +285,13 @@ After installation, run these checks that do not require any private token:
 
 If Claude Code cannot see `/dyp-ask` or `/portfolio-review`, start a new Claude Code session first. If they are still missing, check `~/.claude/commands` for 19 `.md` command files and rerun the installer.
 
+### Install feedback
+
+If installation or self-check differs from the steps above, submit sanitized
+feedback using `docs/install-feedback.md` or the GitHub issue form at
+`.github/ISSUE_TEMPLATE/install-feedback.yml`. Remove tokens, cookies, account
+identifiers, and private local paths before sharing logs.
+
 ### 3. Use
 
 Invoke directly in Claude Code:
