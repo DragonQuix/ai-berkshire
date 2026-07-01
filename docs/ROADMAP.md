@@ -80,21 +80,22 @@ P0 未全部完成前，不得发布，不得 push/tag 作为 release。
 
 ### P0.1 远端状态收敛
 
-状态：未完成（阻塞：发布远端归属需确认）
+状态：已完成（本地远端收敛完成，最终 push 由 P0.7 执行）
 
 问题：
 
 - 本地 `main` 曾领先 `origin/main` 11 个提交。用户通过 README 默认 `git clone https://github.com/xbtlin/ai-berkshire.git` 只能拿到远端版本。
 - 2026-07-01 复核发现，当前本地 `origin` 实际指向 `https://github.com/DragonQuix/ai-berkshire.git`，但 README 默认安装命令指向 `https://github.com/xbtlin/ai-berkshire.git`。
-- `xbtlin/ai-berkshire` 与当前 `origin` 不是同一 HEAD；本地 `main` 与 `xbtlin/main` 也已分叉，不能在未确认发布远端归属前直接 push 并声称普通用户可安装到同一版本。
+- 2026-07-01 复核时，`xbtlin/ai-berkshire` 与当时的 `origin` 不是同一 HEAD；本地 `main` 与 `xbtlin/main` 也已分叉。
+- 2026-07-01 已按项目文档和 README 确认最终发布远端为 `xbtlin/ai-berkshire`；已将本地 `origin` 对齐到 `https://github.com/xbtlin/ai-berkshire.git`，并合并 `xbtlin/main` 远端基线。
 
 必须完成：
 
 - 确认最终发布提交全部在本地 `main`。
-- 确认最终面向普通用户的发布远端：README 默认 clone 的 `xbtlin/ai-berkshire`，还是当前本地 `origin` 的 `DragonQuix/ai-berkshire`。
-- 若最终发布远端为 `xbtlin/ai-berkshire`，必须先处理 `xbtlin/main` 与本地 `main` 的分叉，保留 P0 原子提交边界，并重新运行最终准出门禁。
-- 若最终发布远端为 `DragonQuix/ai-berkshire`，必须同步修改 README/README_EN/install 文档中的默认 clone URL，避免普通用户按文档安装到错误仓库。
-- 在最终准出门禁通过后，按项目规则 `git pull --rebase origin main`，解决冲突后再 push。
+- 确认最终面向普通用户的发布远端：README 默认 clone 的 `xbtlin/ai-berkshire`，还是当前本地 `origin` 的 `DragonQuix/ai-berkshire`。=> 已确认使用 `xbtlin/ai-berkshire`。
+- 若最终发布远端为 `xbtlin/ai-berkshire`，必须先处理 `xbtlin/main` 与本地 `main` 的分叉，保留 P0 原子提交边界，并重新运行最终准出门禁。=> 已通过 merge commit `<48bdf67>` 合并 `xbtlin/main`，冲突文件保留本地 P0 发布说明，远端新增报告/脚本/Codex 兼容产物已纳入本地。
+- 若最终发布远端为 `DragonQuix/ai-berkshire`，必须同步修改 README/README_EN/install 文档中的默认 clone URL，避免普通用户按文档安装到错误仓库。=> 不采用。
+- 在最终准出门禁通过后，按项目规则 `git pull --rebase origin main`，解决冲突后再 push。=> 当前 `origin/main` 已是本地 `main` 祖先，最终 push 由 P0.7 执行。
 - push 前不得丢失原子提交边界。
 
 验证命令：
@@ -105,14 +106,15 @@ git log -5 --oneline
 git remote -v
 git ls-remote https://github.com/xbtlin/ai-berkshire.git HEAD
 git ls-remote https://github.com/DragonQuix/ai-berkshire.git HEAD
-git fetch https://github.com/xbtlin/ai-berkshire.git main
-git rev-list --left-right --count FETCH_HEAD...main
+git fetch origin main
+git rev-list --left-right --count origin/main...main
+git merge-base --is-ancestor origin/main main
 ```
 
 准出标准：
 
-- push 前：工作区干净，本地包含本路线图要求的所有修复，且 README 默认 clone URL 与实际发布远端一致。
-- push 后：`git status --short --branch` 不再显示本地 ahead。
+- push 前：工作区干净，本地包含本路线图要求的所有修复，README 默认 clone URL 与实际发布远端一致，且 `origin/main` 是本地 `main` 的祖先。
+- push 后：`git status --short --branch` 不再显示本地 ahead（由 P0.7 最终发布动作验证）。
 
 ### P0.2 移除作者机器硬编码路径
 
@@ -333,7 +335,7 @@ rg -n --glob '!docs/ROADMAP.md' "C:/Users/admin|C:\\Users\\admin|/Users/linxuan|
 
 最近本地准出门禁记录：
 
-- 2026-07-01：本地 `main` 在 `fc2940c9` 通过最终准出门禁；验证：`git status --short --branch` -> `main...origin/main [ahead 22]`；`python -m pytest -q` -> 363 passed；`python tools\verify_channel_capability.py --quick` -> 全部通过；`python -m compileall -q tools codex\ai-berkshire\scripts\tools` -> 通过；`python tools\release_smoke.py` -> PASS release smoke；`git diff --check` -> 通过；发布面路径扫描 -> 无命中。该记录只证明当前本地状态可发布，P0.1 远端归属确认和最终 push 前仍需重新验证。
+- 2026-07-01：本地 `main` 在 `fc2940c9` 通过最终准出门禁；验证：`git status --short --branch` -> `main...origin/main [ahead 22]`；`python -m pytest -q` -> 363 passed；`python tools\verify_channel_capability.py --quick` -> 全部通过；`python -m compileall -q tools codex\ai-berkshire\scripts\tools` -> 通过；`python tools\release_smoke.py` -> PASS release smoke；`git diff --check` -> 通过；发布面路径扫描 -> 无命中。该记录只证明当时本地状态可发布，后续已继续处理 P0.1 远端收敛。
 
 ## 6. P1：发布后再做的事
 
@@ -364,3 +366,4 @@ P1 不得回填到 P0 之前作为“顺手优化”。
 - 2026-07-01：完成 P0.4，提交 `<641bf4a>`；验证：`rg -n --glob '!docs/ROADMAP.md' "18 个|16 clear|19 个|claude" README.md README_EN.md install.ps1 install.sh tests tools` -> 仅命中 19 个与 claude 预期说明，无旧错误数量；PowerShell 解析 `install.ps1` -> 通过；`bash -n install.sh` -> 通过；`python -m pytest tests/test_skill_output_regressions.py -q` -> 33 passed；`python tools\verify_channel_capability.py --quick` -> 全部通过；`git diff --check` -> 通过；剩余阻塞：P0.1、P0.5、P0.6、P0.7。
 - 2026-07-01：完成 P0.5，提交 `<5a72772>`；验证：`python tools\release_smoke.py` -> PASS release smoke；`python -m pytest tests/test_release_smoke.py -q` -> 2 passed；剩余阻塞：P0.1、P0.6、P0.7。
 - 2026-07-01：完成 P0.6，提交 `<06e86a9>`；验证：`rg -n "安装后自检|19 个|portfolio-holdings.sample.json|~/.claude/commands|/dyp-ask|/portfolio-review" README.md README_EN.md` -> 命中安装后自检、19 个命令、portfolio 样例、Claude Code 轻量命令和排障提示；`python -m pytest tests/test_skill_output_regressions.py -q` -> 35 passed；剩余阻塞：P0.1、P0.7。
+- 2026-07-01：完成 P0.1 本地远端收敛，提交 `<48bdf67>`；验证：`git remote -v` -> `origin` 指向 `https://github.com/xbtlin/ai-berkshire.git`；`git rev-list --left-right --count origin/main...main` -> `0 201`；`git merge-base --is-ancestor origin/main main` -> 通过；`python -m pytest -q` -> 363 passed；`python tools\verify_channel_capability.py --quick` -> 全部通过；`python tools\release_smoke.py` -> PASS release smoke；剩余阻塞：P0.7。
