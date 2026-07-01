@@ -1,0 +1,79 @@
+name: 使用体验反馈 / Usage feedback
+description: Share how AI Berkshire worked in a real Claude Code or Codex workflow.
+title: "[Usage feedback] "
+labels: ["usage-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing usage feedback. Please remove private holdings,
+        account identifiers, tokens, cookies, and private local paths before
+        submitting. Use percentages or anonymized examples when needed.
+
+  - type: dropdown
+    id: workflow
+    attributes:
+      label: Workflow type
+      options:
+        - Company research
+        - Earnings review
+        - Portfolio review
+        - Industry research or funnel
+        - Management deep dive
+        - News pulse
+        - Article writing or rewrite
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: commands
+    attributes:
+      label: Commands used
+      description: List the AI Berkshire command(s) you tried.
+      placeholder: "/dyp-ask, /portfolio-review, /investment-research"
+    validations:
+      required: true
+
+  - type: textarea
+    id: sanitized_input
+    attributes:
+      label: Sanitized input
+      description: Paste a simplified prompt or anonymized input. Remove private holdings, account ids, tokens, and local paths.
+      placeholder: "/portfolio-review Tencent 30%, Meituan 20%, Cash 50%"
+    validations:
+      required: true
+
+  - type: textarea
+    id: experience
+    attributes:
+      label: Result and experience
+      description: What helped? What was confusing, too verbose, unactionable, or inaccurate?
+      placeholder: "Helpful parts, friction points, output quality, decision usefulness."
+    validations:
+      required: true
+
+  - type: textarea
+    id: blockers
+    attributes:
+      label: Friction or blockers
+      description: Mention command visibility, data source issues, report structure, terminology, speed, hallucinations, or missing evidence.
+      placeholder: "Where did the workflow slow down or fail?"
+
+  - type: textarea
+    id: improvements
+    attributes:
+      label: Expected improvements
+      description: What examples, docs, command behavior, or report structure would make it better?
+      placeholder: "Concrete changes that would improve the next run."
+
+  - type: dropdown
+    id: quote_permission
+    attributes:
+      label: Can this feedback be anonymously quoted in docs?
+      options:
+        - "No"
+        - "Yes, anonymously"
+        - "Ask me first"
+    validations:
+      required: true

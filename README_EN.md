@@ -305,6 +305,14 @@ feedback using `docs/install-feedback.md` or the GitHub issue form at
 `.github/ISSUE_TEMPLATE/install-feedback.yml`. Remove tokens, cookies, account
 identifiers, and private local paths before sharing logs.
 
+### Usage feedback
+
+If commands are visible and you want to share how the workflows felt in real
+use, submit sanitized feedback using `docs/usage-feedback.md` or the GitHub
+issue form at `.github/ISSUE_TEMPLATE/usage-feedback.yml`. For real holdings,
+accounts, or trades, use percentages or anonymized examples instead of private
+details.
+
 ### 3. Use
 
 Invoke directly in Claude Code:

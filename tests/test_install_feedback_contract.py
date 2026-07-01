@@ -27,6 +27,23 @@ def test_install_feedback_issue_template_exists() -> None:
         assert snippet in template
 
 
+def test_usage_feedback_issue_template_exists() -> None:
+    template = read_text(".github/ISSUE_TEMPLATE/usage-feedback.yml")
+
+    for snippet in [
+        "使用体验反馈 / Usage feedback",
+        "usage-feedback",
+        "Workflow type",
+        "Commands used",
+        "Sanitized input",
+        "Result and experience",
+        "Friction or blockers",
+        "Expected improvements",
+        "anonymously quoted",
+    ]:
+        assert snippet in template
+
+
 def test_install_feedback_docs_define_safe_minimum_fields() -> None:
     docs = read_text("docs/install-feedback.md")
 
@@ -43,6 +60,22 @@ def test_install_feedback_docs_define_safe_minimum_fields() -> None:
         assert snippet in docs
 
 
+def test_usage_feedback_docs_define_safe_minimum_fields() -> None:
+    docs = read_text("docs/usage-feedback.md")
+
+    for snippet in [
+        "真实持仓金额",
+        "使用场景",
+        "/portfolio-review",
+        "脱敏输入",
+        "结果体验",
+        "期望改进",
+        "匿名引用授权",
+        "真实反馈记录",
+    ]:
+        assert snippet in docs
+
+
 def test_readmes_link_install_feedback_entry() -> None:
     zh = read_text("README.md")
     en = read_text("README_EN.md")
@@ -53,3 +86,15 @@ def test_readmes_link_install_feedback_entry() -> None:
     assert "docs/install-feedback.md" in en
     assert ".github/ISSUE_TEMPLATE/install-feedback.yml" in en
     assert "AI Berkshire commands OK" in en
+
+
+def test_readmes_link_usage_feedback_entry() -> None:
+    zh = read_text("README.md")
+    en = read_text("README_EN.md")
+
+    assert "docs/usage-feedback.md" in zh
+    assert ".github/ISSUE_TEMPLATE/usage-feedback.yml" in zh
+    assert "使用体验反馈" in zh
+    assert "docs/usage-feedback.md" in en
+    assert ".github/ISSUE_TEMPLATE/usage-feedback.yml" in en
+    assert "Usage feedback" in en

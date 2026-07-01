@@ -306,6 +306,12 @@ cd $HOME\ai-berkshire; pwsh install.ps1
 也可以使用 GitHub issue form：`.github/ISSUE_TEMPLATE/install-feedback.yml`。提交前请移除
 token、cookie、账户标识和真实本机私有路径。
 
+### 使用体验反馈
+
+如果命令已经可用，想反馈实际使用感受、哪些流程好用/不好用、输出是否能辅助决策，
+请按 `docs/usage-feedback.md` 提供脱敏反馈；也可以使用 GitHub issue form：
+`.github/ISSUE_TEMPLATE/usage-feedback.yml`。涉及真实持仓、账户、交易记录时，请改用比例或匿名样例。
+
 ## 数据源与可选依赖
 
 安装 AI Berkshire 不需要任何私有 token。普通用户不配置 `LIXINGER_TOKEN`、妙想 mx 系列或 Playwright 时，不应被判定为安装失败；相关增强能力会降级、跳过，或提示补充配置。
