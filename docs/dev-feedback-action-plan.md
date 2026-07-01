@@ -642,7 +642,7 @@ python -m pytest tests/test_skill_output_regressions.py -q
 | P1-F3 保险股 `oi/toi` 口径不一致 | 已完成 | insurance `caliber_metadata` 与 `/investment-research` 统一说明保险股用 `oi=营业收入` |
 | P2-F4 extract 误抽情景标题与列对齐错位 | 已完成 | 非可审计压力/偏误表整表跳过；表格数据行列数不匹配时直接跳过，不再生成 `列N` 猜测标签 |
 | P2-F5 Agent 路由间歇性说明 | 已完成 | 10 个团队型 skill 均要求每次 TeamCreate/TaskCreate/后台 Agent 派发、等待或读取结果独立捕获，不因前一次成功假设后续成功 |
-| P3-F6 deep 档抽检点数量下限自适应 | 候选 | 当前可显式 `--ratio 0.25`，后续再评估是否按数据点数量提高默认下限 |
+| P3-F6 deep 档抽检点数量下限自适应 | 已完成 | `report_audit extract --depth deep` 默认 25% 抽样、至少 30 点且不再 30 点封顶；`/investment-research` deep 档文档已改用该参数 |
 | P3-F7 datapack `_generated_at` TTL 可观测 | 候选 | 属可观测性增强，不阻断本轮准出 |
 
 ## 9. 二次验证跟踪字段
@@ -670,3 +670,4 @@ python -m pytest tests/test_skill_output_regressions.py -q
 | P1-F3 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_lxr_data.py::TestEndpointRouting::test_financials_lixinger_insurance_caliber_metadata_uses_oi tests/test_skill_output_regressions.py::test_financial_caliber_metadata_contracts_are_documented -q`；等待下一次完整报告运行回填 |
 | P2-F4 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py::test_extract_data_points_skips_stress_or_bias_tables_as_non_auditable_data tests/test_report_audit.py::test_extract_data_points_skips_misaligned_table_rows_instead_of_guessing_columns -q`；等待下一次完整报告运行回填 |
 | P2-F5 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_skill_output_regressions.py::test_task_agent_degradation_contracts_are_documented -q`；等待下一次完整报告运行回填 |
+| P3-F6 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py::test_cli_extract_deep_depth_uses_adaptive_sample_count tests/test_skill_output_regressions.py::test_investment_research_documents_deep_audit_depth -q`；等待下一次完整报告运行回填 |

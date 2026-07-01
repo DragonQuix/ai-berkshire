@@ -155,6 +155,23 @@ def test_sample_points_respects_minimum_cap_seed_and_line_order() -> None:
     assert [p["line_number"] for p in first] == sorted(p["line_number"] for p in first)
 
 
+def test_sample_points_supports_deep_adaptive_count_without_cap() -> None:
+    points = [
+        {"id": i, "label": f"指标{i}", "line_number": i}
+        for i in range(1, 201)
+    ]
+
+    sampled = audit.sample_points(
+        points,
+        ratio=0.25,
+        seed=1,
+        min_points=30,
+        max_points=None,
+    )
+
+    assert len(sampled) == 50
+
+
 def test_render_verdict_passes_when_all_fetched_values_within_tolerance() -> None:
     result, out = _capture_stdout(
         audit.render_verdict,
@@ -466,6 +483,46 @@ def test_cli_extract_output_writes_clean_json_file(tmp_path: Path) -> None:
     assert data[0]["fetched_value"] is None
     assert "抽检清单 JSON" not in proc.stdout
     assert "抽检清单 JSON 已写入" in proc.stderr
+
+
+def test_cli_extract_deep_depth_uses_adaptive_sample_count(tmp_path: Path) -> None:
+    report = tmp_path / "deep-report.md"
+    output = tmp_path / "extract.json"
+    rows = "\n".join(
+        f"| 指标{i} | {1000 + i}亿 | annual-report |"
+        for i in range(1, 141)
+    )
+    report.write_text(
+        "| 指标 | 2025 | 口径/来源 |\n|---|---:|---|\n" + rows + "\n",
+        encoding="utf-8",
+    )
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "report_audit.py"),
+            "extract",
+            "--report",
+            str(report),
+            "--depth",
+            "deep",
+            "--seed",
+            "1",
+            "-o",
+            str(output),
+        ],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    data = json.loads(output.read_text(encoding="utf-8"))
+    assert len(data) == 35
+    assert "抽样比例：25%" in proc.stdout
+    assert "抽检数量：35" in proc.stdout
 
 
 def test_cli_verdict_exit_code_reflects_pass_or_fail() -> None:

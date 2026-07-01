@@ -313,10 +313,17 @@ python tools/financial_rigor.py three-scenario \
 
 报告写入文件后，**必须**执行数据抽检，通过后方可发布：
 
-**Step 1 — 提取抽检清单（15%随机抽样）：**
+**Step 1 — 提取抽检清单（standard 默认 15% 随机抽样）：**
 ```bash
 python tools/report_audit.py extract \
   --report <报告文件路径>
+```
+deep 档必须使用 `--depth deep`：抽样比例为 25%，至少 30 点；当报告数据点很多时按 25% 自适应增加，不再 30 点封顶。
+```bash
+python tools/report_audit.py extract \
+  --report <报告文件路径> \
+  --depth deep \
+  -o _tmp_extract.json
 ```
 输出 JSON 模板，每项含 `fetched_value`（待填）。
 

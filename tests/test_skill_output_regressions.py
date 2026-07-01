@@ -289,6 +289,13 @@ HK_INDUSTRY_COMPARE_FALLBACK_SNIPPETS = [
     "不要求申万同行分位",
 ]
 
+DEEP_AUDIT_DEPTH_SNIPPETS = [
+    "--depth deep",
+    "25%",
+    "至少 30 点",
+    "不再 30 点封顶",
+]
+
 FINANCIAL_CALIBER_METADATA_CONTRACTS = {
     "financial-data.md": [
         "caliber_metadata",
@@ -438,6 +445,13 @@ def test_investment_research_documents_hk_industry_compare_fallback() -> None:
         text = read_text(rel_path)
         for snippet in HK_INDUSTRY_COMPARE_FALLBACK_SNIPPETS:
             assert snippet in text, f"{rel_path} missing HK industry compare fallback {snippet!r}"
+
+
+def test_investment_research_documents_deep_audit_depth() -> None:
+    for rel_path in skill_channels("investment-research.md"):
+        text = read_text(rel_path)
+        for snippet in DEEP_AUDIT_DEPTH_SNIPPETS:
+            assert snippet in text, f"{rel_path} missing deep audit depth contract {snippet!r}"
 
 
 @pytest.mark.parametrize("skill_name, required_snippets", FINANCIAL_CALIBER_METADATA_CONTRACTS.items())

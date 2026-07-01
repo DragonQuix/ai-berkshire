@@ -317,14 +317,38 @@ def extract_data_points(md_text: str) -> list:
     return points
 
 
-def sample_points(points: list, ratio: float = 0.15, seed: int = None) -> list:
-    """随机抽取 ratio 比例的数据点，最少 3 个，最多 30 个。"""
-    n = max(3, min(30, math.ceil(len(points) * ratio)))
+def sample_points(
+    points: list,
+    ratio: float = 0.15,
+    seed: int = None,
+    min_points: int = 3,
+    max_points: int = 30,
+) -> list:
+    """随机抽取 ratio 比例的数据点，默认最少 3 个、最多 30 个。"""
+    if not points or ratio <= 0:
+        return []
+    n = max(min_points, math.ceil(len(points) * ratio))
+    if max_points is not None:
+        n = min(max_points, n)
     n = min(n, len(points))
     rng = Random(seed)
     sampled = rng.sample(points, n)
     # 按行号排序，方便人工比对
     return sorted(sampled, key=lambda p: p['line_number'])
+
+
+def _sampling_config(depth: str, ratio):
+    if depth == 'deep':
+        return {
+            'ratio': 0.25 if ratio is None else ratio,
+            'min_points': 30,
+            'max_points': None,
+        }
+    return {
+        'ratio': 0.15 if ratio is None else ratio,
+        'min_points': 3,
+        'max_points': 30,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -704,6 +728,9 @@ def main():
   指定抽样比例（默认0.15）：
     python3 tools/report_audit.py extract --report reports/xxx.md --ratio 0.20
 
+  deep 档自适应抽检（默认 25%，至少 30 点，不再 30 点封顶）：
+    python3 tools/report_audit.py extract --report reports/xxx.md --depth deep
+
   固定随机种子（复现同一批样本）：
     python3 tools/report_audit.py extract --report reports/xxx.md --seed 42
         """)
@@ -713,7 +740,8 @@ def main():
     # extract
     ext = sub.add_parser('extract', help='从报告提取数据点并随机抽样')
     ext.add_argument('--report', required=True, help='报告文件路径（Markdown）')
-    ext.add_argument('--ratio', type=float, default=0.15, help='抽样比例，默认 0.15')
+    ext.add_argument('--depth', choices=['standard', 'deep'], default='standard', help='抽检深度，standard=15%且最多30点，deep=25%且至少30点')
+    ext.add_argument('--ratio', type=float, default=None, help='覆盖抽样比例；默认 standard=0.15, deep=0.25')
     ext.add_argument('--seed', type=int, default=None, help='随机种子（可选，用于复现）')
     ext.add_argument('--dry-run', action='store_true', help='只打印，不输出 JSON')
     ext.add_argument('-o', '--output', help='将抽检清单 JSON 写入文件')
@@ -736,12 +764,19 @@ def main():
             text = f.read()
 
         all_points = extract_data_points(text)
-        sampled = sample_points(all_points, ratio=args.ratio, seed=args.seed)
+        sampling = _sampling_config(args.depth, args.ratio)
+        sampled = sample_points(
+            all_points,
+            ratio=sampling['ratio'],
+            seed=args.seed,
+            min_points=sampling['min_points'],
+            max_points=sampling['max_points'],
+        )
 
         print('=' * 70)
         print(f'报告数据抽检清单')
         print(f'文件：{args.report}')
-        print(f'总提取数据点：{len(all_points)}  |  抽样比例：{args.ratio:.0%}  |  抽检数量：{len(sampled)}')
+        print(f'总提取数据点：{len(all_points)}  |  抽样比例：{sampling["ratio"]:.0%}  |  抽检数量：{len(sampled)}')
         if args.seed is not None:
             print(f'随机种子：{args.seed}（可用于复现同一批样本）')
         print('=' * 70)
