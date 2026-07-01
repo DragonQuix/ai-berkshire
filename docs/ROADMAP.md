@@ -360,6 +360,10 @@ P1 只能在 P0 发布完成后启动。
 
 P1 不得回填到 P0 之前作为“顺手优化”。
 
+P1 进展记录：
+
+- 2026-07-01：Codex 包安装体验第一步，`tools/release_smoke.py` 增加 Codex package contract，检查 `codex/ai-berkshire/SKILL.md`、19 个 reference、关键 bundled tools、禁止私有 `lxr_config.json` 进入 Codex 包，并校验 `scripts/tools/*.py` 与 root `tools/*.py` 同步。
+
 ## 7. 发布日志
 
 每个完成 P0 任务的会话必须追加一条记录，格式固定：

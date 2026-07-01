@@ -27,6 +27,16 @@ LEGACY_SKILL_COUNT_PATTERNS = [
     "16" + " Skills",
 ]
 
+CODEX_REQUIRED_TOOL_FILES = [
+    "financial_rigor.py",
+    "report_audit.py",
+    "portfolio_analyzer.py",
+    "team_research_outputs.py",
+    "lxr_data.py",
+    "md2html.py",
+    "verify_channel_capability.py",
+]
+
 
 class CheckResult(NamedTuple):
     ok: bool
@@ -205,6 +215,45 @@ def check_readme_install_contract(repo: Path) -> CheckResult:
     return CheckResult(True, "README install commands and counts are aligned")
 
 
+def check_codex_package_contract(repo: Path) -> CheckResult:
+    package = repo / "codex" / "ai-berkshire"
+    reference_skills = package / "references" / "skills"
+    bundled_tools = package / "scripts" / "tools"
+    root_tools = repo / "tools"
+    problems: list[str] = []
+
+    if not (package / "SKILL.md").is_file():
+        problems.append("codex/ai-berkshire/SKILL.md is missing")
+
+    references = sorted(reference_skills.glob("*.md"))
+    if len(references) != EXPECTED_SKILL_COUNT:
+        problems.append(
+            "codex references expected "
+            f"{EXPECTED_SKILL_COUNT}, got {len(references)}"
+        )
+
+    for filename in CODEX_REQUIRED_TOOL_FILES:
+        if not (bundled_tools / filename).is_file():
+            problems.append(f"codex bundled tool missing: {filename}")
+
+    if (bundled_tools / "lxr_config.json").exists():
+        problems.append("codex bundle must not include private lxr_config.json")
+
+    for codex_tool in sorted(bundled_tools.glob("*.py")):
+        root_tool = root_tools / codex_tool.name
+        if not root_tool.exists():
+            problems.append(f"codex bundled tool has no root counterpart: {codex_tool.name}")
+        elif codex_tool.read_bytes() != root_tool.read_bytes():
+            problems.append(f"codex bundled tool is stale: {codex_tool.name}")
+
+    if problems:
+        return CheckResult(False, "\n".join(problems))
+    return CheckResult(
+        True,
+        f"{len(references)} references, {len(list(bundled_tools.glob('*.py')))} tools synced",
+    )
+
+
 def build_checks(repo: Path) -> list[Check]:
     repo = repo.resolve()
     return [
@@ -220,6 +269,10 @@ def build_checks(repo: Path) -> list[Check]:
         Check(
             "README install commands and skill count",
             lambda: check_readme_install_contract(repo),
+        ),
+        Check(
+            "Codex package install contract",
+            lambda: check_codex_package_contract(repo),
         ),
     ]
 

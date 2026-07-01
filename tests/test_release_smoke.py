@@ -18,6 +18,7 @@ REQUIRED_CHECKS = {
     "release surface has no author machine paths",
     "portfolio sample json",
     "README install commands and skill count",
+    "Codex package install contract",
 }
 
 
