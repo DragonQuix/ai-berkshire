@@ -130,6 +130,7 @@ _CORE_TABLE_KEYWORD_RE = re.compile(
     re.I,
 )
 _NON_CORE_TABLE_HEADER_RE = re.compile(r'(触发条件|自查|修正动作|应对|情景|路径|概率|偏误|压力测试)', re.I)
+_NON_AUDITABLE_TABLE_HEADER_RE = re.compile(r'(触发条件|自查项|修正动作|应对|路径|概率)', re.I)
 _CALIBER_HEADER_RE = re.compile(r'(口径|来源|source|caliber)', re.I)
 
 
@@ -150,6 +151,11 @@ def _table_has_core_metric(headers: list, row_lines: list) -> bool:
 
 def _table_has_caliber_header(headers: list) -> bool:
     return any(_CALIBER_HEADER_RE.search(h) for h in headers)
+
+
+def _table_should_skip_extraction(headers: list) -> bool:
+    header_text = ' '.join(headers)
+    return bool(_NON_AUDITABLE_TABLE_HEADER_RE.search(header_text))
 
 
 def _caliber_warning_ranges(lines: list) -> list:
@@ -196,19 +202,21 @@ def _parse_md_tables(lines: list) -> list:
         line = lines[i].strip()
         # 检测表头行（含 | 且不是分隔行）
         if '|' in line and not re.match(r'^\|[\-\s\|:]+\|$', line):
-            headers_raw = [h.strip().strip('*_').strip() for h in line.split('|')]
-            headers_raw = [h for h in headers_raw if h]
+            headers_raw = _split_table_cells(line)
+            if not headers_raw or any(not h for h in headers_raw):
+                i += 1
+                continue
             # 下一行应是分隔行
             if i + 1 < len(lines) and re.match(r'^\|[\-\s\|:]+\|$', lines[i+1].strip()):
+                skip_table = _table_should_skip_extraction(headers_raw)
                 i += 2  # 跳过分隔行
                 # 读数据行
                 while i < len(lines):
                     dline = lines[i].strip()
                     if not dline or not dline.startswith('|'):
                         break
-                    cells = [c.strip().strip('*_~').strip() for c in dline.split('|')]
-                    cells = [c for c in cells if c != '']
-                    if len(cells) < 2:
+                    cells = _split_table_cells(dline)
+                    if skip_table or len(cells) != len(headers_raw) or len(cells) < 2:
                         i += 1
                         continue
                     row_label = cells[0]

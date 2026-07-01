@@ -102,12 +102,12 @@ def test_extract_data_points_does_not_flag_core_table_with_caliber_source_column
     assert all(not p.get("caliber_column_warning") for p in points)
 
 
-def test_extract_data_points_does_not_flag_stress_or_bias_tables_as_core_caliber_tables() -> None:
+def test_extract_data_points_skips_stress_or_bias_tables_as_non_auditable_data() -> None:
     text = """# 压力测试
 
 | 情景 | 触发条件 | 估值影响 | 应对 |
 |---|---|---:|---|
-| 资产负债压力 | 长端利率下行，负债久期拉长 | -15% | 降低仓位 |
+| 权益市场2026-2027熊市 | 长端利率下行，负债久期拉长 | -15% | 降低仓位 |
 
 # 偏误自查
 
@@ -118,8 +118,24 @@ def test_extract_data_points_does_not_flag_stress_or_bias_tables_as_core_caliber
 
     points = audit.extract_data_points(text)
 
-    assert points
-    assert all(not p.get("caliber_column_warning") for p in points)
+    assert points == []
+
+
+def test_extract_data_points_skips_misaligned_table_rows_instead_of_guessing_columns() -> None:
+    text = """# 估值核验
+
+| 指标 | 2025 | 口径/来源 |
+|---|---:|---|
+| PE-TTM | 12.5x | lixinger | 61.75 |
+| PB | 1.83x | lixinger |
+"""
+
+    points = audit.extract_data_points(text)
+    labels = {p["label"]: p for p in points}
+
+    assert "PE-TTM · 2025" not in labels
+    assert "PE-TTM · 列3" not in labels
+    assert labels["PB · 2025"]["reported_value"] == 1.83
 
 
 def test_sample_points_respects_minimum_cap_seed_and_line_order() -> None:
