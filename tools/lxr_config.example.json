@@ -1,5 +1,5 @@
 {
-  "_readme": "理杏仁 API 客户端配置模板。复制为 lxr_config.json 后按需修改。token 优先取自环境变量 token_env（默认 LIXINGER_TOKEN），仅当环境变量未设置时才使用本文件中的 token 字段。请勿将真实 token 提交到 git（lxr_config.json 已在 .gitignore 中排除）。",
+  "_readme": "理杏仁 API 客户端配置模板。理杏仁属于可选私有增强；普通安装和核心离线能力不需要 token。需要时复制为 lxr_config.json 后在本机修改。token 优先取自环境变量 token_env（默认 LIXINGER_TOKEN），仅当环境变量未设置时才使用本地 lxr_config.json 中的 token 字段。请勿将真实 token 提交到 git（lxr_config.json 已在 .gitignore 中排除）。",
   "base_url": "https://open.lixinger.com/api/",
   "token_env": "LIXINGER_TOKEN",
   "token": "",

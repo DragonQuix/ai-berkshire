@@ -154,7 +154,7 @@ python tools\verify_channel_capability.py --quick
 
 ### P0.3 明确外部数据依赖与降级合同
 
-状态：未完成
+状态：已完成
 
 问题：
 
@@ -346,3 +346,4 @@ P1 不得回填到 P0 之前作为“顺手优化”。
 
 - 2026-07-01：重写路线图为 Claude Code 可安装即用交付路线图；旧功能扩张式路线图停止作为执行依据；P0 阻塞清单成为唯一推进入口。
 - 2026-07-01：完成 P0.2，提交 `<a1ae8e83>`；验证：`rg -n --glob '!docs/ROADMAP.md' "C:/Users/admin|C:\\Users\\admin|/Users/linxuan|~/.claude/projects|-Users-linxuan|lixingren_docs" README.md README_EN.md skills codex/ai-berkshire/references/skills docs` -> 无命中；`python -m pytest tests/test_skill_output_regressions.py -q` -> 25 passed；`python tools\verify_channel_capability.py --quick` -> 全部通过；`git diff --check` -> 通过；剩余阻塞：P0.1、P0.3、P0.4、P0.5、P0.6、P0.7。
+- 2026-07-01：完成 P0.3，提交 `<本轮原子提交>`；验证：`rg -n "LIXINGER_TOKEN|MX_DATA_SCRIPT|MX_SEARCH_SCRIPT|MX_XUANGU_SCRIPT|可选|降级|无需 token" README.md skills/financial-data.md docs/lixinger-data-guide.md` -> 命中 README、financial-data、lixinger-data-guide；`python -m pytest tests/test_skill_output_regressions.py -q` -> 28 passed；`python tools\verify_channel_capability.py --quick` -> 全部通过；`git diff --check` -> 通过；剩余阻塞：P0.1、P0.4、P0.5、P0.6、P0.7。

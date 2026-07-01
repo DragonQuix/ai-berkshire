@@ -135,6 +135,48 @@ AUTHOR_MACHINE_PATH_PATTERNS = [
     "lixingren_docs",
 ]
 
+DATA_DEPENDENCY_RELEASE_CONTRACTS = {
+    "README.md": [
+        "## 数据源与可选依赖",
+        "核心离线能力",
+        "无需 token",
+        "免费/公开源能力",
+        "私有增强能力",
+        "LIXINGER_TOKEN",
+        "MX_DATA_SCRIPT",
+        "MX_SEARCH_SCRIPT",
+        "MX_XUANGU_SCRIPT",
+        "Playwright",
+        "雪球",
+        "tools/lxr_config.example.json",
+        "不需要提交真实 token",
+    ],
+    "skills/financial-data.md": [
+        "安装不依赖 LIXINGER_TOKEN",
+        "无 token",
+        "免费/公开源",
+        "私有增强",
+        "MX_DATA_SCRIPT",
+        "MX_SEARCH_SCRIPT",
+        "MX_XUANGU_SCRIPT",
+        "Playwright",
+        "雪球",
+        "不需要提交真实 token",
+    ],
+    "docs/lixinger-data-guide.md": [
+        "无 token",
+        "安装失败",
+        "免费/公开源",
+        "私有增强",
+        "MX_DATA_SCRIPT",
+        "MX_SEARCH_SCRIPT",
+        "MX_XUANGU_SCRIPT",
+        "Playwright",
+        "雪球",
+        "不需要提交真实 token",
+    ],
+}
+
 
 def public_release_files() -> list[Path]:
     files: list[Path] = []
@@ -173,3 +215,13 @@ def test_public_release_files_do_not_contain_author_machine_paths() -> None:
                 offenders.append(f"{rel_path}: contains {pattern!r}")
 
     assert not offenders, "作者机器路径不能进入发布面文件:\n" + "\n".join(offenders)
+
+
+@pytest.mark.parametrize("rel_path, required_snippets", DATA_DEPENDENCY_RELEASE_CONTRACTS.items())
+def test_data_dependency_release_contracts_are_documented(
+    rel_path: str,
+    required_snippets: list[str],
+) -> None:
+    text = read_text(rel_path)
+    for snippet in required_snippets:
+        assert snippet in text, f"{rel_path} missing data dependency contract {snippet!r}"

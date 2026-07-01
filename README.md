@@ -249,6 +249,31 @@ cd $HOME\ai-berkshire; pwsh install.ps1
 >
 > **Codex 用户**：运行 `bash install.sh`（或 `pwsh install.ps1`）即可同时安装 Claude Code 命令和 Codex 原生 Skill。手动安装 Codex Skill：将 `codex/ai-berkshire/` 复制到 `$CODEX_HOME/skills/`（Windows 默认 C:\Users\<用户>\.codex\skills）。
 
+## 数据源与可选依赖
+
+安装 AI Berkshire 不需要任何私有 token。普通用户不配置 `LIXINGER_TOKEN`、妙想 mx 系列或 Playwright 时，不应被判定为安装失败；相关增强能力会降级、跳过，或提示补充配置。
+
+### 核心离线能力
+
+无需 token 即可使用：
+
+- 19 个 Claude Code slash command 的研究框架、报告结构和检查清单。
+- `examples/portfolio-holdings.sample.json` 组合样例与 `tools/portfolio_analyzer.py`。
+- `tools/financial_rigor.py` 手动输入模式、估值验算、三情景计算和交叉验证工具。
+- `tools/report_audit.py` 报告抽检、`tools/md2html.py` HTML 转换，以及 `reports/` 样例报告。
+
+### 免费/公开源能力
+
+东方财富、巨潮资讯、aastocks、Macrotrends、SEC EDGAR 等免费/公开源可作为兜底或人工对照来源。这类能力通常无需私有凭证，但会受到网络、站点结构、地区访问和数据更新滞后的影响。
+
+### 私有增强能力
+
+以下能力是可选增强，不是安装前置条件：
+
+- 理杏仁：设置环境变量 `LIXINGER_TOKEN`，或复制 `tools/lxr_config.example.json` 为 `tools/lxr_config.json` 后本地填写。`tools/lxr_config.json` 已被 gitignore；不需要提交真实 token。
+- 妙想 mx 系列：默认由 `python tools/lxr_data.py mx-data|mx-search|mx-xuangu ...` 统一调用；如需指定外部脚本，可设置 `MX_DATA_SCRIPT`、`MX_SEARCH_SCRIPT`、`MX_XUANGU_SCRIPT`。
+- Playwright / 雪球爬虫：仅用于需要浏览器登录态或雪球时间线抓取的场景；未安装或未登录时，不影响离线工具和普通报告框架使用。
+
 #### 更新
 
 ```bash

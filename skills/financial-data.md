@@ -18,11 +18,21 @@
 
 自 2026-06 起，A股/港股财务与估值数据改为**自动化三级回退**获取，优先使用理杏仁 API（结构化、含估值分位点、覆盖保险/银行/证券专属报表），失败时回退妙想 Skills，再失败回退免费源。优先级与 `docs/plan-lixinger-migration.md` 一致。**能力边界实测**见 `docs/channel-capability-matrix.md`（E0 准出，含保险 EV/NBV 已确认可用）。
 
+安装不依赖 LIXINGER_TOKEN；无 token 时不得把安装或基础报告框架判为失败。需要私有增强时再配置凭证；否则优先使用核心离线工具、手动输入和免费/公开源，并在报告中标明实际 `_source`。
+
 | 顺位 | 来源 | 能力 | 何时用 |
 |------|------|------|--------|
 | 1（主） | **理杏仁 API** | 结构化财务报表（非金融/保险/银行/证券四类）、估值与历史分位点（1/5/10年）、总股本/市值 | 默认。`--source lixinger` |
 | 2（副） | **妙想 Skills** (`mx-data`) | 自然语言查询实时行情、财务、股东信息，输出 Excel/JSON | 理杏仁不可用/缺字段时自动回退 |
 | 3（兜底） | **免费源**（东财/巨潮/aastocks/macrotrends 等，见下方表格） | 网页/API 抓取，部分保险报表不可用、GBK 乱码、无分位点 | 前两顺位均失败时兜底 |
+
+### 发布版依赖合同
+
+- 核心离线能力：无需 token，可运行报告框架、样例组合、`financial_rigor.py` 手动验算、`report_audit.py` 和 `md2html.py`。
+- 免费/公开源：东方财富、巨潮、aastocks、Macrotrends、SEC EDGAR 等可作为兜底或人工对照，但受网络与站点变化影响。
+- 私有增强：理杏仁 `LIXINGER_TOKEN`、妙想 mx 系列、Playwright / 雪球爬虫均为可选；缺失时只能降级或提示补配置，不得编造数据。
+- 妙想脚本覆盖：如需直连外部脚本，用 `MX_DATA_SCRIPT`、`MX_SEARCH_SCRIPT`、`MX_XUANGU_SCRIPT` 指定；默认通过 `python tools/lxr_data.py mx-data|mx-search|mx-xuangu ...` 调用。
+- 配置模板：复制 `tools/lxr_config.example.json` 为本地 `tools/lxr_config.json` 后填写；不需要提交真实 token，真实 token 不得进入 git。
 
 ### `_source` 字段统一标注（所有 Skill 必遵）
 
@@ -71,6 +81,7 @@ python tools/financial_rigor.py verify-market-cap --price 510 --shares 9.11e9 --
 
 - token 存放于 `tools/lxr_config.json`（已 gitignore，不入库）；模板见 `tools/lxr_config.example.json`。
 - 也可用环境变量 `LIXINGER_TOKEN` 覆盖。
+- `tools/lxr_config.example.json` 只是模板；普通用户不需要提交真实 token，也不应把真实 token 写入仓库。
 - 缓存落盘于 `tempfile.gettempdir()/lxr_cache/`，TTL 按数据类型分级（行情类短、财报类长）。
 - 速率限制 1000次/分钟、36次/秒，客户端已内置节流与 429/5xx 指数退避重试。
 

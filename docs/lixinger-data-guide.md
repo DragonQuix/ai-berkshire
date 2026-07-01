@@ -5,12 +5,18 @@
 
 ## 一、环境配置
 
-- Token：填写 `tools/lxr_config.json`（不提交 git），模板见 `tools/lxr_config.example.json`。
- 也可用环境变量 `LIXINGER_TOKEN`。codex 副本目录 `codex/ai-berkshire/scripts/tools/`。
-- 妙想脚本路径：默认 `~/.claude/skills/mx-data/mx_data.py`（codex 自动回退 `~/.codex/skills/...`），
- 可用 `MX_DATA_SCRIPT` 覆盖。
+- 安装不要求理杏仁 token。无 token 时，不应把安装或核心离线工具判为安装失败；理杏仁专属命令会降级、跳过或提示补充配置。
+- Token：需要私有增强时，填写本地 `tools/lxr_config.json`（不提交 git），模板见 `tools/lxr_config.example.json`；也可用环境变量 `LIXINGER_TOKEN`。不需要提交真实 token。
+- 妙想脚本路径：默认由 `python tools/lxr_data.py mx-data|mx-search|mx-xuangu ...` 统一解析；如需覆盖外部脚本，使用 `MX_DATA_SCRIPT`、`MX_SEARCH_SCRIPT`、`MX_XUANGU_SCRIPT`。
+- Playwright / 雪球爬虫属于私有增强，只在需要浏览器登录态或雪球时间线时配置；未安装不影响核心离线能力。
 - 缓存：自动落盘 `tempfile.gettempdir()`，财报/估值等 TTL 见各方法。
 - Windows 中文输出：`$env:PYTHONIOENCODING='utf-8'`。
+
+## 一点五、普通用户能力边界
+
+- 核心离线能力：无需 token，可运行报告框架、样例组合、手动估值验算、报告审计和 HTML 转换。
+- 免费/公开源：东方财富、巨潮、aastocks、Macrotrends、SEC EDGAR 等可作为兜底或人工对照，但受网络与站点变化影响。
+- 私有增强：理杏仁 `LIXINGER_TOKEN`、妙想 mx 系列、Playwright / 雪球爬虫均为可选；缺失时只能降级或提示补配置，不得编造数据。
 
 ## 二、CLI 命令速查（`python tools/lxr_data.py <command>`）
 
