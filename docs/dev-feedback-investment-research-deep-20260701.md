@@ -67,7 +67,7 @@
 
 - 内容：9 个团队型 skill 同步增加"Agent 失败诊断与降级记录（必须执行）"小节，明确 `model route not configured`/`timeout`/`permission denied` 三类错误的处理，要求报告附录记录失败 Agent/错误原文/降级方式/影响范围。
 - 评价：**积极有效且覆盖广**。同步覆盖 9 个 skill（investment-team/earnings-team/industry-research 等）而非只改 investment-research，避免了局部修复。本次报告附录 A 完整记录了 Explore Agent 和 exa-1 两项降级（见 §1 E5），Fix#8/B1 实际生效。
-- 改进点：错误原文摘要"只保留必要信息，不写入密钥或本机隐私路径"是好的隐私原则，但没有给出"必要信息"的判定标准。建议补一个示例：`deepseek-v4-flash 路由未配置` 是可保留的模型名，`C:\Users\admin\...` 是必须删除的路径。
+- 改进点：错误原文摘要"只保留必要信息，不写入密钥或本机隐私路径"是好的隐私原则，但没有给出"必要信息"的判定标准。建议补一个示例：`deepseek-v4-flash 路由未配置` 是可保留的模型名，`<本机用户目录>\...` 是必须删除的路径。
 
 ### 2.6 `4568e6f0` fix(lxr): 增加港股行业对比降级路径
 
