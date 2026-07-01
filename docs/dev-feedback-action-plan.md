@@ -248,6 +248,41 @@ python tools\verify_channel_capability.py --quick
 python tools\release_smoke.py
 ```
 
+### P1-D1：release notes 自动生成
+
+状态：已完成（2026-07-01）
+
+目标文件：
+
+- `tools/release_notes.py`
+- `tools/release_smoke.py`
+- `tests/test_release_notes.py`
+- `tests/test_release_smoke.py`
+- `docs/release-notes.md`
+- `docs/ROADMAP.md`
+- `docs/dev-feedback-action-plan.md`
+
+验收点：
+
+- 默认用 `origin/main..HEAD` 生成 Markdown 发布说明，不联网、不依赖私有配置。
+- 按 conventional commit 类型分组，保留 scope 和中文提交摘要。
+- 支持 `--from`、`--to`、`--title`、`--output/-o`、`--max-count`。
+- release smoke 覆盖 dry run，避免发布说明工具退化。
+
+完成记录：
+
+- 新增 `tools/release_notes.py`，输出中文 Markdown release notes。
+- 新增 `tests/test_release_notes.py` 覆盖分组、解析和 `--output` 落盘。
+- `tools/release_smoke.py` 增加 `release notes dry run` 检查。
+- `docs/release-notes.md` 记录维护者生成草稿的使用流程。
+
+验证命令：
+
+```powershell
+python -m pytest tests/test_release_notes.py tests/test_release_smoke.py -q
+python tools\release_smoke.py
+```
+
 ## 5. 反馈入口动作
 
 本次已将“执行 agent 的代码级复盘”从普通 `usage-feedback` 中分离，新增：

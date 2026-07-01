@@ -19,6 +19,7 @@ REQUIRED_CHECKS = {
     "portfolio sample json",
     "README install commands and skill count",
     "Codex package install contract",
+    "release notes dry run",
 }
 
 

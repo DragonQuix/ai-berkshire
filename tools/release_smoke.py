@@ -254,6 +254,27 @@ def check_codex_package_contract(repo: Path) -> CheckResult:
     )
 
 
+def check_release_notes_dry_run(repo: Path) -> CheckResult:
+    completed = _run(
+        [
+            sys.executable,
+            str(repo / "tools" / "release_notes.py"),
+            "--from",
+            "HEAD",
+            "--to",
+            "HEAD",
+            "--title",
+            "release smoke",
+        ],
+        repo,
+    )
+    if completed.returncode != 0:
+        return _fail_from_process("release notes dry run failed", completed)
+    if "# release smoke" not in completed.stdout or "没有发现提交" not in completed.stdout:
+        return CheckResult(False, "release notes dry run output missing expected markers")
+    return CheckResult(True, "release_notes.py can render Markdown without commits")
+
+
 def build_checks(repo: Path) -> list[Check]:
     repo = repo.resolve()
     return [
@@ -274,6 +295,7 @@ def build_checks(repo: Path) -> list[Check]:
             "Codex package install contract",
             lambda: check_codex_package_contract(repo),
         ),
+        Check("release notes dry run", lambda: check_release_notes_dry_run(repo)),
     ]
 
 
