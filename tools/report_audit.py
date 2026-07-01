@@ -256,6 +256,15 @@ def sample_points(points: list, ratio: float = 0.15, seed: int = None) -> list:
 _TOLERANCE = 0.02   # 2% 容差（与 financial-data.md / plan-skill-enhancement §4.3 一致）
 
 
+def _write_json_output(path: str, payload: dict) -> None:
+    directory = os.path.dirname(os.path.abspath(path))
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
+
 def _to_numeric(value):
     """安全转为 float；日期、文本、评级等非数值返回 None。"""
     if value is None:
@@ -559,6 +568,7 @@ def main():
       {"id":1,"label":"营业收入","reported_value":7518,"unit":"亿","fetched_value":7518,"fetched_source":"macrotrends","fetched_value2":7500,"fetched_source2":"stockanalysis"},
       ...
     ]'
+    python3 tools/report_audit.py verdict --results '[...]' -o _tmp_verdict.json
 
   一步预览（只打印抽检清单，不核验）：
     python3 tools/report_audit.py extract --report reports/xxx.md --dry-run
@@ -583,6 +593,7 @@ def main():
     vrd = sub.add_parser('verdict', help='根据核验结果输出准出/打回判决')
     vrd.add_argument('--results', required=True, help='JSON 数组，含 fetched_value 等字段')
     vrd.add_argument('--report', default='', help='报告名称（可选，用于显示）')
+    vrd.add_argument('-o', '--output', help='将判决结果 JSON 写入文件')
     vrd.add_argument('--output-json', action='store_true', help='将判决结果以 JSON 输出到 stdout')
 
     args = parser.parse_args()
@@ -649,6 +660,10 @@ def main():
 
         report_name = args.report or ''
         outcome = render_verdict(results, report_name=report_name)
+
+        if args.output:
+            _write_json_output(args.output, outcome)
+            print(f'判决 JSON 已写入: {args.output}', file=sys.stderr)
 
         if args.output_json:
             print(json.dumps(outcome, ensure_ascii=False, indent=2))

@@ -319,6 +319,43 @@ python -m pytest tests/test_report_audit.py -q
 python tools\verify_channel_capability.py --quick
 ```
 
+### P1-E2：`report_audit verdict` 可复现输出
+
+状态：已完成（2026-07-01）
+
+来源反馈：
+
+- `docs/dev-feedback-investment-research-deep-20260701.md` §3.2。
+- `report_audit.py verdict` 只把 JSON 结果混在 stdout 人类日志之后输出，主 Agent 需要清洗日志头和 ANSI 颜色码才能拿到可机器解析结果。
+
+目标文件：
+
+- `tools/report_audit.py`
+- `codex/ai-berkshire/scripts/tools/report_audit.py`
+- `tests/test_report_audit.py`
+- `docs/ROADMAP.md`
+- `docs/dev-feedback-action-plan.md`
+
+验收点：
+
+- `python tools/report_audit.py verdict --results ... -o _tmp_verdict.json` 直接写入纯 JSON 判决文件。
+- stdout 继续保留人类可读准出/打回摘要，stderr 只写落盘提示。
+- 输出文件使用 UTF-8 和 LF 行尾，便于后续 Agent/CI 直接读取。
+
+完成记录：
+
+- verdict CLI 新增 `-o/--output`。
+- 新增 `_write_json_output()`，自动创建父目录并写出 UTF-8/LF JSON。
+- `tests/test_report_audit.py` 覆盖 `-o` 落盘、JSON 可解析和 verdict 字段。
+- root 工具与 Codex bundled 副本已同步。
+
+验证命令：
+
+```powershell
+python -m pytest tests/test_report_audit.py -q
+python tools\verify_channel_capability.py --quick
+```
+
 ## 5. 反馈入口动作
 
 本次已将“执行 agent 的代码级复盘”从普通 `usage-feedback` 中分离，新增：
@@ -362,7 +399,7 @@ python tools\verify_channel_capability.py --quick
 按准出摩擦优先级排序，详见 `docs/dev-feedback-investment-research-deep-20260701.md` §3 与 §5：
 
 - **P1-E1**：`report_audit` 单位归一化（§3.1）——extract 保留 unit 但 verdict 不归一化，fetched_value 单位错配触发 9900% 假偏差。目标 `tools/report_audit.py`，加 `report_unit`/`fetched_unit` 字段与已知换算归一化。=> 已完成。
-- **P1-E2**：`report_audit` CLI `-o/--output`（§3.2）——verdict stdout 混日志头需清洗。参考 `lxr_data.py datapack -o`。
+- **P1-E2**：`report_audit` CLI `-o/--output`（§3.2）——verdict stdout 混日志头需清洗。参考 `lxr_data.py datapack -o`。=> 已完成。
 - **P1-E3**：`report_audit` verdict `caliber_ack` 通道（§3.4）——已知口径差异占警告额度，缺认可通道。
 - **P2-E4**：港股 `--no-mx` 路径透 alternatives（§3.5）——文档示例路径的覆盖盲点。
 - **P2-E5**：口径列覆盖率检查（§3.3）——让"所有核心数据表"从软约束变机器检查。

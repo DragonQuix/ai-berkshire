@@ -335,6 +335,43 @@ def test_cli_verdict_exit_code_reflects_pass_or_fail() -> None:
     assert "打回" in fail_proc.stdout
 
 
+def test_cli_verdict_writes_pure_json_output_file(tmp_path: Path) -> None:
+    output = tmp_path / "verdict.json"
+    results = [{
+        "id": 1,
+        "label": "MAU",
+        "reported_value": 14.3,
+        "unit": "亿",
+        "fetched_value": 1430,
+        "fetched_unit": "百万",
+        "fetched_source": "annual-report",
+    }]
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "report_audit.py"),
+            "verdict",
+            "--results",
+            json.dumps(results, ensure_ascii=False),
+            "-o",
+            str(output),
+        ],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert "准出" in proc.stdout
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert payload["verdict"] == "PASS"
+    assert payload["pass_count"] == 1
+    assert payload["fail_count"] == 0
+
+
 def test_codex_copy_matches_root_report_audit_tool() -> None:
     root = (REPO / "tools" / "report_audit.py").read_text(encoding="utf-8")
     codex = (
