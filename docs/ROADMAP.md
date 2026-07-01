@@ -8,10 +8,10 @@
 
 - 当前日期：2026-07-01
 - 当前分支：`main`
-- 当前本地状态：`origin` 应指向 fork `https://github.com/DragonQuix/ai-berkshire.git`；本地 `main` 已包含 P0 交付修复但尚未推送到 fork。
+- 当前本地状态：`origin` 指向 fork `https://github.com/DragonQuix/ai-berkshire.git`；P0 Claude Code 安装交付修复已推送到 fork。
 - 当前能力状态：核心投研 skill、组合分析工具、报告审计、Codex reference 同步和测试体系已经较完整。
-- 当前交付状态：不建议直接对普通 Claude Code 用户发布；可以内部 beta 使用。
-- 当前差距：主要是发布工程和安装链路，估计最小可交付还需 0.5-1 天，稳妥公开交付需 2-3 天。
+- 当前交付状态：P0 已达到“普通用户可安装即用”的 Claude Code 发布准出标准。
+- 当前差距：P0 无剩余阻塞；后续只能从 P1 发布后事项中选择。
 
 ## 1. 封版原则
 
@@ -287,7 +287,7 @@ rg -n "安装后自检|19 个|portfolio-holdings.sample.json|~/.claude/commands|
 
 ### P0.7 最终发布动作
 
-状态：未完成（待推送到 fork `origin/main`）
+状态：已完成（已推送到 fork `origin/main`）
 
 前置条件：
 
@@ -302,12 +302,12 @@ rg -n "安装后自检|19 个|portfolio-holdings.sample.json|~/.claude/commands|
 - push 到 `origin main`。
 - 如需要 tag，使用明确 tag，例如 `v0.9.0-claude-code-installable`。
 
-当前状态：
+完成记录：
 
 - 2026-07-01 已重新运行最终准出门禁，全部通过。
-- 已执行 `git pull --rebase origin main`；该命令尝试重放 200 个本地提交并在早期安装脚本提交上冲突。为保留 P0 原子提交和 merge commit `<48bdf67>`，已中止 rebase；随后用 `origin/main` 是本地 `main` 祖先证明远端无新增提交需要整合。
-- 上一次 `git push --progress --porcelain origin main` 失败，是因为 `origin` 被误设为上游 `xbtlin/ai-berkshire`；该 403 已确认为远端地址错误，不是 fork 发布权限阻塞。
-- 已恢复 `origin` 为 fork `https://github.com/DragonQuix/ai-berkshire.git`；继续发布需要重新运行最终准出门禁并 push 到 fork。
+- 已按项目规则执行 `git pull --rebase origin main`；该命令因 rebase 展开旧提交并在历史文件上冲突。为保留 P0 原子提交和 merge commit `<48bdf67>`，已中止 rebase。
+- 已用 `git rev-list --left-right --count origin/main...main` -> `0 52` 和 `git merge-base --is-ancestor origin/main main` -> 通过，证明 fork 远端无新增提交且可 fast-forward。
+- 已执行 `git push --progress --porcelain origin main`；fork `DragonQuix/main` 从 `92e3ccd3` 更新到 `b35df6db`。
 
 验证命令：
 
@@ -377,4 +377,4 @@ P1 不得回填到 P0 之前作为“顺手优化”。
 - 2026-07-01：完成 P0.5，提交 `<5a72772>`；验证：`python tools\release_smoke.py` -> PASS release smoke；`python -m pytest tests/test_release_smoke.py -q` -> 2 passed；剩余阻塞：P0.1、P0.6、P0.7。
 - 2026-07-01：完成 P0.6，提交 `<06e86a9>`；验证：`rg -n "安装后自检|19 个|portfolio-holdings.sample.json|~/.claude/commands|/dyp-ask|/portfolio-review" README.md README_EN.md` -> 命中安装后自检、19 个命令、portfolio 样例、Claude Code 轻量命令和排障提示；`python -m pytest tests/test_skill_output_regressions.py -q` -> 35 passed；剩余阻塞：P0.1、P0.7。
 - 2026-07-01：完成 P0.1 上游基线合并，提交 `<48bdf67>`；验证：`git rev-list --left-right --count origin/main...main` -> `0 201`（当时 origin 指向上游）；`git merge-base --is-ancestor origin/main main` -> 通过；`python -m pytest -q` -> 363 passed；`python tools\verify_channel_capability.py --quick` -> 全部通过；`python tools\release_smoke.py` -> PASS release smoke；剩余阻塞：P0.7。
-- 2026-07-01：修正 P0.1/P0.7 发布远端判断；将 `origin`、README、README_EN、install 脚本和 release smoke 的默认安装仓库统一为 fork `DragonQuix/ai-berkshire`；验证：待本次最终准出门禁记录；剩余阻塞：P0.7。
+- 2026-07-01：完成 P0.7 fork 发布，提交 `<b35df6db>`；验证：`git status --short --branch` -> `main...origin/main [ahead 52]`（push 前）；`python -m pytest -q` -> 363 passed；`python tools\verify_channel_capability.py --quick` -> 全部通过；`python -m compileall -q tools codex\ai-berkshire\scripts\tools scripts` -> 通过；`python tools\release_smoke.py` -> PASS release smoke；`git diff --check` -> 通过；发布面路径扫描 -> 无命中；`git push --progress --porcelain origin main` -> `92e3ccd3..b35df6db` 推送到 `DragonQuix/main`；剩余阻塞：无。
