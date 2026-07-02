@@ -28,6 +28,7 @@ LEGACY_SKILL_COUNT_PATTERNS = [
 ]
 
 CODEX_REQUIRED_TOOL_FILES = [
+    "cycle_pe_trap.py",
     "financial_rigor.py",
     "report_audit.py",
     "portfolio_analyzer.py",

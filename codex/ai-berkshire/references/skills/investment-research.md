@@ -272,6 +272,17 @@ python tools/financial_rigor.py three-scenario \
 `--growth` 推荐使用小数格式（例如 `0.30 0.15 -0.05`）。若误填 `30 15 -5`，工具会自动转为 `0.30/0.15/-0.05` 并在 stderr 警告；报告中必须保留最终使用口径。
 - 与自身历史估值对比
 - 与同行估值对比
+- 周期行业额外检查：若公司属于油气/煤炭/钢铁/航运/券商，必须运行周期顶部 PE 陷阱检测器，避免把周期顶部盈利造成的低 PE 误判为安全边际。示例：
+```bash
+python tools/cycle_pe_trap.py \
+  --industry "油气" \
+  --pe-percentile {PE十年分位百分数} \
+  --net-profit '[近5年归母净利润序列]' \
+  --revenue '[近5年营收序列]' \
+  --commodity-price {油价/煤价/钢价/运价/市场成交景气指标} \
+  --format json
+```
+若输出 `cycle_position=top` 且 `risk_level=high`，报告必须在估值节标注「周期顶部 PE 陷阱」，并用更低中枢 PE、归一化盈利或压力情景复核安全边际。
 
 **段永平式追问**：如果股市明天关闭5年，你愿意以这个价格持有吗？
 

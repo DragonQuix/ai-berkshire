@@ -39,6 +39,7 @@ def test_release_smoke_declares_p0_5_checks() -> None:
     check_names = {check.name for check in checks}
 
     assert REQUIRED_CHECKS <= check_names
+    assert "cycle_pe_trap.py" in module.CODEX_REQUIRED_TOOL_FILES
 
 
 def test_release_smoke_cli_passes_from_repo_root() -> None:

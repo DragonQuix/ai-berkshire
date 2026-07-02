@@ -697,6 +697,7 @@ python tools\verify_channel_capability.py --quick
 | P2-F11 datapack TTL 使用说明 | 已完成 | `/investment-research` 第〇步要求读取 `_generated_at`、`_ttl_seconds`、`_expires_at` 并在超过 `_expires_at` 时重新拉取 datapack |
 | P2-F12 长报告 heredoc 防错说明 | 已完成 | `/investment-research` 输出要求补充“长报告分段写入先写临时文件，再追加到正式报告”，避免 heredoc 定界符冲突 |
 | P3-F13 Edit 行尾冲突处理说明 | 已完成 | `/investment-research` 输出要求补充 `File has been modified since read` 时先重新读取目标行区域，避免覆盖行尾归一化后的新内容 |
+| P2-F14 周期顶部 PE 陷阱检测器 | 已完成 | 新增 `tools/cycle_pe_trap.py`，覆盖油气/煤炭/钢铁/航运/券商五类周期行业；`/investment-research` 估值节要求周期行业运行该工具并在高风险时标注「周期顶部 PE 陷阱」 |
 
 ## 9. 二次验证跟踪字段
 
@@ -731,3 +732,4 @@ python tools\verify_channel_capability.py --quick
 | P2-F11 | 已自动回归，待真实运行验证 | `tests/test_skill_output_regressions.py`：`/investment-research` 已要求检查 `_generated_at`、`_ttl_seconds`、`_expires_at` 并在超过 `_expires_at` 时重新拉取 datapack |
 | P2-F12 | 已自动回归，待真实运行验证 | `tests/test_skill_output_regressions.py`：`/investment-research` 已要求长报告分段写入时先写临时文件、再追加到正式报告，避免 heredoc 冲突 |
 | P3-F13 | 已自动回归，待真实运行验证 | `tests/test_skill_output_regressions.py`：`/investment-research` 已记录 `File has been modified since read` 时重新读取目标行区域，避免行尾归一化冲突 |
+| P2-F14 | 已自动回归，待真实运行验证 | `tests/test_cycle_pe_trap.py`：油气低 PE、盈利近峰值、油价高位场景输出 `cycle_position=top` 与 `risk_level=high`；`tests/test_skill_output_regressions.py`：`/investment-research` 已接入 `cycle_pe_trap.py` |

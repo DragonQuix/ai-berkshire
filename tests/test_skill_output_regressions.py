@@ -296,6 +296,15 @@ DEEP_AUDIT_DEPTH_SNIPPETS = [
     "不再 30 点封顶",
 ]
 
+CYCLE_PE_TRAP_SNIPPETS = [
+    "cycle_pe_trap.py",
+    "周期顶部 PE 陷阱",
+    "油气/煤炭/钢铁/航运/券商",
+    "--pe-percentile",
+    "--net-profit",
+    "--commodity-price",
+]
+
 INVESTMENT_RESEARCH_WORKFLOW_GUARDRAILS = [
     "_generated_at",
     "_ttl_seconds",
@@ -467,6 +476,13 @@ def test_investment_research_documents_deep_audit_depth() -> None:
         text = read_text(rel_path)
         for snippet in DEEP_AUDIT_DEPTH_SNIPPETS:
             assert snippet in text, f"{rel_path} missing deep audit depth contract {snippet!r}"
+
+
+def test_investment_research_documents_cycle_pe_trap_detector() -> None:
+    for rel_path in skill_channels("investment-research.md"):
+        text = read_text(rel_path)
+        for snippet in CYCLE_PE_TRAP_SNIPPETS:
+            assert snippet in text, f"{rel_path} missing cycle PE trap detector contract {snippet!r}"
 
 
 def test_investment_research_documents_workflow_guardrails() -> None:
