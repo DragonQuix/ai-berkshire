@@ -685,6 +685,16 @@ python tools\verify_channel_capability.py --quick
 | P3-F6 deep 档抽检点数量下限自适应 | 已完成 | `report_audit extract --depth deep` 默认 25% 抽样、至少 30 点且不再 30 点封顶；`/investment-research` deep 档文档已改用该参数 |
 | P3-F7 datapack `_generated_at` TTL 可观测 | 已完成 | datapack 顶层新增 `_generated_at`/`_ttl_seconds`/`_expires_at`，缓存命中保留原始生成时间 |
 
+### 8.2 第四次运行反馈处置（来自中国海油港股 deep 档）
+
+来源：`docs/dev-feedback-investment-research-deep-20260702.md`。本次反馈作为港股 A+H 油气资源股场景的真实运行验证处理，优先修复会制造准出摩擦或口径误导的三项问题。
+
+| 反馈项 | 处置 | 说明 |
+|---|---|---|
+| P1-F8 港股油气/贸易类 `toi/npatoshopc` 口径提示 | 已完成 | 港股非金融 `caliber_metadata` notes 增加资源、油气或贸易类公司提示，说明 `toi` 可能含贸易业务全额、`npatoshopc` 可能含权益法被投资实体份额，EPS/PE 等关键计算建议以年报披露口径为准 |
+| P1-F9 `extract` 口径列内嵌数字误匹配 | 已完成 | Markdown 表格解析跳过 `口径/来源/source/caliber` 列中的数字，避免把“10年分位”“2025 年报”“同比 -2.0%”误当作主值 |
+| P1-F10 定性评级表口径列误报 | 已完成 | 口径列覆盖率检查排除无财务单位的 `结论/信心度/评级/评分` 类定性评估表，同时不再抽取这类评分列为数据点 |
+
 ## 9. 二次验证跟踪字段
 
 本节用于区分「代码/文档已修复并通过自动回归」与「已在真实技能完整运行中二次验证」。后续每次完整运行产生新的 dev-feedback 文件时，应回填对应行；未真实运行验证的项必须标记「待补」，不得用单元测试结果冒充真实运行闭环。
@@ -712,3 +722,6 @@ python tools\verify_channel_capability.py --quick
 | P2-F5 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260702.md` §0/§2.3.3：Explore × 2 失败独立捕获并记录附录 A，符合"每次派发独立捕获"规范 |
 | P3-F6 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260702.md` §0/§2.3.4：37 个数据点按 25% 实抽 37 点，不再 30 点封顶 |
 | P3-F7 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260702.md` §0/§2.3.5：datapack 顶层含 `_generated_at`，可判断缓存是否过期 |
+| P1-F8 | 已自动回归，待真实运行验证 | `tests/test_lxr_data.py`：港股非金融 `caliber_metadata` notes 覆盖贸易、权益法和年报披露口径提示；待下一次港股油气/贸易类真实运行回填 |
+| P1-F9 | 已自动回归，待真实运行验证 | `tests/test_report_audit.py`：含 `口径/来源` 列的 PE、股息率、桶油作业费、派息率表不再误抽 10/2025/-2 等描述数字；待下一次 deep 抽检回填 |
+| P1-F10 | 已自动回归，待真实运行验证 | `tests/test_report_audit.py`：护城河/信心度类定性评级表不触发口径列警告且不抽取评分列；待下一次真实报告抽检回填 |

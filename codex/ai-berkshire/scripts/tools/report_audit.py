@@ -132,6 +132,10 @@ _CORE_TABLE_KEYWORD_RE = re.compile(
 _NON_CORE_TABLE_HEADER_RE = re.compile(r'(触发条件|自查|修正动作|应对|情景|路径|概率|偏误|压力测试)', re.I)
 _NON_AUDITABLE_TABLE_HEADER_RE = re.compile(r'(触发条件|自查项|修正动作|应对|路径|概率)', re.I)
 _CALIBER_HEADER_RE = re.compile(r'(口径|来源|source|caliber)', re.I)
+_QUALITATIVE_VALUE_HEADER_RE = re.compile(r'(结论|信心度|评级|评分|星级|分数|等级)', re.I)
+_FINANCIAL_VALUE_RE = re.compile(
+    rf'{_SIGNED_NUM}\s*(亿[元美港]?元?|万亿|[xX倍]|%|[BMT]|美元|港元|元)'
+)
 
 
 def _split_table_cells(line: str) -> list:
@@ -145,6 +149,8 @@ def _table_has_core_metric(headers: list, row_lines: list) -> bool:
     header_text = ' '.join(headers)
     if _NON_CORE_TABLE_HEADER_RE.search(header_text):
         return False
+    if _table_is_qualitative_assessment(headers, row_lines):
+        return False
     haystack = ' '.join(headers + row_lines)
     return bool(_CORE_TABLE_KEYWORD_RE.search(haystack))
 
@@ -156,6 +162,17 @@ def _table_has_caliber_header(headers: list) -> bool:
 def _table_should_skip_extraction(headers: list) -> bool:
     header_text = ' '.join(headers)
     return bool(_NON_AUDITABLE_TABLE_HEADER_RE.search(header_text))
+
+
+def _table_is_qualitative_assessment(headers: list, row_lines: list) -> bool:
+    header_text = ' '.join(headers)
+    if not _QUALITATIVE_VALUE_HEADER_RE.search(header_text):
+        return False
+    return not _FINANCIAL_VALUE_RE.search(' '.join(row_lines))
+
+
+def _table_column_should_skip_numbers(header: str) -> bool:
+    return bool(_CALIBER_HEADER_RE.search(header) or _QUALITATIVE_VALUE_HEADER_RE.search(header))
 
 
 def _caliber_warning_ranges(lines: list) -> list:
@@ -222,6 +239,8 @@ def _parse_md_tables(lines: list) -> list:
                     row_label = cells[0]
                     for col_idx, cell in enumerate(cells[1:], start=1):
                         col_header = headers_raw[col_idx] if col_idx < len(headers_raw) else f'列{col_idx}'
+                        if _table_column_should_skip_numbers(col_header):
+                            continue
                         # 提取 cell 中的数字+单位
                         m = re.search(
                             rf'[~约]?\$?({_SIGNED_NUM})\s*(亿[元美港]?元?|万亿|[xX倍]|%|[BMT])?',

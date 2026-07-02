@@ -135,6 +135,14 @@ class TestEndpointRouting(unittest.TestCase):
         self.assertEqual(meta["fields"]["q.ps.toi.t"]["caliber"], "营业总收入")
         self.assertIn("年报“收益”", "\n".join(meta["notes"]))
 
+    def test_hk_non_financial_caliber_metadata_warns_oil_trade_and_equity_method(self):
+        meta = lxd._financial_caliber_metadata("hk", "non_financial")
+        notes = "\n".join(meta["notes"])
+
+        self.assertIn("贸易", notes)
+        self.assertIn("权益法", notes)
+        self.assertIn("年报披露口径", notes)
+
     def test_financials_lixinger_insurance_caliber_metadata_uses_oi(self):
         cli = FakeClient({
             "cn/company/fs/insurance": [[{"date": "2025-12-31", "q": {}}]],

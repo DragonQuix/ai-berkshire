@@ -102,6 +102,43 @@ def test_extract_data_points_does_not_flag_core_table_with_caliber_source_column
     assert all(not p.get("caliber_column_warning") for p in points)
 
 
+def test_extract_data_points_ignores_numbers_inside_caliber_source_column() -> None:
+    text = """# 估值核验
+
+| 指标 | 数值 | 口径/来源 |
+|---|---:|---|
+| PE-TTM | 7.54x | lixinger pe_ttm，10年分位 47.4% |
+| 股息率 | 5.8% | lixinger dyr，10年分位 62.9% |
+| 桶油作业费 | 7.83美元/桶 | 2025 年报，同比 -2.0% |
+| 派息率 | 43.6% | 2025 年报 |
+"""
+
+    points = audit.extract_data_points(text)
+    labels = {p["label"]: p for p in points}
+
+    assert labels["PE-TTM · 数值"]["reported_value"] == 7.54
+    assert labels["股息率 · 数值"]["reported_value"] == 5.8
+    assert labels["桶油作业费 · 数值"]["reported_value"] == 7.83
+    assert labels["派息率 · 数值"]["reported_value"] == 43.6
+    assert all("口径/来源" not in p["label"] for p in points)
+    assert all(p["reported_value"] not in (10.0, 2025.0, -2.0) for p in points)
+
+
+def test_extract_data_points_does_not_flag_qualitative_rating_tables() -> None:
+    text = """# 护城河定性评估
+
+| 维度 | 结论 | 信心度 |
+|---|---|---:|
+| 估值纪律 | PE 低但可能是周期顶部 | 4/5 |
+| 现金流质量 | 自由现金流稳定 | 3/5 |
+"""
+
+    points = audit.extract_data_points(text)
+
+    assert all(not p.get("caliber_column_warning") for p in points)
+    assert all("信心度" not in p["label"] for p in points)
+
+
 def test_extract_data_points_skips_stress_or_bias_tables_as_non_auditable_data() -> None:
     text = """# 压力测试
 

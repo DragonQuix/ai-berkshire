@@ -169,6 +169,15 @@ def _financial_caliber_metadata(market: str, report_type: str) -> dict:
         if report_type == "insurance"
         else "toi=营业总收入；年报“收益”可能按披露口径包含或剔除特定业务，需要逐项核对。"
     )
+    notes = [
+        revenue_note,
+        "跨来源比较必须同时保留字段口径、币种和单位；无法确认同口径时使用 cross-validate --caliber 标注。",
+    ]
+    if market == "hk" and report_type == "non_financial":
+        notes.append(
+            "港股资源、油气或贸易类公司需额外核对年报披露口径：toi 可能含贸易业务全额，"
+            "npatoshopc 可能含权益法被投资实体份额；EPS/PE 等关键计算建议以年报披露口径为准。"
+        )
     fields = {}
     for key, item in FINANCIAL_FIELD_CALIBERS.items():
         fields[key] = {
@@ -184,10 +193,7 @@ def _financial_caliber_metadata(market: str, report_type: str) -> dict:
         "currency": currency,
         "unit": "raw_yuan",
         "fields": fields,
-        "notes": [
-            revenue_note,
-            "跨来源比较必须同时保留字段口径、币种和单位；无法确认同口径时使用 cross-validate --caliber 标注。",
-        ],
+        "notes": notes,
     }
 
 _SKIP_INTEREST_COVERAGE = frozenset({"bank", "insurance", "security", "other_financial"})
