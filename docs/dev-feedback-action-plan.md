@@ -704,11 +704,11 @@ python tools\verify_channel_capability.py --quick
 | P1-E3 | 已三次验证 | `docs/dev-feedback-investment-research-deep-20260701-xinhua.md` §0：4 个基准日差异点用 `caliber_ack + caliber_note` 认可 |
 | P2-E4 | 已三次验证 | `docs/dev-feedback-investment-research-deep-20260701-xinhua.md` §0：`industry-compare 00700 --no-mx` 透出 alternatives |
 | P2-E5 | 已三次验证但发现误报 | `docs/dev-feedback-investment-research-deep-20260701-xinhua.md` §0/§3.2：口径列检查生效但过度匹配，后续由 P1-F2 修复 |
-| P2-E6 | 待港股真实运行验证 | 当前已有自动回归；新华保险为 A 股，仅确认测试覆盖而非港股真实运行触发 |
-| P1-F1 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py::test_cli_extract_output_writes_clean_json_file -q`；等待下一次完整报告运行回填 |
-| P1-F2 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py -q`；等待下一次完整报告运行回填 |
-| P1-F3 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_lxr_data.py::TestEndpointRouting::test_financials_lixinger_insurance_caliber_metadata_uses_oi tests/test_skill_output_regressions.py::test_financial_caliber_metadata_contracts_are_documented -q`；等待下一次完整报告运行回填 |
-| P2-F4 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py::test_extract_data_points_skips_stress_or_bias_tables_as_non_auditable_data tests/test_report_audit.py::test_extract_data_points_skips_misaligned_table_rows_instead_of_guessing_columns -q`；等待下一次完整报告运行回填 |
-| P2-F5 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_skill_output_regressions.py::test_task_agent_degradation_contracts_are_documented -q`；等待下一次完整报告运行回填 |
-| P3-F6 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_report_audit.py::test_cli_extract_deep_depth_uses_adaptive_sample_count tests/test_skill_output_regressions.py::test_investment_research_documents_deep_audit_depth -q`；等待下一次完整报告运行回填 |
-| P3-F7 | 已自动回归，待真实运行验证 | 当前已有自动回归：`python -m pytest tests/test_lxr_data.py::test_datapack_exposes_generated_at_and_ttl_observability tests/test_lxr_data.py::test_datapack_preserves_generated_at_and_ttl_on_cache_hit -q`；等待下一次完整报告运行回填 |
+| P2-E6 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260702.md` §0/§2.2.9：港股 00883 datapack 财报正常获取，年报 reportType 识别正确 |
+| P1-F1 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260702.md` §0/§2.3.1：`extract --depth deep -o _tmp_extract.json` 直接落盘纯 JSON，无需切片清洗 |
+| P1-F2 | 已二次验证但发现残留误报 | `docs/dev-feedback-investment-research-deep-20260702.md` §0/§2.3.2/§3.3：含信号词表（压力测试/偏误自查）已跳过；但定性评级表（护城河评估/决策汇总/同业对比）表头不含信号词仍误报，约 15 个元数据警告属此类，需补充数值行二次确认 |
+| P1-F3 | 已二次验证（非保险股场景） | `docs/dev-feedback-investment-research-deep-20260702.md` §0：本次非保险股未直接触发，但文档已统一 oi/toi 说明 |
+| P2-F4 | 已二次验证但发现相邻问题 | `docs/dev-feedback-investment-research-deep-20260702.md` §0/§3.2：无非可审计表误抽；但 extract 口径列单元格内嵌数字误匹配是相邻新问题，PE/股息率/桶油作业费/派息率 4 点本不应进入认可通道 |
+| P2-F5 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260702.md` §0/§2.3.3：Explore × 2 失败独立捕获并记录附录 A，符合"每次派发独立捕获"规范 |
+| P3-F6 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260702.md` §0/§2.3.4：37 个数据点按 25% 实抽 37 点，不再 30 点封顶 |
+| P3-F7 | 已二次验证 | `docs/dev-feedback-investment-research-deep-20260702.md` §0/§2.3.5：datapack 顶层含 `_generated_at`，可判断缓存是否过期 |

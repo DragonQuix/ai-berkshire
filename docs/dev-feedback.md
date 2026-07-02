@@ -76,5 +76,7 @@
 ```md
 - 2026-07-01：`/investment-research 泡泡玛特`（standard）；结果 mixed；识别工具容错、口径与可观测性问题；原始反馈见 `docs/dev-feedback-investment-research.md`；核查后方案见 `docs/dev-feedback-action-plan.md`。
 - 2026-07-01：`/investment-research 腾讯控股`（deep，commit `1ae451ce`）；结果 usable-with-warnings；作为 `20ea36d9` 后 9 个修复提交的二次运行验证，确认 E1/E6/E7/E8/E9 修复生效，新发现 report_audit 单位陷阱（§3.1）、verdict 缺口径认可通道（§3.4）、港股 `--no-mx` 路径 alternatives 缺失（§3.5）；原始反馈见 `docs/dev-feedback-investment-research-deep-20260701.md`。
+- 2026-07-01：`/investment-research 新华保险A股`（deep，commit `69d675c5`）；结果 usable；作为第三次运行验证腾讯反馈 E10/E11/E12/E13 修复，6 项中 5 项完全生效，1 项（E12 口径列检查）过度匹配 60% 误报；新发现 extract 仍不支持 `-o`、口径列检查过度匹配、保险股 oi/toi 口径不一致；原始反馈见 `docs/dev-feedback-investment-research-deep-20260701-xinhua.md`。
+- 2026-07-02：`/investment-research 中国海油`（港股 00883，deep，commit `6d134c87`）；结果 usable；作为第四次运行验证新华反馈 F1-F7 修复，7 项中 6 项完全生效（F1 extract `-o` 落盘体感提升最大、F6 抽检自适应 37 点、F7 datapack `_generated_at`），1 项（F2 口径列检查）部分生效（含信号词表已跳过，但定性评级表仍误报）；新发现港股 A+H 油气股 `toi/npatoshopc` 含权益法 11% 口径冲突、extract 口径列内嵌数字误匹配（PE/股息率/桶油作业费/派息率 4 点本不应进入认可通道）、F2 定性评级表误报约 15 个；原始反馈见 `docs/dev-feedback-investment-research-deep-20260702.md`。
 ```
 
