@@ -59,6 +59,8 @@ python tools/lxr_data.py datapack {code} --years 5 -o _tmp_{code}_datapack.json
 
 主 Agent 随后读取 `_tmp_{code}_datapack.json`，从 `sections.financials/valuation/verify_inputs/...` 中取数；不要用 `glob datapack_*.json` 猜缓存文件名。若只想看 stdout，可省略 `-o`。财报字段必须同时读取 `sections.financials.caliber_metadata` 或顶层 `caliber_metadata.financials`，保留非保险股 `toi=营业总收入`、保险股用 `oi=营业收入`、年报“收益”差异、币种和单位信息。
 
+读取 datapack 后先检查顶层 `_generated_at`、`_ttl_seconds` 与 `_expires_at`：若当前时间超过 `_expires_at`，或 `_ttl_seconds` 为 0 且本次不是刚生成文件，必须重新拉取 datapack，避免跨会话复用过期行情、估值或资讯。缓存命中时 `_generated_at` 保留原始生成时间，不要把当前读取时间当作数据新鲜度证据。
+
 或按维度分拆（理杏仁为主，妙想补 tick/资讯；单次研究约 5–8 次理杏仁 + 2 次 MX）：
 
 | 维度 | 命令 / 渠道 | `_source` 标注 |
@@ -308,6 +310,11 @@ python tools/financial_rigor.py three-scenario \
 7. **报告开头**必须包含"信息丰富度评级"（A/B/C）和"AI研究局限性声明"
 8. **报告结尾**必须区分"AI分析置信度"与"投资确定性"——前者取决于资料量，后者取决于生意本质。明确告知读者：本报告的哪些结论基于充分数据，哪些基于有限信息的推理
 9. 如果公司属于C级（信息稀缺），报告末尾必须列出"需要一手验证的问题清单"——建议读者通过田野调查、产品体验、供应链访谈等方式补充AI的盲区
+
+### 报告写入工作流防错
+
+- 长报告分段写入时，优先先写临时文件（如 `_tmp_part3.md`），确认内容完整后再追加到正式报告，避免 heredoc 遇到撇号、反引号或定界符冲突导致 `unexpected EOF`。
+- 如果编辑器或工具返回 `File has been modified since read`，不要覆盖写入；先重新读取目标行区域，再基于最新内容重试。常见原因是行尾归一化、格式化器或 linter 在后台改写了文件。
 
 ## 数据抽检（准出流程）
 

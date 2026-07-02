@@ -694,6 +694,9 @@ python tools\verify_channel_capability.py --quick
 | P1-F8 港股油气/贸易类 `toi/npatoshopc` 口径提示 | 已完成 | 港股非金融 `caliber_metadata` notes 增加资源、油气或贸易类公司提示，说明 `toi` 可能含贸易业务全额、`npatoshopc` 可能含权益法被投资实体份额，EPS/PE 等关键计算建议以年报披露口径为准 |
 | P1-F9 `extract` 口径列内嵌数字误匹配 | 已完成 | Markdown 表格解析跳过 `口径/来源/source/caliber` 列中的数字，避免把“10年分位”“2025 年报”“同比 -2.0%”误当作主值 |
 | P1-F10 定性评级表口径列误报 | 已完成 | 口径列覆盖率检查排除无财务单位的 `结论/信心度/评级/评分` 类定性评估表，同时不再抽取这类评分列为数据点 |
+| P2-F11 datapack TTL 使用说明 | 已完成 | `/investment-research` 第〇步要求读取 `_generated_at`、`_ttl_seconds`、`_expires_at` 并在超过 `_expires_at` 时重新拉取 datapack |
+| P2-F12 长报告 heredoc 防错说明 | 已完成 | `/investment-research` 输出要求补充“长报告分段写入先写临时文件，再追加到正式报告”，避免 heredoc 定界符冲突 |
+| P3-F13 Edit 行尾冲突处理说明 | 已完成 | `/investment-research` 输出要求补充 `File has been modified since read` 时先重新读取目标行区域，避免覆盖行尾归一化后的新内容 |
 
 ## 9. 二次验证跟踪字段
 
@@ -725,3 +728,6 @@ python tools\verify_channel_capability.py --quick
 | P1-F8 | 已自动回归，待真实运行验证 | `tests/test_lxr_data.py`：港股非金融 `caliber_metadata` notes 覆盖贸易、权益法和年报披露口径提示；待下一次港股油气/贸易类真实运行回填 |
 | P1-F9 | 已自动回归，待真实运行验证 | `tests/test_report_audit.py`：含 `口径/来源` 列的 PE、股息率、桶油作业费、派息率表不再误抽 10/2025/-2 等描述数字；待下一次 deep 抽检回填 |
 | P1-F10 | 已自动回归，待真实运行验证 | `tests/test_report_audit.py`：护城河/信心度类定性评级表不触发口径列警告且不抽取评分列；待下一次真实报告抽检回填 |
+| P2-F11 | 已自动回归，待真实运行验证 | `tests/test_skill_output_regressions.py`：`/investment-research` 已要求检查 `_generated_at`、`_ttl_seconds`、`_expires_at` 并在超过 `_expires_at` 时重新拉取 datapack |
+| P2-F12 | 已自动回归，待真实运行验证 | `tests/test_skill_output_regressions.py`：`/investment-research` 已要求长报告分段写入时先写临时文件、再追加到正式报告，避免 heredoc 冲突 |
+| P3-F13 | 已自动回归，待真实运行验证 | `tests/test_skill_output_regressions.py`：`/investment-research` 已记录 `File has been modified since read` 时重新读取目标行区域，避免行尾归一化冲突 |

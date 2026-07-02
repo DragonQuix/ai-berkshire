@@ -296,6 +296,21 @@ DEEP_AUDIT_DEPTH_SNIPPETS = [
     "不再 30 点封顶",
 ]
 
+INVESTMENT_RESEARCH_WORKFLOW_GUARDRAILS = [
+    "_generated_at",
+    "_ttl_seconds",
+    "_expires_at",
+    "超过 `_expires_at`",
+    "重新拉取 datapack",
+    "长报告分段写入",
+    "先写临时文件",
+    "再追加到正式报告",
+    "避免 heredoc",
+    "File has been modified since read",
+    "重新读取目标行区域",
+    "行尾归一化",
+]
+
 FINANCIAL_CALIBER_METADATA_CONTRACTS = {
     "financial-data.md": [
         "caliber_metadata",
@@ -452,6 +467,13 @@ def test_investment_research_documents_deep_audit_depth() -> None:
         text = read_text(rel_path)
         for snippet in DEEP_AUDIT_DEPTH_SNIPPETS:
             assert snippet in text, f"{rel_path} missing deep audit depth contract {snippet!r}"
+
+
+def test_investment_research_documents_workflow_guardrails() -> None:
+    for rel_path in skill_channels("investment-research.md"):
+        text = read_text(rel_path)
+        for snippet in INVESTMENT_RESEARCH_WORKFLOW_GUARDRAILS:
+            assert snippet in text, f"{rel_path} missing workflow guardrail {snippet!r}"
 
 
 @pytest.mark.parametrize("skill_name, required_snippets", FINANCIAL_CALIBER_METADATA_CONTRACTS.items())
